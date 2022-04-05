@@ -216,6 +216,10 @@ class  RegressionDataElliptic:public RegressionData
 		Diffusion<PDEParameterOptions::Constant> const & getK() const {return K_;}
 		Advection<PDEParameterOptions::Constant> const & getBeta() const {return beta_;}
 		Real const getC() const {return c_;}
+		
+		void setK(Diffusion<PDEParameterOptions::Constant> const & K) {K_ = K;}
+		void setBeta(Advection<PDEParameterOptions::Constant> const & beta) {beta_ = beta;}
+		void setC(Real const & c) {c_ = c;}
 };
 
 class RegressionDataEllipticSpaceVarying:public RegressionData
@@ -261,6 +265,10 @@ class RegressionDataEllipticSpaceVarying:public RegressionData
 		Advection<PDEParameterOptions::SpaceVarying> const & getBeta() const {return beta_;}
 		Reaction const & getC() const {return c_;}
 		ForcingTerm const & getU() const {return u_;}
+		
+		void setK(Diffusion<PDEParameterOptions::SpaceVarying> const & K) {K_ = K;}
+		void setBeta(Advection<PDEParameterOptions::SpaceVarying> const & beta) {beta_ = beta;}
+		void setC(Reaction const & c) {c_ = c;}
 };
 
 //----------------------------------------------------------------------------//

@@ -53,7 +53,7 @@ public:
 
   Advection(SEXP RGlobalVector) :
     b_ptr_(REAL(RGlobalVector)) {}
-
+    
   template<UInt ORDER, UInt mydim, UInt ndim>
   Real operator() (const FiniteElement<ORDER,mydim,ndim>& fe_, UInt iq, UInt i, UInt j) const;
 
