@@ -5,29 +5,49 @@
 #include <limits>
 
 template <typename ...Extension>
-const Diffusion<PDEParameterOption::Constant> PDE_Parameter_Functional<...Extension>::build_K(const Real& angle,
-																							  const Real& intensity)
+void PDE_Parameter_Functional<...Extension>::set_K(const Real& angle, const Real& intensity)
 {
+	MatrixXr Q;
+	Q << std::cos(angle), -std::sin(angle),
+		 std::sin(angle), std::cos(angle);
 
-	set_K_matrix(angle, intesity);
+	MatrixXr Sigma;
+	Sigma << 1/std::sqrt(intensity), 0.,
+ 			 0., std::sqrt(intensity);
 
-	const Diffusion<PDEParameterOption::Constant> K((this -> K_matrix_).data());
+	K_matrix_ = Q * Sigma * Q.inverse();
 
-	return K;
+	const Diffusion<PDEParameterOption::Constant> K(K_matrix_.data());
+
+	carrier_ -> get_model() -> getRegressionData().setK(K);
+				
+	return;
 }
+			
 
 template <typename ...Extension>
-const Advection<PDEParameterOption::Constant> PDE_Parameter_Functional<...Extension>::build_b(const Real& b1, const Real& b2)
+void PDE_Parameter_Functional<...Extension>::set_b(const Real& b1, const Real& b2)
 {
-	set_b_vector(b1, b2);
+	b_vector_ = (VectorXr << b1, b2).finished()
 
-	const Advection<PDEParameterOption::Constant> b((this -> b_vector_).data());
+	const Advection<PDEParameterOption::Constant> b(b_vector_.data());
 
-	return b;
+	carrier_ -> get_model() -> getRegressionData().setBeta(b);
+
+	return;
 }
 
+
+template <typename ...Extension>
+void PDE_Parameter_Functional<...Extension>::set_c(const Real& c) const
+{
+	carrier_ -> get_model() -> getRegressionData().setC(c);
+	return;
+}
+
+
 template <typename ... Extensions>
-Real PDE_Parameter_Functional< ... Extension>::eval_K(const Real& angle, const Real& intensity, const lambda::type<1>& lambda) const
+Real PDE_Parameter_Functional< ... Extension>::eval_K(const Real& angle, const Real& intensity, const lambda::type<1>& lambda)
 {
 	// Check for proper values of angle and intensity
 	// Notice that we keep angle in [0.0, EIGEN_PI] exploiting the periodicity of the matrix K
@@ -36,7 +56,7 @@ Real PDE_Parameter_Functional< ... Extension>::eval_K(const Real& angle, const R
 	
 	else
 	{
-		carrier_ -> get_model() -> getRegressionData().setK(build_K(angle, intensity));
+		set_K(angle, intensity);
 
 		MatrixXr z_hat = carrier_ -> apply(lambda); // apply or apply_to_b ??? VectorXr or MatrixXr?
 
@@ -44,21 +64,23 @@ Real PDE_Parameter_Functional< ... Extension>::eval_K(const Real& angle, const R
     }
 }
 
+
 template <typename ... Extensions>
-Real PDE_Parameter_Functional< ... Extension>::eval_b(const Real& b1, const Real& b2, const lambda::type<1>& lambda) const
+Real PDE_Parameter_Functional< ... Extension>::eval_b(const Real& b1, const Real& b2, const lambda::type<1>& lambda)
 {
-	carrier_ -> get_model() -> getRegressionData().setBeta(build_b(b1, b2));
+	set_b(b1, b2);
 
 	MatrixXr z_hat = carrier_ -> apply(lambda); // apply or apply_to_b ???
 
 	return ((carrier_ -> get_zp) - z_hat).squaredNorm();
     }
 }
+
 
 template <typename ... Extensions>
 Real PDE_Parameter_Functional< ... Extension>::eval_c(const Real& c, const lambda::type<1>& lambda)) const
 {
-	carrier_ -> get_model() -> getRegressionData().setC(c);
+	set_c(c);
 
 	MatrixXr z_hat = carrier_ -> apply(lambda); // apply or apply_to_b ???
 
@@ -66,9 +88,10 @@ Real PDE_Parameter_Functional< ... Extension>::eval_c(const Real& c, const lambd
     }
 }
 
+
 template <typename ... Extensions>
 VextorXr PDE_Parameter_Functional< ... Extension>::eval_grad_K(const Real& angle, const Real& intensity,
-															   const lambda::type<1>& lambda), const Real& h) const
+															   const lambda::type<1>& lambda), const Real& h)
 {
 	VectorXr res;
 
@@ -114,10 +137,11 @@ VextorXr PDE_Parameter_Functional< ... Extension>::eval_grad_K(const Real& angle
 	return res;
 }
 
+
 template <typename ... Extensions>
 VectorXr PDE_Parameter_Functional< ... Extension>::eval_grad_b(const Real& b1, const Real& b2, 
-															   const lambda::type<1>& lambda, const Real& h) const
-{	
+															   const lambda::type<1>& lambda, const Real& h)
+{
 	VectorXr res;
 	
 	res << (eval_b(b1 + h, b2, lambda) - eval_b(b1 - h, b2, lambda)) / (2. * h),
@@ -129,7 +153,7 @@ VectorXr PDE_Parameter_Functional< ... Extension>::eval_grad_b(const Real& b1, c
 
 
 template <typename ... Extensions>
-Real PDE_Parameter_Functional< ... Extension>::eval_grad_c(const Real& c, const lambda::type<1>& lambda), const Real& h) const
+Real PDE_Parameter_Functional< ... Extension>::eval_grad_c(const Real& c, const lambda::type<1>& lambda), const Real& h)
 {
 	return (eval_c(c + h, lambda) - eval_c(c - h, lambda)) / (2. * h);
 }

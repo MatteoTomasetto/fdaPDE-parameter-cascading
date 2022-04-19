@@ -4,95 +4,150 @@
 template <typename ... Extensions>
 void Parameter_Cascading<... Extension>::step_K()
 {
+	// Vectors to store the optimal values for each lambda in lambdas_
+	VectorXr angles(lambdas_.size() + 1);
+	VectorXr intensities(lambdas_.size() + 1);
 
-	// PSEUDOCODE:	
+	// Initialization
+	angles(0) = angle_;
+	intensities(0) = intensity_;
+
+	// Vectors to store the GCV values for each lambda in lambdas_
+	VectorXr GCVs(lambdas_.size());
+
+	for (Uint iter = 0; iter < lambdas_.size(); ++iter)
+	{
+		// Optimization step
+		// [angles(iter + 1), intensities(iter + 1)] = OPT_ALGORITHM_K(angles(iter), intensities(iter), lambdas_(iter)); //TODO
+
+		// Compute GCV with the new parameters
+		H_.set_K(angles(iter + 1), intensities(iter + 1));
+		//GCVs(i) = H_.get_carrier() -> compute_GCV(); //TODO
+		
+		iter += 1;
+	}
+
+	// Find the minimum GCV and save the related parameters
+	Uint min_GCV_pos;
+	GCVs.maxCoeff(&min_GCV_pos);
+
+	angle_ = angles(min_GCV_pos + 1); // GCVs is shorter than angles due to initialization => index shifted
+	intensity_ = intensities(min_GCV_pos + 1); // GCVs is shorter than intensities due to initialization => index shifted
+
+	H_.set_K(angle_, intensity_);
 	
-	// Kold = K;
-	// vector<Kappas> vK;
-	// vK[0] = K;
-	// vector<Real> = vGCV;
-	
-	// for i=1:lambdas_.size()
-	//		vK[i] = OPT_ALGORITHM(vK[i-1], lambdas_[i], ...);
-	//		set vK[i] in H_ -> Carrier -> get.regressionData()
-	//		vGCV[i] = H_ -> Carrier -> compute_GCV();
-	
-	// j = argmin(vGCV);
-	// K = vK[j];
-	// set K in H_ -> Carrier -> get.regressionData(). This will be used in the further steps
-	
-	// if(computeError(Kold, K) < tol_PDE_PARAM)
-	//		update_K = false;
+	// Compute increment
+	increment += std::sqrt((angle_ - anlges(0))*(angle_ - anlges(0)));
+	increment += std::sqrt((intensity_ - intensities(0))*(intensity_ - intensities(0)));
 	
 	return;
-
 };
 
 template <typename ... Extensions>
 void Parameter_Cascading<... Extension>::step_b()
 {
+	// Vectors to store the optimal values for each lambda in lambdas_
+	VectorXr b1_values(lambdas_.size() + 1);
+	VectorXr b2_values(lambdas_.size() + 1);
 
-	// PSEUDOCODE:	
-	
-	// bold = b;
-	// vector<b> vb;
-	// vb[0] = b;
-	// vector<Real> = vGCV;
-	
-	// for i=1:lambdas_.size()
-	//		vb[i] = OPT_ALGORITHM(vb[i-1], lambdas_[i], ...);
-	//		set vb[i] in H_ -> Carrier -> get.regressionData()
-	//		vGCV[i] = H_ -> Carrier -> compute_GCV();
-	
-	// j = argmin(vGCV);
-	// b = vb[j];
-	// set b in H_ -> Carrier -> get.regressionData(). This will be used in the further steps
-	
-	// if(computeError(b, bold) < tol_PDE_PARAM)
-	//		update_b = false;
+	// Initialization
+	b1_values(0) = b1_;
+	b2_values(0) = b2_;
 
+	// Vectors to store the GCV values for each lambda in lambdas_
+	VectorXr GCVs(lambdas_.size());
 
+	for (Uint iter = 0; iter < lambdas_.size(); ++iter)
+	{
+		// Optimization step
+		// [b1_values(iter + 1), b2_values(iter + 1)] = OPT_ALGORITHM_b(b1_values(iter), b2_values(iter), lambdas_(iter)); //TODO
+
+		// Compute GCV with the new parameters
+		H_.set_b(b1_values(iter + 1), b2_values(iter + 1));
+		//GCVs(i) = H_.get_carrier() -> compute_GCV(); //TODO
+		
+		iter += 1;
+	}
+
+	// Find the minimum GCV and save the related parameters
+	Uint min_GCV_pos;
+	GCVs.maxCoeff(&min_GCV_pos);
+
+	b1_ = b1_values(min_GCV_pos + 1); // GCVs is shorter than b1_values due to initialization => index shifted
+	b2_ = b2_values(min_GCV_pos + 1); // GCVs is shorter than b2_values due to initialization => index shifted
+
+	H_.set_b(b1_, b2_);
+	
+	// Compute increment
+	increment += std::sqrt((b1_ - b1_values(0))*(b1_ - b1_values(0)));
+	increment += std::sqrt((b2_ - b2_values(0))*(b2_ - b2_values(0)));
+	
+	return;
 };
 
 template <typename ... Extensions>
 void Parameter_Cascading<... Extension>::step_c()
 {
 
+	// Vector to store the optimal values for each lambda in lambdas_
+	VectorXr c_values(lambdas_.size() + 1);
 
-	// PSEUDOCODE:	
-	
-	// cold = c;
-	// vector<c> vc;
-	// vc[0] = c;
-	// vector<Real> = vGCV;
-	
-	// for i=1:lambdas_.size()
-	//		vc[i] = OPT_ALGORITHM(vc[i-1], lambdas_[i], ...);
-	//		set vc[i] in H_ -> Carrier -> get.regressionData()
-	//		vGCV[i] = H_ -> Carrier -> compute_GCV();
-	
-	// j = argmin(vGCV);
-	// c = vc[j];
-	// set c in H_ -> Carrier -> get.regressionData(). This will be used in the further steps
+	// Initialization
+	c_values(0) = c_;
+
+	// Vectors to store the GCV values for each lambda in lambdas_
+	VectorXr GCVs(lambdas_.size());
+
+	for (Uint iter = 0; iter < lambdas_.size(); ++iter)
+	{
+		// Optimization step
+		// c_values(iter + 1) = OPT_ALGORITHM_c(c_values(iter), lambdas_(iter)); //TODO
+
+		// Compute GCV with the new parameters
+		H_.set_c(c_values(iter + 1));
+		//GCVs(i) = H_.get_carrier() -> compute_GCV(); //TODO
 		
-	// if(computeError(c, cold) < tol_PDE_PARAM)
-	//		update_c = false;
+		iter += 1;
+	}
 
+	// Find the minimum GCV and save the related parameters
+	Uint min_GCV_pos;
+	GCVs.maxCoeff(&min_GCV_pos);
+
+	c_ = c_values(min_GCV_pos + 1); // GCVs is shorter than c_values due to initialization => index shifted
+	
+	H_.set_c(c_);
+	
+	// Compute increment
+	increment += std::sqrt((c_ - c_values(0));
+	
+	return;
 };
 
 
 template <typename ... Extensions>
-void Parameter_Cascading<... Extension>::apply()
+bool Parameter_Cascading<... Extension>::apply()
 {
-
-
-	// PSEUDOCODE:	
+	for(Uint iter = 0; iter < max_iter_parameter_cascading_ && goOn; ++iter)
+	{	
+		iter += 1;
+		
+		increment = 0.0;
+		
+		if(update_K)
+			step_K();
+		
+		if(update_b)
+			step_b();
+			
+		if(update_c)
+			step_c();
+		
+		goOn = increment > tol_parameter_cascading;
+		
+	}
 	
-	// for i=0:max_iter_parameter_cascading && (update_k = true or update_b = true or update_c = true) 
-	// 		if(update_k) step_K();
-	//		if(update_b) step_b();
-	//		if(update_c) step_c();
-	
+	return (iter < max_iter_parameter_cascading_);
 
 };
 
