@@ -2,7 +2,7 @@
 #define __PDE_PARAMETER_FUNCTIONALS_H__
 
 #include "../../FdaPDE.h"
-#include "../../Lambda_Optimization/Include/Carrier.h"
+#include "../../Lambda_Optimization/Include/Lambda_Optimizer.h"
 #include "../../FE_Assemblers_Solvers/Include/Param_Functors.h"
 
 /* *** PDE_Parameter_Functional ***
@@ -17,15 +17,15 @@
 
 // TODO For now we do not consider spacevarying case / GAM / temporal case (with lambdaS and lambdaT).
 
-template <typename ... Extensions>
+template <typename InputCarrier>
 class PDE_Parameter_Functional
 {
-	private: Carrier<RegressionDataElliptic, ... Extensions> * carrier_; // Carrier needed to solve the regression problem
-			 MatrixXr K_matrix_; // Diffusion matrix needed to build a Diffusion object from diffusion angle and intensity
-			 VectorXr b_vector_; // Advection vector needed to build Advection object from advection components
+	private: GCV_Exact<InputCarrier, 1> & solver; // Lambda optimizer object with a carrier needed to solve the regression problem
+			 MatrixXr K_matrix; // Diffusion matrix needed to build a Diffusion object from diffusion angle and intensity
+			 VectorXr b_vector; // Advection vector needed to build Advection object from advection components
 
 	public: // Constructor to set the pointer to the Carrier
-			PDE_Parameter_Functional(Carrier<RegressionDataElliptic, ... Extensions> * carrier) : carrier_(carrier);
+			PDE_Parameter_Functional(GCV_Exact<InputCarrier, 1> & solver_) : GCV_Exact<InputCarrier, 1>(solver_);
 
 			// Functions to build PDE parameters and set them in RegressionData
 			void set_K(const Real& angle, const Real& intensity);
@@ -44,7 +44,7 @@ class PDE_Parameter_Functional
 			Real	 eval_grad_c(const Real& c, const lambda::type<1>& lambda), const Real& h = 1e-3) const;
 			
 			// GETTERS
-			inline Carrier<RegressionDataElliptic, ... Extensions>* get_carrier() const { return this -> carrier_;};
+			inline GCV_Exact<InputCarrier, 1>& const get_solver(void) const { return solver; };
 
 };
 

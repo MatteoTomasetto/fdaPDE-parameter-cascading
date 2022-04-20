@@ -4,8 +4,8 @@
 #include <cmath> 
 #include <limits>
 
-template <typename ...Extension>
-void PDE_Parameter_Functional<...Extension>::set_K(const Real& angle, const Real& intensity)
+template <typename InputCarrier>
+void PDE_Parameter_Functional<InputCarrier>::set_K(const Real& angle, const Real& intensity)
 {
 	MatrixXr Q;
 	Q << std::cos(angle), -std::sin(angle),
@@ -15,39 +15,40 @@ void PDE_Parameter_Functional<...Extension>::set_K(const Real& angle, const Real
 	Sigma << 1/std::sqrt(intensity), 0.,
  			 0., std::sqrt(intensity);
 
-	K_matrix_ = Q * Sigma * Q.inverse();
+	K_matrix = Q * Sigma * Q.inverse();
 
-	const Diffusion<PDEParameterOption::Constant> K(K_matrix_.data());
+	const Diffusion<PDEParameterOption::Constant> K(K_matrix.data());
 
-	carrier_ -> get_model() -> getRegressionData().setK(K);
+	solver.get_carrier().get_model() -> getRegressionData().setK(K);
 				
 	return;
 }
 			
 
-template <typename ...Extension>
-void PDE_Parameter_Functional<...Extension>::set_b(const Real& b1, const Real& b2)
+template <typename InputCarrier>
+void PDE_Parameter_Functional<InputCarrier>::set_b(const Real& b1, const Real& b2)
 {
-	b_vector_ = (VectorXr << b1, b2).finished()
+	b_vector = (VectorXr << b1, b2).finished()
 
-	const Advection<PDEParameterOption::Constant> b(b_vector_.data());
+	const Advection<PDEParameterOption::Constant> b(b_vector.data());
 
-	carrier_ -> get_model() -> getRegressionData().setBeta(b);
+	solver.get_carrier().get_model() -> getRegressionData().setBeta(b);
 
 	return;
 }
 
 
-template <typename ...Extension>
-void PDE_Parameter_Functional<...Extension>::set_c(const Real& c) const
+template <typename InputCarrier>
+void PDE_Parameter_Functional<InputCarrier>::set_c(const Real& c) const
 {
-	carrier_ -> get_model() -> getRegressionData().setC(c);
+	solver.get_carrier.get_model() -> getRegressionData().setC(c);
+	
 	return;
 }
 
 
-template <typename ... Extensions>
-Real PDE_Parameter_Functional< ... Extension>::eval_K(const Real& angle, const Real& intensity, const lambda::type<1>& lambda)
+template <typename InputCarrier>
+Real PDE_Parameter_Functional<InputCarrier>::eval_K(const Real& angle, const Real& intensity, const lambda::type<1>& lambda)
 {
 	// Check for proper values of angle and intensity
 	// Notice that we keep angle in [0.0, EIGEN_PI] exploiting the periodicity of the matrix K
@@ -57,41 +58,47 @@ Real PDE_Parameter_Functional< ... Extension>::eval_K(const Real& angle, const R
 	else
 	{
 		set_K(angle, intensity);
+		
+		solver.update_parameters(lambda)
 
-		MatrixXr z_hat = carrier_ -> apply(lambda); // apply or apply_to_b ??? VectorXr or MatrixXr?
+		VectorXr z_hat = solver.get_z_hat();
 
-		return ((carrier_ -> get_zp) - z_hat).squaredNorm();
+		return (solver.get_carrier().get_zp()) - z_hat).squaredNorm();
     }
 }
 
 
-template <typename ... Extensions>
-Real PDE_Parameter_Functional< ... Extension>::eval_b(const Real& b1, const Real& b2, const lambda::type<1>& lambda)
+template <typename InputCarrier>
+Real PDE_Parameter_Functional<InputCarrier>::eval_b(const Real& b1, const Real& b2, const lambda::type<1>& lambda)
 {
 	set_b(b1, b2);
+	
+	solver.update_parameters(lambda);
 
-	MatrixXr z_hat = carrier_ -> apply(lambda); // apply or apply_to_b ???
+	VectorXr z_hat = solver.get_z_hat();
 
-	return ((carrier_ -> get_zp) - z_hat).squaredNorm();
+	return (solver.get_carrier().get_zp()) - z_hat).squaredNorm();
     }
 }
 
 
-template <typename ... Extensions>
-Real PDE_Parameter_Functional< ... Extension>::eval_c(const Real& c, const lambda::type<1>& lambda)) const
+template <typename InputCarrier>
+Real PDE_Parameter_Functional<InputCarrier>::eval_c(const Real& c, const lambda::type<1>& lambda)) const
 {
 	set_c(c);
 
-	MatrixXr z_hat = carrier_ -> apply(lambda); // apply or apply_to_b ???
+	solver.update_parameters(lambda);
 
-	return ((carrier_ -> get_zp) - z_hat).squaredNorm();
+	VectorXr z_hat = solver.get_z_hat();
+
+	return (solver.get_carrier().get_zp()) - z_hat).squaredNorm();
     }
 }
 
 
-template <typename ... Extensions>
-VextorXr PDE_Parameter_Functional< ... Extension>::eval_grad_K(const Real& angle, const Real& intensity,
-															   const lambda::type<1>& lambda), const Real& h)
+template <typename InputCarrier>
+VextorXr PDE_Parameter_Functional<InputCarrier>::eval_grad_K(const Real& angle, const Real& intensity,
+															 const lambda::type<1>& lambda), const Real& h)
 {
 	VectorXr res;
 
@@ -138,9 +145,9 @@ VextorXr PDE_Parameter_Functional< ... Extension>::eval_grad_K(const Real& angle
 }
 
 
-template <typename ... Extensions>
-VectorXr PDE_Parameter_Functional< ... Extension>::eval_grad_b(const Real& b1, const Real& b2, 
-															   const lambda::type<1>& lambda, const Real& h)
+template <typename InputCarrier>
+VectorXr PDE_Parameter_Functional<InputCarrier>::eval_grad_b(const Real& b1, const Real& b2, 
+														     const lambda::type<1>& lambda, const Real& h)
 {
 	VectorXr res;
 	
@@ -152,8 +159,8 @@ VectorXr PDE_Parameter_Functional< ... Extension>::eval_grad_b(const Real& b1, c
 }
 
 
-template <typename ... Extensions>
-Real PDE_Parameter_Functional< ... Extension>::eval_grad_c(const Real& c, const lambda::type<1>& lambda), const Real& h)
+template <typename InputCarrier>
+Real PDE_Parameter_Functional<InpuCarrier>::eval_grad_c(const Real& c, const lambda::type<1>& lambda), const Real& h)
 {
 	return (eval_c(c + h, lambda) - eval_c(c - h, lambda)) / (2. * h);
 }
