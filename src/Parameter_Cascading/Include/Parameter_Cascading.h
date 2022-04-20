@@ -35,10 +35,12 @@ class Parameter_Cascading {
 			 const Uint max_iter_parameter_cascading = 200;	// max number of iterations
 			 const Real tol_parameter_cascading = 1e-3;		// tolerance 
 			 
-			 void step_K(); // find and update diffusion parameters via optimization algorithm
-			 void step_b(); // find and update advection components via optimization algorithm
-			 void step_c(); // find and update reaction parameter via optimization algorithm
-
+			 Real compute_optimal_lambda(void) const;
+			 
+			 void step_K(void); // find and update diffusion parameters via optimization algorithm
+			 void step_b(void); // find and update advection components via optimization algorithm
+			 void step_c(void); // find and update reaction parameter via optimization algorithm
+			 
 	public: // Constructor that computes the vector of lambdas from the vector of rhos presented in \cite{Bernardi}
 			template<UInt ORDER, UInt mydim, UInt ndim>
 			Parameter_Cascading(const PDE_Parameter_Functional<InputCarrier>& H_,  bool update_K_, bool update_b_, update_c_, 
@@ -61,7 +63,7 @@ class Parameter_Cascading {
 			};
 			
 			// Function to apply the parameter cascading algorithm
-			bool apply();
+			bool apply(void);
 
 };
 

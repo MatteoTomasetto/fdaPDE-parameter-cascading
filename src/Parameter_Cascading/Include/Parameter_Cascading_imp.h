@@ -1,8 +1,58 @@
 #ifndef __PARAMETER_CASCADING_IMP_H__
 #define __PARAMETER_CASCADING_IMP_H__
 
+#include "../../Lambda_Optimization/Include/Optimization_Data.h"
+#include "../../Lambda_Optimization/Include/Function_Variadic.h"
+#include "../../Lambda_Optimization/Include/Newton.h"
+#include "../../Lambda_Optimization/Include/Optimization_Methods_Factory.h"
+#include <memory>
+
+
 template <typename InputCarrier>
-void Parameter_Cascading<InputCarrier>::step_K()
+Real Parameter_Cascading<InputCarrier>::compute_optimal_lambda(void) const
+{
+	Function_Wrapper<Real, Real, Real, Real, GCV_Exact<InputCarrier, 1>> Fun(H.get_solver());
+
+	const OptimizationData * optr = H.get_solver().get_carrier().get_opt_data();
+
+	std::unique_ptr<Opt_methods<Real,Real,GCV_Exact<InputCarrier, 1>>>
+	optim_p = Opt_method_factory<Real, Real, GCV_Exact<InputCarrier, 1>>::create_Opt_method(optr->get_criterion(), Fun);
+
+	// Choose initial lambda
+	Real lambda_init = optr->get_initial_lambda_S();
+
+	// Start from 6 lambda and find the minimum value of GCV to pick a good initialization for Newton method
+	std::vector<Real> lambda_grid = {5.000000e-05, 1.442700e-03, 4.162766e-02, 1.201124e+00, 3.465724e+01, 1.000000e+03};
+	UInt dim = lambda_grid.size();
+	Real lambda_min;
+	Real GCV_min = -1.0;
+	for (UInt i = 0; i < dim; i++)
+	{
+		Real evaluation = Fun.evaluate_f(lambda_grid[i]); //only scalar functions;
+		if (evaluation < GCV_min || i == 0)
+		{
+			GCV_min = evaluation;
+			lambda_min = lambda_grid[i];
+		}
+	}
+	// If lambda_init <= 0, use the one from the grid
+	if (lambda_init > lambda_min/4 || lambda_init <= 0)
+		lambda_init = lambda_min/8;
+
+	Checker ch;
+	std::vector<Real> lambda_values;
+	std::vector<Real> GCV_values;
+
+	// Compute optimal lambda
+	std::pair<Real, UInt> lambda_couple = 
+	optim_p->compute(lambda_init, optr->get_stopping_criterion_tol(), 40, ch, GCV_values, lambda_values);
+
+	return lambda_couple.first;
+}
+
+
+template <typename InputCarrier>
+void Parameter_Cascading<InputCarrier>::step_K(void)
 {
 	// Vectors to store the optimal values for each lambda in lambdas
 	VectorXr angles(lambdas.size() + 1);
@@ -22,8 +72,9 @@ void Parameter_Cascading<InputCarrier>::step_K()
 
 		// Compute GCV with the new parameters
 		H.set_K(angles(iter + 1), intensities(iter + 1));
-		H.get_solver().update_parameters(lambdas(iter));
-		GCV_values(iter) = H.get_solver().compute_f(lambdas(iter)); // TODO WE NEED OPTIMAL GCV AND NOT GCV(lambdas_(iter))!!!
+		Real lambda_opt = compute_lambda_optimal();
+		H.get_solver().update_parameters(lambda_opt);
+		GCV_values(iter) = H.get_solver().compute_f(lambda_opt);
 		
 		iter += 1;
 	}
@@ -45,7 +96,7 @@ void Parameter_Cascading<InputCarrier>::step_K()
 }
 
 template <typename InputCarrier>
-void Parameter_Cascading<InputCarrier>::step_b()
+void Parameter_Cascading<InputCarrier>::step_b(void)
 {
 	// Vectors to store the optimal values for each lambda in lambdas
 	VectorXr b1_values(lambdas.size() + 1);
@@ -65,8 +116,9 @@ void Parameter_Cascading<InputCarrier>::step_b()
 
 		// Compute GCV with the new parameters
 		H.set_b(b1_values(iter + 1), b2_values(iter + 1));
-		H.get_solver().update_parameters(lambdas(iter));
-		GCV_values(iter) = H.get_solver().compute_f(lambdas(iter)); // TODO WE NEED OPTIMAL GCV AND NOT GCV(lambdas_(iter))!!!
+		Real lambda_opt = compute_lambda_optimal();
+		H.get_solver().update_parameters(lambda_opt);
+		GCV_values(iter) = H.get_solver().compute_f(lambda_opt);
 		
 		iter += 1;
 	}
@@ -88,7 +140,7 @@ void Parameter_Cascading<InputCarrier>::step_b()
 }
 
 template <typename InputCarrier>
-void Parameter_Cascading<InputCarrier>::step_c()
+void Parameter_Cascading<InputCarrier>::step_c(void)
 {
 
 	// Vector to store the optimal values for each lambda in lambdas
@@ -107,8 +159,9 @@ void Parameter_Cascading<InputCarrier>::step_c()
 
 		// Compute GCV with the new parameters
 		H_.set_c(c_values(iter + 1));
-		H.get_solver().update_parameters(lambdas(iter));
-		GCV_values(iter) = H.get_solver().compute_f(lambdas(iter)); // TODO WE NEED OPTIMAL GCV AND NOT GCV(lambdas_(iter))!!!
+		Real lambda_opt = compute_lambda_optimal();
+		H.get_solver().update_parameters(lambda_opt);
+		GCV_values(iter) = H.get_solver().compute_f(lambda_opt); // TODO WE NEED OPTIMAL GCV AND NOT GCV(lambdas_(iter))!!!
 		
 		iter += 1;
 	}
@@ -129,7 +182,7 @@ void Parameter_Cascading<InputCarrier>::step_c()
 
 
 template <typename InputCarrier>
-bool Parameter_Cascading<InputCarrier>::apply()
+bool Parameter_Cascading<InputCarrier>::apply(void)
 {
 	for(Uint iter = 0; iter < max_iter_parameter_cascading && goOn; ++iter)
 	{	
