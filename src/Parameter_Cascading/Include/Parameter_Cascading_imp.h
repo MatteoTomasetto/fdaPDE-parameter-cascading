@@ -5,8 +5,9 @@
 #include "../../Lambda_Optimization/Include/Function_Variadic.h"
 #include "../../Lambda_Optimization/Include/Newton.h"
 #include "../../Lambda_Optimization/Include/Optimization_Methods_Factory.h"
+#include "Optimization_Algorithm.h"
 #include <memory>
-
+#include <functional>
 
 template <typename InputCarrier>
 Real Parameter_Cascading<InputCarrier>::compute_optimal_lambda(void) const
@@ -68,7 +69,14 @@ void Parameter_Cascading<InputCarrier>::step_K(void)
 	for (Uint iter = 0; iter < lambdas.size(); ++iter)
 	{
 		// Optimization step
-		// [angles(iter + 1), intensities(iter + 1)] = OPT_ALGORITHM_K(angles(iter), intensities(iter), lambdas(iter)); //TODO
+		std::function<Real (Eigen::Vector2d)> F[&H, &lambdas, &iter](Eigen::Vector2d x){return H.eval_K(x(0),x(1), lamdas(iter))};
+		Eigen::Vector2d init(angles(iter), intensities(iter));
+		Genetic_Algorithm<Eigen::Vector2d, Real> opt(F, init, {100, 0.5, 0.5});
+		
+		// Store the optimal solution
+		Eigen::Vector2d opt_sol = opt.get_solution();
+		angles(iter + 1) = opt_sol(0);
+		intensities(iter + 1) = opt_sol(1);
 
 		// Compute GCV with the new parameters
 		H.set_K(angles(iter + 1), intensities(iter + 1));
@@ -112,8 +120,15 @@ void Parameter_Cascading<InputCarrier>::step_b(void)
 	for (Uint iter = 0; iter < lambdas.size(); ++iter)
 	{
 		// Optimization step
-		// [b1_values(iter + 1), b2_values(iter + 1)] = OPT_ALGORITHM_b(b1_values(iter), b2_values(iter), lambdas(iter)); //TODO
-
+		std::function<Real (Eigen::Vector2d)> F[&H, &lambdas, &iter](Eigen::Vector2d x){return H.eval_b(x(0),x(1), lamdas(iter))};
+		Eigen::Vector2d init(b1_values(iter), b2_values(iter));
+		Genetic_Algorithm<Eigen::Vector2d, Real> opt(F, init, {100, 0.5, 0.5});
+		
+		// Store the optimal solution
+		Eigen::Vector2d opt_sol = opt.get_solution();
+		b1_values(iter + 1) = opt_sol(0);
+		b2_values(iter + 1) = opt_sol(1);
+		
 		// Compute GCV with the new parameters
 		H.set_b(b1_values(iter + 1), b2_values(iter + 1));
 		Real lambda_opt = compute_lambda_optimal();
@@ -154,8 +169,14 @@ void Parameter_Cascading<InputCarrier>::step_c(void)
 	for (Uint iter = 0; iter < lambdas.size(); ++iter)
 	{
 		// Optimization step
-		// c_values(iter + 1) = OPT_ALGORITHM_c(c_values(iter), lambdas(iter)); //TODO
-
+		std::function<Real (Real)> F[&H, &lambdas, &iter](Real x){return H.eval_c(x, lamdas(iter))};
+		Real init{c_values(iter)};
+		Genetic_Algorithm<Real, Real> opt(F, init, {100, 0.5, 0.5});
+		
+		// Store the optimal solution
+		Real opt_sol = opt.get_solution();
+		c_values(iter + 1) = opt_sol;
+		
 		// Compute GCV with the new parameters
 		H.set_c(c_values(iter + 1));
 		Real lambda_opt = compute_lambda_optimal();
@@ -184,9 +205,11 @@ void Parameter_Cascading<InputCarrier>::step_c(void)
 template <typename InputCarrier>
 bool Parameter_Cascading<InputCarrier>::apply(void)
 {
-	for(Uint iter = 0; iter < max_iter_parameter_cascading && goOn; ++iter)
+	unsigned int iter = 0u;
+
+	while(iter < max_iter_parameter_cascading && goOn)
 	{	
-		iter += 1;
+		++iter;
 		
 		increment = 0.0;
 		
@@ -199,7 +222,7 @@ bool Parameter_Cascading<InputCarrier>::apply(void)
 		if(update_c)
 			step_c();
 		
-		// stop the procedure when all the updaters are false or when just one updater is true
+		// Stop the procedure when all the updaters are false or when just one updater is true
 		if(update_K*update_b == false && update_K*update_c == false && update_b*update_c == false)
 			goOn = false;
 

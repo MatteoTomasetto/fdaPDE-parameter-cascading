@@ -1,58 +1,82 @@
-/*#ifndef __GENETIC_ALGORITHM_H__
+#ifndef __GENETIC_ALGORITHM_H__
 #define __GENETIC_ALGORITHM_H__
 
 #include "../../FdaPDE.h"
 #include "PDE_Parameter_Functionals.h"
+#include <functional>
 
-//TODO: [angles(iter + 1), intensities(iter + 1)] = OPT_ALGORITHM_K(angles(iter), intensities(iter), lambdas(iter));
+struct Parameter_Genetic_Algorithm
+{
+	unsigned int N; 	// population size
+	Real prob_mutation; // probability of mutation
+	Real prob_crossover;// probability of crossover
+}
 
-template <class DType, class CType>
+template <class DType, class CType> // DType=Domain, CType = Codomain;
 class Genetic_Algorithm
 {
-	private: std::function<DType, CType> F; // this can also be a particular case of FunctionWrapper!
-			 //in our case: F(x){return PDE_Parameter_Functional<InputCarrier> H.eval_K(x, lamdas(iter))}; (or we use before 
-			 // H.set_lambda).
+	private: typedef Eigen::Matrix<DType,Eigen::Dynamic,1> VectorXdtype;
+			 typedef Eigen::Matrix<CType,Eigen::Dynamic,1> VectorXctype;
 
-			 std::vector<DType> population;
+			 // Function to optimize
+			 std::function<CType (DType)> F; 
+
+			 // Population of candidate solutions
+			 VectorXdtype population;
 			 
+			 // Best solution (minimum point)
 			 DType best;
 
-			 void initialization();
+			 // Genetic algortihm parameters
+			 Parameter_Genetic_Algorithm param_genetic_algorithm;
 
-			 void evaluation();
+			 // Boolean to keep looping with genetic algorithm;
+			 // It becomes "false" if	|best_{k} - best_{k-1}| < tol_genetic_algorithm
+			 bool goOn = true;
 
-			 void selection();
+			 const unsigned int max_iterations_genetic_algorithm;
+			 const Real tol_genetic_algorithm;
 
-			 void variation();
+			 // Initialization step
+			 void initialization(void);
 
-			 void replacement();			 			 
+			 // Evaluation step
+			 void evaluation(void);
 
-	public: Genetic_Algorithm(std::function<DType, CType> F_, VectorXr init) : F(F_), population(init) {};
-			//init = [angles(iter), intensities(iter)]
-			
-			void apply();
+			 // Selection step
+			 void selection(VectorXctype values);
 
+			 // Variation step
+			 void variation(void);
+
+			 // Replacement step
+			 void replacement(void);			 			 
+
+	public: // Constructors
+			Genetic_Algorithm(const std::function<CType (DType)>& F_, const DType& init, 
+			const Parameter_Genetic_Algorithm& param_genetic_algorithm_, const unsigned int& max_iterations_genetic_algorithm_,
+			const Real & tol_genetic_algorithm_)
+			: F(F_), max_iterations_genetic_algorithm(max_iterations_genetic_algorithm_),
+			tol_genetic_algorithm(tol_genetic_algorithm_)
+			 {
+			 	population << init;
+			 	best = init;
+			 };
+
+			Genetic_Algorithm(const std::function<CType (DType)>& F_, const DType& init, const Parameter_Genetic_Algorithm& param_genetic_algorithm_)
+			: Genetic_Algorithm(F_, init, param_genetic_algorithm_, 100u, 1e-3) {};
+
+			// Function to apply the algorithm
+			void apply(void);
+
+			// Getters
+			inline DType get_solution(void) {return best;};
 };
 
 
+#include "Optimization_Algorithm_imp.h"
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+#endif
 
 /* NEWTON
 H.set_lambda(lambdas(iter))
