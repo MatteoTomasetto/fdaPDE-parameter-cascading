@@ -44,7 +44,7 @@ class Lambda_optimizer
         virtual void update_parameters(lambda::type<size> lambda) = 0;
 
         public: //GETTERS
-        		inline InputCarrier const & get_carrier(void) const {return this -> the_carrier;};
+        	inline const InputCarrier & get_carrier(void) const {return this -> the_carrier;};
         
                 //! Virtual Destuctor
                 virtual ~Lambda_optimizer(){};
@@ -133,8 +133,8 @@ class GCV_Family: Lambda_optimizer<InputCarrier, size>
                 void combine_output_prediction(const VectorXr & f_hat, output_Data<size> & outp, UInt cols);
                 
                 // GETTERS
-                inline VectorXr & const get_z_hat(void) const { return this -> z_hat;};
-                inline Uint & const get_s(void) const { return this -> s;};
+                inline const VectorXr & get_z_hat(void) const { return this -> z_hat;};
+                inline const UInt & get_s(void) const { return this -> s;};
                 
                 //! Virtual Destuctor
         virtual ~GCV_Family(){};

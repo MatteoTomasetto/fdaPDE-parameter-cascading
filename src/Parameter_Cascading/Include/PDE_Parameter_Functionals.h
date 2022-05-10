@@ -20,31 +20,34 @@
 template <typename InputCarrier>
 class PDE_Parameter_Functional
 {
-	private: GCV_Exact<InputCarrier, 1> & solver; // Lambda optimizer object with a carrier needed to solve the regression problem
-			 MatrixXr K_matrix; // Diffusion matrix needed to build a Diffusion object from diffusion angle and intensity
-			 VectorXr b_vector; // Advection vector needed to build Advection object from advection components
+	private: // Lambda optimizer object with a carrier needed to solve the regression problem
+			 GCV_Stochastic<InputCarrier, 1> & solver;
+			 lambda::type<1> lambda; // lambda coefficient in the loss function
 
-	public: // Constructor to set the pointer to the Carrier
-			PDE_Parameter_Functional(GCV_Exact<InputCarrier, 1> & solver_) : GCV_Exact<InputCarrier, 1>(solver_);
+	public: // Constructor to set the reference to the solver
+			PDE_Parameter_Functional(const GCV_Stochastic<InputCarrier, 1> & solver_, const lambda::type<1> lambda_)
+			: solver(solver_), lambda(lambda_);
 
 			// Functions to build PDE parameters and set them in RegressionData
-			void set_K(const Real& angle, const Real& intensity);
-			void set_b(const Real& b1, const Real& b2);
+			void set_K(const Real& angle, const Real& intensity) const;
+			void set_b(const Real& b1, const Real& b2) const;
 			void set_c(const Real& c) const;
 
 			// Functions to retrieve the value of the functional in the given input
-			Real eval_K(const Real& angle, const Real& intensity, const lambda::type<1>& lambda));
-			Real eval_b(const Real& b1, const Real& b2, const lambda::type<1>& lambda);
-			Real eval_c(const Real& c, const lambda::type<1>& lambda)) const;
+			Real eval_K(const Real& angle, const Real& intensity) const;
+			Real eval_b(const Real& b1, const Real& b2) const;
+			Real eval_c(const Real& c) const;
 			
 			// Functions to retrieve the derivatives of the functional approximated via finite differences
-			VectorXr eval_grad_K(const Real& angle, const Real& intensity, const lambda::type<1>& lambda),
-								 const Real& h = 1e-3);
-			VectorXr eval_grad_b(const Real& b1, const Real& b2, const lambda::type<1>& lambda, const Real& h = 1e-3);
-			Real	 eval_grad_c(const Real& c, const lambda::type<1>& lambda), const Real& h = 1e-3) const;
+			VectorXr eval_grad_K(const Real& angle, const Real& intensity, const Real& h = 1e-3) const;
+			VectorXr eval_grad_b(const Real& b1, const Real& b2, const Real& h = 1e-3) const;
+			Real	 eval_grad_c(const Real& c, const Real& h = 1e-3) const;
 			
 			// GETTERS
-			inline GCV_Exact<InputCarrier, 1>& const get_solver(void) const { return solver; };
+			inline GCV_Stochastic<InputCarrier, 1> & get_solver(void) const { return solver; };
+			
+			// SETTERS
+			inline void set_lambda(lambda::type<1> lambda_) { lambda = lambda_; };
 
 };
 

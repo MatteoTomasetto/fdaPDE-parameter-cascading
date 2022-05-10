@@ -14,7 +14,7 @@ template<PDEParameterOptions OPTION>
 class Diffusion{
 public:
 
-  Diffusion(const Real* const K_ptr) :
+  Diffusion(Real* const K_ptr) :
     K_ptr_(K_ptr) {}
 
   Diffusion(SEXP RGlobalVector) :
@@ -23,8 +23,16 @@ public:
   template<UInt ORDER, UInt mydim, UInt ndim>
   Real operator() (const FiniteElement<ORDER,mydim,ndim>& fe_, UInt iq, UInt i, UInt j) const;
 
+  void setDiffusion(const MatrixXr & K) const
+  {
+    K_ptr_[0] = K(0,0);
+    K_ptr_[1] = K(1,0);
+    K_ptr_[2] = K(0,1);
+    K_ptr_[3] = K(1,1);
+  }
+
 private:
-  const Real* const K_ptr_;
+  Real* const K_ptr_;
 };
 
 template<>
@@ -48,7 +56,7 @@ template<PDEParameterOptions OPTION>
 class Advection{
 public:
 
-  Advection(const Real* const b_ptr) :
+  Advection(Real* const b_ptr) :
     b_ptr_(b_ptr) {}
 
   Advection(SEXP RGlobalVector) :
@@ -62,8 +70,14 @@ public:
     return ExprT(*this);
   }
 
+  void setAdvection(const VectorXr & b) const
+  {
+    b_ptr_[0] = b(0);
+    b_ptr_[1] = b(1);
+  }
+
 private:
-  const Real* const b_ptr_;
+  Real* const b_ptr_;
 };
 
 template<>
@@ -87,7 +101,7 @@ Real Advection<PDEParameterOptions::SpaceVarying>::operator() (const FiniteEleme
 class Reaction{
 public:
 
-	Reaction(const Real* const  c_ptr) :
+	Reaction(Real* const  c_ptr) :
 		c_ptr_(c_ptr) {}
 
 	Reaction(SEXP RGlobalVector) :
@@ -104,8 +118,10 @@ public:
       return ExprT(*this);
   }
 
+  void setReaction(const Real & c) const { *c_ptr_ = c;}
+
 private:
-  const Real* const c_ptr_;
+  Real* const c_ptr_;
 };
 
 

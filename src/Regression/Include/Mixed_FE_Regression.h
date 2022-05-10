@@ -28,7 +28,7 @@ class MixedFERegressionBase
 
 		const std::vector<Real> mesh_time_;
 		const UInt N_; 			//!< Number of spatial basis functions
-		const UInt M_;			//!< Number of temporal nodes
+		const UInt M_;  		//!< Number of temporal nodes
 
 		const InputHandler & regressionData_;
         OptimizationData & optimizationData_; //!<COnst reference to OptimizationData class
