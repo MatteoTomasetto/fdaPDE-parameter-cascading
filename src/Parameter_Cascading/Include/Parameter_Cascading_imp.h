@@ -8,6 +8,7 @@
 #include "Optimization_Algorithm.h"
 #include <memory>
 #include <functional>
+#include <limits>
 
 template <typename InputCarrier>
 Real Parameter_Cascading<InputCarrier>::compute_optimal_lambda(void) const
@@ -71,7 +72,10 @@ void Parameter_Cascading<InputCarrier>::step_K(void)
 		// Optimization step
 		std::function<Real (Eigen::Vector2d)> F[&H, &lambdas, &iter](Eigen::Vector2d x){return H.eval_K(x(0),x(1), lamdas(iter))};
 		Eigen::Vector2d init(angles(iter), intensities(iter));
-		Genetic_Algorithm<Eigen::Vector2d, Real> opt(F, init, {100, 0.5, 0.5});
+		Eigen::Vector2d lower_bound(0.0, 0.0);
+		Eigen::Vector2d upper_bound(EIGEN_PI, std::numeric_limits<Real>::infinity());
+
+		Genetic_Algorithm<Eigen::Vector2d, Real> opt(F, init, {100, lower_bound, upper_bound});
 		
 		// Store the optimal solution
 		Eigen::Vector2d opt_sol = opt.get_solution();
@@ -122,7 +126,10 @@ void Parameter_Cascading<InputCarrier>::step_b(void)
 		// Optimization step
 		std::function<Real (Eigen::Vector2d)> F[&H, &lambdas, &iter](Eigen::Vector2d x){return H.eval_b(x(0),x(1), lamdas(iter))};
 		Eigen::Vector2d init(b1_values(iter), b2_values(iter));
-		Genetic_Algorithm<Eigen::Vector2d, Real> opt(F, init, {100, 0.5, 0.5});
+		Eigen::Vector2d lower_bound(-std::numeric_limits<Real>::infinity(), -std::numeric_limits<Real>::infinity());
+		Eigen::Vector2d upper_bound(std::numeric_limits<Real>::infinity(), std::numeric_limits<Real>::infinity());
+
+		Genetic_Algorithm<Eigen::Vector2d, Real> opt(F, init, {100, lower_bound, upper_bound});
 		
 		// Store the optimal solution
 		Eigen::Vector2d opt_sol = opt.get_solution();
@@ -171,7 +178,10 @@ void Parameter_Cascading<InputCarrier>::step_c(void)
 		// Optimization step
 		std::function<Real (Real)> F[&H, &lambdas, &iter](Real x){return H.eval_c(x, lamdas(iter))};
 		Real init{c_values(iter)};
-		Genetic_Algorithm<Real, Real> opt(F, init, {100, 0.5, 0.5});
+		Real lower_bound(-std::numeric_limits<Real>::infinity());
+		Real upper_bound(std::numeric_limits<Real>::infinity());
+
+		Genetic_Algorithm<Real, Real> opt(F, init, {100, lower_bound, upper_bound});
 		
 		// Store the optimal solution
 		Real opt_sol = opt.get_solution();

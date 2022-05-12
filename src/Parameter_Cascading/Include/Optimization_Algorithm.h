@@ -7,12 +7,12 @@
 
 struct Parameter_Genetic_Algorithm
 {
-	unsigned int N; 	// population size
-	Real prob_mutation; // probability of mutation
-	Real prob_crossover;// probability of crossover
+	unsigned int N;			// population size
+	DType lower_bound;		// lower bound for input values
+	DType upper_bound;		// upper bound for output values
 }
 
-template <class DType, class CType> // DType=Domain, CType = Codomain;
+template <class DType, class CType> // DType=Domain variable type, CType = Codomain variable type;
 class Genetic_Algorithm
 {
 	private: typedef Eigen::Matrix<DType,Eigen::Dynamic,1> VectorXdtype;
@@ -37,29 +37,35 @@ class Genetic_Algorithm
 			 const unsigned int max_iterations_genetic_algorithm;
 			 const Real tol_genetic_algorithm;
 
+			 // Generate random DType
+			 template <class SFINAE = void>
+			 const DType& get_random_element(const DType& mean, const Real& sigma) const;
+
 			 // Initialization step
 			 void initialization(void);
 
 			 // Evaluation step
-			 void evaluation(void);
+			 void evaluation(void) const;
 
-			 // Selection step
-			 void selection(VectorXctype values);
+			 // Selection and Variation steps
+			 void selection_and_variation(VectorXctype values);
 
-			 // Variation step
-			 void variation(void);
+			 // Mutation step
+			 void mutation(void);	
 
-			 // Replacement step
-			 void replacement(void);			 			 
+			 // Compute error
+			 Real compute_increment(DType new_sol, DType old_sol) const;		 			 
 
 	public: // Constructors
 			Genetic_Algorithm(const std::function<CType (DType)>& F_, const DType& init, 
 			const Parameter_Genetic_Algorithm& param_genetic_algorithm_, const unsigned int& max_iterations_genetic_algorithm_,
 			const Real & tol_genetic_algorithm_)
-			: F(F_), max_iterations_genetic_algorithm(max_iterations_genetic_algorithm_),
+			: F(F_), param_genetic_algorithm(param_genetic_algorithm_), 
+			max_iterations_genetic_algorithm(max_iterations_genetic_algorithm_),
 			tol_genetic_algorithm(tol_genetic_algorithm_)
 			 {
 			 	population << init;
+			 	population.resize(param_genetic_algorithm.N);
 			 	best = init;
 			 };
 
@@ -70,7 +76,7 @@ class Genetic_Algorithm
 			void apply(void);
 
 			// Getters
-			inline DType get_solution(void) {return best;};
+			inline DType get_solution(void) const {return best;};
 };
 
 
