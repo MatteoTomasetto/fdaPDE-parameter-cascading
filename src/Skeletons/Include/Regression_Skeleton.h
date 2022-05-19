@@ -12,6 +12,10 @@
 #include "../../Mesh/Include/Mesh.h"
 #include "../../Regression/Include/Mixed_FE_Regression.h"
 
+#include "../../Parameter_Cascading/Include/PDE_Parameter_Functionals.h" //CHECK
+#include "../../Parameter_Cascading/Include/Optimization_Algorithm.h" //CHECK
+#include "../../Parameter_Cascading/Include/Parameter_Cascading.h" // CHECK
+
 template<typename CarrierType>
 typename std::enable_if<std::is_same<multi_bool_type<std::is_base_of<Temporal, CarrierType>::value>, f_type>::value,
 	std::pair<MatrixXr, output_Data<1>> >::type optimizer_method_selection(CarrierType & carrier);
@@ -62,6 +66,15 @@ SEXP regression_skeleton(InputHandler & regressionData, OptimizationData & optim
 			//Rprintf("Pointwise\n");
 			Carrier<InputHandler>
 				carrier = CarrierBuilder<InputHandler>::build_plain_carrier(regressionData, regression, optimizationData);
+
+			if constexpr (std::is_same<InputHandler, RegressionDataElliptic>::value) // CHECK
+			{
+				GCV_Stochastic<decltype(carrier), 1> GS(carrier, true); //CHECK
+				PDE_Parameter_Functional<decltype(carrier)> H(GS); // CHECK
+				Parameter_Cascading<decltype(carrier)> PC(H, true, false, false, 1.0, 1.0, 2.0, 1.0, 3.0, mesh); // CHECK
+				PC.apply(); // CHECK
+			}
+
 			solution_bricks = optimizer_method_selection<Carrier<InputHandler>>(carrier);
 		}
 	}

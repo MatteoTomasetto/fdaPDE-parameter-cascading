@@ -5,12 +5,13 @@
 #include "PDE_Parameter_Functionals.h"
 #include <functional>
 
+template <class DType>
 struct Parameter_Genetic_Algorithm
 {
 	unsigned int N;			// population size
 	DType lower_bound;		// lower bound for input values
 	DType upper_bound;		// upper bound for output values
-}
+};
 
 template <class DType, class CType> // DType=Domain variable type, CType = Codomain variable type;
 class Genetic_Algorithm
@@ -28,7 +29,7 @@ class Genetic_Algorithm
 			 DType best;
 
 			 // Genetic algortihm parameters
-			 Parameter_Genetic_Algorithm param_genetic_algorithm;
+			 Parameter_Genetic_Algorithm<DType> param_genetic_algorithm;
 
 			 // Boolean to keep looping with genetic algorithm;
 			 // It becomes "false" if	|best_{k} - best_{k-1}| < tol_genetic_algorithm
@@ -38,14 +39,13 @@ class Genetic_Algorithm
 			 const Real tol_genetic_algorithm;
 
 			 // Generate random DType
-			 template <class SFINAE = void>
 			 const DType& get_random_element(const DType& mean, const Real& sigma) const;
 
 			 // Initialization step
 			 void initialization(void);
 
 			 // Evaluation step
-			 void evaluation(void) const;
+			 VectorXctype evaluation(void) const;
 
 			 // Selection and Variation steps
 			 void selection_and_variation(VectorXctype values);
@@ -58,7 +58,7 @@ class Genetic_Algorithm
 
 	public: // Constructors
 			Genetic_Algorithm(const std::function<CType (DType)>& F_, const DType& init, 
-			const Parameter_Genetic_Algorithm& param_genetic_algorithm_, const unsigned int& max_iterations_genetic_algorithm_,
+			const Parameter_Genetic_Algorithm<DType>& param_genetic_algorithm_, const unsigned int& max_iterations_genetic_algorithm_,
 			const Real & tol_genetic_algorithm_)
 			: F(F_), param_genetic_algorithm(param_genetic_algorithm_), 
 			max_iterations_genetic_algorithm(max_iterations_genetic_algorithm_),
@@ -69,7 +69,7 @@ class Genetic_Algorithm
 			 	best = init;
 			 };
 
-			Genetic_Algorithm(const std::function<CType (DType)>& F_, const DType& init, const Parameter_Genetic_Algorithm& param_genetic_algorithm_)
+			Genetic_Algorithm(const std::function<CType (DType)>& F_, const DType& init, const Parameter_Genetic_Algorithm<DType>& param_genetic_algorithm_)
 			: Genetic_Algorithm(F_, init, param_genetic_algorithm_, 100u, 1e-3) {};
 
 			// Function to apply the algorithm

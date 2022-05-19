@@ -67,10 +67,10 @@ void Parameter_Cascading<InputCarrier>::step_K(void)
 	// Vectors to store the GCV values for each lambda in lambdas
 	VectorXr GCV_values(lambdas.size());
 
-	for (Uint iter = 0; iter < lambdas.size(); ++iter)
+	for (UInt iter = 0; iter < lambdas.size(); ++iter)
 	{
 		// Optimization step
-		std::function<Real (Eigen::Vector2d)> F[&H, &lambdas, &iter](Eigen::Vector2d x){return H.eval_K(x(0),x(1), lamdas(iter))};
+		auto F = [this, &iter](Eigen::Vector2d x){return this->H.eval_K(x(0),x(1), this->lambdas(iter));};
 		Eigen::Vector2d init(angles(iter), intensities(iter));
 		Eigen::Vector2d lower_bound(0.0, 0.0);
 		Eigen::Vector2d upper_bound(EIGEN_PI, std::numeric_limits<Real>::infinity());
@@ -84,7 +84,7 @@ void Parameter_Cascading<InputCarrier>::step_K(void)
 
 		// Compute GCV with the new parameters
 		H.set_K(angles(iter + 1), intensities(iter + 1));
-		Real lambda_opt = compute_lambda_optimal();
+		Real lambda_opt = compute_optimal_lambda();
 		H.get_solver().update_parameters(lambda_opt);
 		GCV_values(iter) = H.get_solver().compute_f(lambda_opt);
 		
@@ -92,7 +92,7 @@ void Parameter_Cascading<InputCarrier>::step_K(void)
 	}
 
 	// Find the minimum GCV and save the related parameters
-	Uint min_GCV_pos;
+	UInt min_GCV_pos;
 	GCV_values.minCoeff(&min_GCV_pos);
 
 	angle = angles(min_GCV_pos + 1); // GCV_values is shorter than angles due to initialization => index shifted
@@ -101,7 +101,7 @@ void Parameter_Cascading<InputCarrier>::step_K(void)
 	H.set_K(angle, intensity);
 	
 	// Compute increment
-	increment += std::sqrt((angle - anlges(0))*(angle - anlges(0)));
+	increment += std::sqrt((angle - angles(0))*(angle - angles(0)));
 	increment += std::sqrt((intensity - intensities(0))*(intensity - intensities(0)));
 	
 	return;
@@ -121,10 +121,10 @@ void Parameter_Cascading<InputCarrier>::step_b(void)
 	// Vectors to store the GCV values for each lambda in lambdas_
 	VectorXr GCV_values(lambdas.size());
 
-	for (Uint iter = 0; iter < lambdas.size(); ++iter)
+	for (UInt iter = 0; iter < lambdas.size(); ++iter)
 	{
 		// Optimization step
-		std::function<Real (Eigen::Vector2d)> F[&H, &lambdas, &iter](Eigen::Vector2d x){return H.eval_b(x(0),x(1), lamdas(iter))};
+		auto F = [this, &iter](Eigen::Vector2d x){return this->H.eval_b(x(0),x(1), this->lambdas(iter));};
 		Eigen::Vector2d init(b1_values(iter), b2_values(iter));
 		Eigen::Vector2d lower_bound(-std::numeric_limits<Real>::infinity(), -std::numeric_limits<Real>::infinity());
 		Eigen::Vector2d upper_bound(std::numeric_limits<Real>::infinity(), std::numeric_limits<Real>::infinity());
@@ -138,7 +138,7 @@ void Parameter_Cascading<InputCarrier>::step_b(void)
 		
 		// Compute GCV with the new parameters
 		H.set_b(b1_values(iter + 1), b2_values(iter + 1));
-		Real lambda_opt = compute_lambda_optimal();
+		Real lambda_opt = compute_optimal_lambda();
 		H.get_solver().update_parameters(lambda_opt);
 		GCV_values(iter) = H.get_solver().compute_f(lambda_opt);
 		
@@ -146,7 +146,7 @@ void Parameter_Cascading<InputCarrier>::step_b(void)
 	}
 
 	// Find the minimum GCV and save the related parameters
-	Uint min_GCV_pos;
+	UInt min_GCV_pos;
 	GCV_values.minCoeff(&min_GCV_pos);
 
 	b1 = b1_values(min_GCV_pos + 1); // GCV_values is shorter than b1_values due to initialization => index shifted
@@ -173,10 +173,10 @@ void Parameter_Cascading<InputCarrier>::step_c(void)
 	// Vectors to store the GCV values for each lambda in lambdas
 	VectorXr GCV_values(lambdas.size());
 
-	for (Uint iter = 0; iter < lambdas.size(); ++iter)
+	for (UInt iter = 0; iter < lambdas.size(); ++iter)
 	{
 		// Optimization step
-		std::function<Real (Real)> F[&H, &lambdas, &iter](Real x){return H.eval_c(x, lamdas(iter))};
+		auto F = [this, &iter](Real x){return this->H.eval_c(x, this->lambdas(iter));};
 		Real init{c_values(iter)};
 		Real lower_bound(-std::numeric_limits<Real>::infinity());
 		Real upper_bound(std::numeric_limits<Real>::infinity());
@@ -189,7 +189,7 @@ void Parameter_Cascading<InputCarrier>::step_c(void)
 		
 		// Compute GCV with the new parameters
 		H.set_c(c_values(iter + 1));
-		Real lambda_opt = compute_lambda_optimal();
+		Real lambda_opt = compute_optimal_lambda();
 		H.get_solver().update_parameters(lambda_opt);
 		GCV_values(iter) = H.get_solver().compute_f(lambda_opt);
 		
@@ -197,7 +197,7 @@ void Parameter_Cascading<InputCarrier>::step_c(void)
 	}
 
 	// Find the minimum GCV and save the related parameters
-	Uint min_GCV_pos;
+	UInt min_GCV_pos;
 	GCV_values.minCoeff(&min_GCV_pos);
 
 	c = c_values(min_GCV_pos + 1); // GCV_values is shorter than c_values due to initialization => index shifted
@@ -232,12 +232,7 @@ bool Parameter_Cascading<InputCarrier>::apply(void)
 		if(update_c)
 			step_c();
 		
-		// Stop the procedure when all the updaters are false or when just one updater is true
-		if(update_K*update_b == false && update_K*update_c == false && update_b*update_c == false)
-			goOn = false;
-
-		else
-			goOn = increment > tol_parameter_cascading;
+		goOn = increment > tol_parameter_cascading;
 		
 	}
 	

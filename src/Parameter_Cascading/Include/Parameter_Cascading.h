@@ -44,8 +44,8 @@ class Parameter_Cascading
 			 void step_c(void); // find and update reaction parameter via optimization algorithm
 			 
 	public: // Constructor that computes the vector of lambdas from the vector of rhos presented in \cite{Bernardi}
-			template<class DType, class CType, UInt ORDER, UInt mydim, UInt ndim>
-			Parameter_Cascading(const PDE_Parameter_Functional<InputCarrier>& H_,
+			template<UInt ORDER, UInt mydim, UInt ndim>
+			Parameter_Cascading(PDE_Parameter_Functional<InputCarrier>& H_,
 								bool update_K_, bool update_b_, bool update_c_, 
 								const Real& angle_, const Real& intensity_, const Real& b1_, const Real& b2_, const Real& c_,
 								const MeshHandler<ORDER, mydim, ndim> & mesh, const unsigned int& max_iter_parameter_cascading_, 
@@ -69,8 +69,8 @@ class Parameter_Cascading
 			};
 			
 			// Constructor that set max_iter and tolerance with default values 
-			template<class DType, class CType, UInt ORDER, UInt mydim, UInt ndim>
-			Parameter_Cascading(const PDE_Parameter_Functional<InputCarrier>& H_,
+			template<UInt ORDER, UInt mydim, UInt ndim>
+			Parameter_Cascading(PDE_Parameter_Functional<InputCarrier>& H_,
 								bool update_K_, bool update_b_, bool update_c_, 
 								const Real& angle_, const Real& intensity_, const Real& b1_, const Real& b2_, const Real& c_,
 								const MeshHandler<ORDER, mydim, ndim> & mesh)

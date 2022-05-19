@@ -5,50 +5,47 @@
 #include <algorithm>
 #include <type_traits>
 
+
 // Random element generator used if DType is a container (vector with more than one elements)
 template <class DType, class CType>
-template <class SFINAE = void>
-const DType& Genetic_Algorithm<DType, CType>::get_random_elemet(const DType& mean, const Real& sigma) const
+const DType& Genetic_Algorithm<DType, CType>::get_random_element(const DType& mean, const Real& sigma) const
 {	
-	unsigned int ElemSize = mean.size();
-
 	std::random_device rd;
 	std::knuth_b seed{rd()};
 	std::default_random_engine generator{seed};
 
-	DType res;
-	res.resize(ElemSize);
-	
-	for(unsigned int j = 0u; j < ElemSize; ++j) // loop over each component of mean and res
-	{	
+	if(std::is_scalar<DType>::value)
+	{
 		// Set lower and upper values for the uniform distribution
-		Real a = std::max(mean(j) - sigma, param_genetic_algorithm.lower_bound(j));
-		Real b = std::min(mean(j) + sigma, param_genetic_algorithm.upper_bound(j));
+		Real a = std::max(mean - sigma, param_genetic_algorithm.lower_bound);
+		Real b = std::min(mean + sigma, param_genetic_algorithm.upper_bound);
+		std::uniform_real_distribution<DType> distr(a, b);
 
-		// Generate the j-th random component
-		std::uniform_distribution<decltype(mean(j))> distr(a, b);
-
-		res(j) = distr(generator);
+		return distr(generator);
 	}
 
-	return res;
-}
+	else
+	{
+		unsigned int ElemSize = mean.size();
 
-// Initialization used if DType is a scalar (double or int for example)
-template <class DType, class CType>
-const DType& Genetic_Algorithm<DType, CType>::get_random_elemet<std::enable_if< std::is_scalar<DType>::value >::type >
-(const DType& mean, const Real& sigma) const
-{
-	std::random_device rd;
-	std::knuth_b seed{rd()};
-	std::default_random_engine generator{seed};
+		DType res;
+		res.resize(ElemSize);
+	
+		for(unsigned int j = 0u; j < ElemSize; ++j) // loop over each component of mean and res
+		{	
+			// Set lower and upper values for the uniform distribution
+			Real a = std::max(mean(j) - sigma, param_genetic_algorithm.lower_bound(j));
+			Real b = std::min(mean(j) + sigma, param_genetic_algorithm.upper_bound(j));
 
-	// Set lower and upper values for the uniform distribution
-	Real a = std::max(mean - eps, param_genetic_algorithm.lower_bound);
-	Real b = std::min(mean + eps, param_genetic_algorithm.upper_bound);
-	std::uniform_distribution<DType> distr(a, b);
+			// Generate the j-th random component
+			std::uniform_real_distribution<decltype(mean(j))> distr(a, b);
 
-	return distr(generator);
+			res(j) = distr(generator);
+		}
+
+		return res;
+	}
+
 }
 
 
@@ -59,14 +56,14 @@ void Genetic_Algorithm<DType, CType>::initialization(void)
 
 	// populate the candidate solutions container "population"
 	for(unsigned int i = 1u; i < param_genetic_algorithm.N; ++i)
-		population(i) = get_random_elemet(population(0), sigma);
+		population(i) = get_random_element(population(0), sigma);
 
 	return;
 }
 
 
 template <class DType, class CType>
-VectorXctype Genetic_Algorithm<DType, CType>::evaluation(void) const
+typename Genetic_Algorithm<DType, CType>::VectorXctype Genetic_Algorithm<DType, CType>::evaluation(void) const
 {
 	VectorXctype res(param_genetic_algorithm.N);
 
@@ -88,25 +85,27 @@ void Genetic_Algorithm<DType, CType>::selection_and_variation(VectorXctype value
 	if constexpr (std::is_scalar<DType>::value)
 		zero_elem = static_cast<DType>(0);
 	else
-		std::fill(zero_elem.data(), zero_elem.data() + zero_elem.size(), 0.0) 
+		std::fill(zero_elem.data(), zero_elem.data() + zero_elem.size(), 0.0);
 
-	for (unsigned int i = 0u; i < param_genetic_algorithm.N - 2; i += 2u)
+	unsigned int i = 0u;
+
+	for (; i < param_genetic_algorithm.N - 2; i += 2u)
 	{	
 		if(values(i) > values(i+1))
 		{
-			population(i) = population(i+1) + get_random_elemet(zero_elem, sigma);
+			population(i) = population(i+1) + get_random_element(zero_elem, sigma);
 		}
 
 		else
-			population(i+1) = population(i) + get_random_elemet(zero_elem, sigma);
+			population(i+1) = population(i) + get_random_element(zero_elem, sigma);
 	}
 
 	if(i == param_genetic_algorithm.N - 2) // Extra case to manage the case with N odd
 	{
 		if(values(i) > values(i+1))
-			population(i) = population(i+1) + get_random_elemet(zero_elem, sigma);
+			population(i) = population(i+1) + get_random_element(zero_elem, sigma);
 		else
-			population(i+1) = population(i) + get_random_elemet(zero_elem, sigma);
+			population(i+1) = population(i) + get_random_element(zero_elem, sigma);
 
 	}
 
@@ -124,12 +123,12 @@ void Genetic_Algorithm<DType, CType>::mutation(void)
 		std::random_device rd;
 		std::knuth_b seed{rd()};
 		std::default_random_engine generator{seed};
-		std::uniform_distribution<Uint> distr(0, param_genetic_algorithm.N);
+		std::uniform_int_distribution<> distr(0, param_genetic_algorithm.N);
 		
 		for(unsigned int i = 0u; i < param_genetic_algorithm.N / 4; ++i) // mutation for 1/4 of the population
 		{
-			Uint idx1 = distr(generator);
-			Uint idx2 = distr(generator);
+			UInt idx1 = distr(generator);
+			UInt idx2 = distr(generator);
 
 			std::swap(population(idx1)(0), population(idx2)(1));
 		}
@@ -157,11 +156,11 @@ void Genetic_Algorithm<DType, CType>::apply(void)
 
 	// Evaluate the loss function for population elements: this is needed for selection process
 	VectorXctype F_values(param_genetic_algorithm.N);
-	F_values = evaluate();
+	F_values = evaluation();
 
 	unsigned int iter = 0u;
 
-	while(iter < max_iter_parameter_cascading && goOn)
+	while(iter < max_iterations_genetic_algorithm && goOn)
 	{	
 		// Save the old solution to compute error
 		DType old_solution = best;
@@ -169,13 +168,12 @@ void Genetic_Algorithm<DType, CType>::apply(void)
 		++iter;
 
 		// Genetic algorithm steps to modify the population (keep most promising candidate + generate new candidate solutions)
-		selection(F_values);
-		variation();
-		replacement();
+		selection_and_variation(F_values);
+		mutation();
 
 		// Find the best solution
-		F_values = evaluate();
-		Uint best_index;
+		F_values = evaluation();
+		UInt best_index;
 		F_values.minCoeff(&best_index);
 		best = population(best_index);
 

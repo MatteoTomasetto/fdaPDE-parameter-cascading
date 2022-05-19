@@ -5,10 +5,10 @@
 #include <limits>
 #include <type_traits>
 #include <utility>
-#include "../../Regression/Include/RegressionData.h"
+#include "../../Regression/Include/Regression_Data.h"
 
 template <typename InputCarrier>
-void PDE_Parameter_Functional<InputCarrier>::set_K(const Real& angle, const Real& intensity)
+void PDE_Parameter_Functional<InputCarrier>::set_K(const Real& angle, const Real& intensity) const
 {
 	// build the diffusion matrix from angle and intensity
 	MatrixXr Q;
@@ -29,11 +29,12 @@ void PDE_Parameter_Functional<InputCarrier>::set_K(const Real& angle, const Real
 			
 
 template <typename InputCarrier>
-void PDE_Parameter_Functional<InputCarrier>::set_b(const Real& b1, const Real& b2)
+void PDE_Parameter_Functional<InputCarrier>::set_b(const Real& b1, const Real& b2) const
 {
 	// build the advection vector from its components
-	VectorXr b_vector = (VectorXr << b1, b2).finished()
-
+	VectorXr b_vector;
+	b_vector << b1, b2;
+	
 	// set the advection in RegressionData
 	solver.get_carrier().get_model() -> getRegressionData().getBeta().setAdvection(b_vector);
 
@@ -45,20 +46,20 @@ template <typename InputCarrier>
 void PDE_Parameter_Functional<InputCarrier>::set_c(const Real& c) const
 {	
 	// set the advection in RegressionData
-	const auto& regression_data = solver.get_carrier().get_model() -> getRegressionData();
+	auto& regression_data = solver.get_carrier().get_model() -> getRegressionData();
 
-	if(std::is_same<RegressionDataElliptic, decltype(regression_data) >::value)
-		regression_data.getC().setReaction(c);
+	if constexpr (std::is_same<RegressionDataElliptic, decltype(regression_data) >::value)
+		regression_data.setC(c);
 	
-	//if(std::is_same<RegressionDataEllipticSpaceVarying, decltype(regression_data)>::value)
-	//	regression_data.setC(c); 
+	//if constexpr (std::is_same<RegressionDataEllipticSpaceVarying, decltype(regression_data)>::value)
+	//	regression_data.getC().setReaction(c);
 
 	return;
 }
 
 
 template <typename InputCarrier>
-Real PDE_Parameter_Functional<InputCarrier>::eval_K(const Real& angle, const Real& intensity) const
+Real PDE_Parameter_Functional<InputCarrier>::eval_K(const Real& angle, const Real& intensity, const lambda::type<1>& lambda) const
 {
 	// Check for proper values of angle and intensity
 	// Notice that we keep angle in [0.0, EIGEN_PI] exploiting the periodicity of the matrix K
@@ -71,17 +72,17 @@ Real PDE_Parameter_Functional<InputCarrier>::eval_K(const Real& angle, const Rea
 		set_K(angle, intensity);
 		
 		// solve the regression problem
-		solver.update_parameters(lambda)
+		solver.update_parameters(lambda);
 
 		// compute the value of the functional and return it
 		VectorXr z_hat = solver.get_z_hat();
-		return (solver.get_carrier().get_zp() - z_hat).squaredNorm();
+		return (*(solver.get_carrier().get_zp()) - z_hat).squaredNorm();
     }
 }
 
 
 template <typename InputCarrier>
-Real PDE_Parameter_Functional<InputCarrier>::eval_b(const Real& b1, const Real& b2)
+Real PDE_Parameter_Functional<InputCarrier>::eval_b(const Real& b1, const Real& b2, const lambda::type<1>& lambda) const
 {
 	// set parameter in RegressionData
 	set_b(b1, b2);
@@ -91,13 +92,13 @@ Real PDE_Parameter_Functional<InputCarrier>::eval_b(const Real& b1, const Real& 
 
 	// compute the value of the functional and return it
 	VectorXr z_hat = solver.get_z_hat();
-	return (solver.get_carrier().get_zp() - z_hat).squaredNorm();
+	return (*(solver.get_carrier().get_zp()) - z_hat).squaredNorm();
 
 }
 
 
 template <typename InputCarrier>
-Real PDE_Parameter_Functional<InputCarrier>::eval_c(const Real& c) const
+Real PDE_Parameter_Functional<InputCarrier>::eval_c(const Real& c, const lambda::type<1>& lambda) const
 {
 	// set parameter in RegressionData
 	set_c(c);
@@ -107,13 +108,13 @@ Real PDE_Parameter_Functional<InputCarrier>::eval_c(const Real& c) const
 
 	// compute the value of the functional and return it
 	VectorXr z_hat = solver.get_z_hat();
-	return (solver.get_carrier().get_zp() - z_hat).squaredNorm();
+	return (*(solver.get_carrier().get_zp()) - z_hat).squaredNorm();
 
 }
 
 
 template <typename InputCarrier>
-VextorXr PDE_Parameter_Functional<InputCarrier>::eval_grad_K(const Real& angle, const Real& intensity, const Real& h)
+VectorXr PDE_Parameter_Functional<InputCarrier>::eval_grad_K(const Real& angle, const Real& intensity, const lambda::type<1>& lambda, const Real& h) const
 {
 	VectorXr res;
 
@@ -153,7 +154,7 @@ VextorXr PDE_Parameter_Functional<InputCarrier>::eval_grad_K(const Real& angle, 
 		intensity_lower = intensity - h;
 		h_intensity = 2. * h;
 	}
-	res << (eval_K(angle_upper, intensity, lambda) - eval_K(angle_lower, intensity, lambda)) / std::min(h_angle_upper, 																											h_angle_lower),
+	res << (eval_K(angle_upper, intensity, lambda) - eval_K(angle_lower, intensity, lambda)) / std::min(h_angle_upper, h_angle_lower),
 		   (eval_K(angle, intensity + h, lambda) - eval_K(angle, intensity_lower, lambda)) / h_intensity;
 	
 	return res;
@@ -161,7 +162,7 @@ VextorXr PDE_Parameter_Functional<InputCarrier>::eval_grad_K(const Real& angle, 
 
 
 template <typename InputCarrier>
-VectorXr PDE_Parameter_Functional<InputCarrier>::eval_grad_b(const Real& b1, const Real& b2, const Real& h)
+VectorXr PDE_Parameter_Functional<InputCarrier>::eval_grad_b(const Real& b1, const Real& b2, const lambda::type<1>& lambda, const Real& h) const
 {
 	VectorXr res;
 	
@@ -174,7 +175,7 @@ VectorXr PDE_Parameter_Functional<InputCarrier>::eval_grad_b(const Real& b1, con
 
 
 template <typename InputCarrier>
-Real PDE_Parameter_Functional<InputCarrier>::eval_grad_c(const Real& c, const Real& h)
+Real PDE_Parameter_Functional<InputCarrier>::eval_grad_c(const Real& c, const lambda::type<1>& lambda, const Real& h) const
 {
 	return (eval_c(c + h, lambda) - eval_c(c - h, lambda)) / (2. * h);
 }
