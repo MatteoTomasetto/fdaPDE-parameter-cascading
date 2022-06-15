@@ -204,6 +204,8 @@ class MixedFERegressionBase
 		// -- GETTERS --
 		//! A function returning the regression data
 		InputHandler const & getRegressionData(void) const {return this->regressionData_;}
+		//! A function returning the optimization data
+		OptimizationData & getOptimizationData(void) const {return this->optimizationData_;}
 		//! A function returning the computed barycenters of the locationss
 		MatrixXr const & getBarycenters(void) const {return barycenters_;}; //returns a const reference as in rergressionData
 		//! A function returning the element ids of the locations

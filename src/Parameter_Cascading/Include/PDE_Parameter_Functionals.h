@@ -2,8 +2,8 @@
 #define __PDE_PARAMETER_FUNCTIONALS_H__
 
 #include "../../FdaPDE.h"
-#include "../../Lambda_Optimization/Include/Lambda_Optimizer.h"
 #include "../../FE_Assemblers_Solvers/Include/Param_Functors.h"
+#include "../../Regression/Include/Mixed_FE_Regression.h"
 
 /* *** PDE_Parameter_Functional ***
  *
@@ -16,16 +16,19 @@
 */
 
 // TODO For now we do not consider spacevarying case / GAM / temporal case (with lambdaS and lambdaT).
-
-template <typename InputCarrier>
+template <UInt ORDER, UInt mydim, UInt ndim>
 class PDE_Parameter_Functional
 {
-	private: // Lambda optimizer object with a carrier needed to solve the regression problem
-			 GCV_Stochastic<InputCarrier, 1> & solver;
+	private: // MixedFERegression object with to solve the regression problem
+			 MixedFERegression<RegressionDataElliptic> & model;
+
+			 // mesh needed to call .preapply() every time the parameters change in the problem
+			 const MeshHandler<ORDER, mydim, ndim> & mesh;
 			 
 	public: // Constructor to set the reference to the solver
-			PDE_Parameter_Functional(GCV_Stochastic<InputCarrier, 1> & solver_)
-			: solver(solver_) {};
+			PDE_Parameter_Functional(MixedFERegression<RegressionDataElliptic> & model_,
+									 const MeshHandler<ORDER, mydim, ndim> & mesh_)
+			: model(model_), mesh(mesh_) {};
 
 			// Functions to build PDE parameters and set them in RegressionData
 			void set_K(const Real& angle, const Real& intensity) const;
@@ -43,7 +46,7 @@ class PDE_Parameter_Functional
 			Real	 eval_grad_c(const Real& c, const lambda::type<1>& lambda, const Real& h = 1e-3) const;
 			
 			// GETTERS
-			inline GCV_Stochastic<InputCarrier, 1> & get_solver(void) const { return solver; };
+			inline MixedFERegression<RegressionDataElliptic> & getModel(void) const { return model; };
 };
 
 #include "PDE_Parameter_Functionals_imp.h"

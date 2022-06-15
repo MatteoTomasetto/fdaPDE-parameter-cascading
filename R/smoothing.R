@@ -497,7 +497,7 @@ smooth.FEM<-function(locations = NULL, observations, FEMbasis,
     optim = optim, lambda = lambda, DOF.stochastic.realizations = DOF.stochastic.realizations, DOF.stochastic.seed = DOF.stochastic.seed,
     DOF.matrix = DOF.matrix, GCV.inflation.factor = GCV.inflation.factor, lambda.optimization.tolerance = lambda.optimization.tolerance)
 
-  # If I have PDE non-sv case I need (constant) matrices as parameters
+  # If I have PDE non-sv case I need matrices as parameters
   if(!is.null(PDE_parameters) & space_varying == FALSE)
   {
     PDE_parameters$K = as.matrix(PDE_parameters$K)

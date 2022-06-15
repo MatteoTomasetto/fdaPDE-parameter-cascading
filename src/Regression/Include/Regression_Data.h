@@ -213,9 +213,9 @@ class  RegressionDataElliptic:public RegressionData
 			SEXP RK, SEXP Rbeta, SEXP Rc, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues,
 			SEXP RincidenceMatrix, SEXP RarealDataAvg, SEXP Rflag_mass, SEXP Rflag_parabolic, SEXP Rflag_iterative, SEXP Rmax_num_iteration, SEXP Rthreshold, SEXP Ric, SEXP Rsearch);
 
-		Diffusion<PDEParameterOptions::Constant> const & getK() const {return K_;}
-		Advection<PDEParameterOptions::Constant> const & getBeta() const {return beta_;}
-		Real const getC() const {return c_;}
+		const Diffusion<PDEParameterOptions::Constant> & getK() const {return K_;}
+		const Advection<PDEParameterOptions::Constant> & getBeta() const {return beta_;}
+		const Real getC() const {return c_;}
 
 		void setC(const Real& c){ c_ = c;}
 
@@ -260,10 +260,10 @@ class RegressionDataEllipticSpaceVarying:public RegressionData
 			SEXP RK, SEXP Rbeta, SEXP Rc, SEXP Ru, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues, SEXP RincidenceMatrix, SEXP RarealDataAvg,
 			SEXP Rflag_mass, SEXP Rflag_parabolic, SEXP Rflag_iterative, SEXP Rmax_num_iteration, SEXP Rthreshold, SEXP Ric, SEXP Rsearch);
 
-		Diffusion<PDEParameterOptions::SpaceVarying> const & getK() const {return K_;}
-		Advection<PDEParameterOptions::SpaceVarying> const & getBeta() const {return beta_;}
-		Reaction const & getC() const {return c_;}
-		ForcingTerm const & getU() const {return u_;}
+		const Diffusion<PDEParameterOptions::SpaceVarying> & getK() const {return K_;}
+		const Advection<PDEParameterOptions::SpaceVarying> & getBeta() const {return beta_;}
+		const Reaction & getC() const {return c_;}
+		const ForcingTerm & getU() const {return u_;}
 
 };
 

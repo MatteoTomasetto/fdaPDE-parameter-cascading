@@ -6,60 +6,75 @@
 #include <type_traits>
 #include <utility>
 #include "../../Regression/Include/Regression_Data.h"
+#include "../../Lambda_Optimization/Include/Carrier.h"
+#include "../../Lambda_Optimization/Include/Lambda_Optimizer.h"
+#include "../../Lambda_Optimization/Include/Solution_Builders.h"
 
-template <typename InputCarrier>
-void PDE_Parameter_Functional<InputCarrier>::set_K(const Real& angle, const Real& intensity) const
+template <UInt ORDER, UInt mydim, UInt ndim>
+void PDE_Parameter_Functional<ORDER, mydim, ndim>::set_K(const Real& angle, const Real& intensity) const
 {
 	// build the diffusion matrix from angle and intensity
-	MatrixXr Q;
+	MatrixXr Q(2,2);
 	Q << std::cos(angle), -std::sin(angle),
 		 std::sin(angle), std::cos(angle);
 
-	MatrixXr Sigma;
+	MatrixXr Sigma(2,2);
 	Sigma << 1/std::sqrt(intensity), 0.,
  			 0., std::sqrt(intensity);
 
-	MatrixXr K_matrix = Q * Sigma * Q.inverse();
+	MatrixXr K_matrix(2,2);
+	K_matrix = Q * Sigma * Q.inverse();
+
+	Rprintf("New K computed\n");
 
 	// set the diffusion in RegressionData
-	solver.get_carrier().get_model() -> getRegressionData().getK().setDiffusion(K_matrix);
-				
+	model.getRegressionData().getK().setDiffusion(K_matrix);
+
+	Rprintf("New K set in RegressionData\n");
+	Rprintf("Preapply\n");
+
+	model.template preapply<ORDER, mydim, ndim>(mesh);
+
 	return;
 }
 			
 
-template <typename InputCarrier>
-void PDE_Parameter_Functional<InputCarrier>::set_b(const Real& b1, const Real& b2) const
+template <UInt ORDER, UInt mydim, UInt ndim>
+void PDE_Parameter_Functional<ORDER, mydim, ndim>::set_b(const Real& b1, const Real& b2) const
 {
 	// build the advection vector from its components
-	VectorXr b_vector;
+	VectorXr b_vector(2,1);
 	b_vector << b1, b2;
 	
 	// set the advection in RegressionData
-	solver.get_carrier().get_model() -> getRegressionData().getBeta().setAdvection(b_vector);
+	model.getRegressionData().getBeta().setAdvection(b_vector);
+
+	model.template preapply<ORDER, mydim, ndim>(mesh);
 
 	return;
 }
 
 
-template <typename InputCarrier>
-void PDE_Parameter_Functional<InputCarrier>::set_c(const Real& c) const
+template <UInt ORDER, UInt mydim, UInt ndim>
+void PDE_Parameter_Functional<ORDER, mydim, ndim>::set_c(const Real& c) const
 {	
 	// set the advection in RegressionData
-	auto& regression_data = solver.get_carrier().get_model() -> getRegressionData();
+	//auto& regression_data = model.getRegressionData();
 
-	if constexpr (std::is_same<RegressionDataElliptic, decltype(regression_data) >::value)
-		regression_data.setC(c);
+	//if constexpr (std::is_same<RegressionDataElliptic, decltype(regression_data) >::value) // constexpr KO in c++11
+	//	regression_data.setC(c);
 	
 	//if constexpr (std::is_same<RegressionDataEllipticSpaceVarying, decltype(regression_data)>::value)
 	//	regression_data.getC().setReaction(c);
 
+	// PREAPPLY NEEDED
+
 	return;
 }
 
 
-template <typename InputCarrier>
-Real PDE_Parameter_Functional<InputCarrier>::eval_K(const Real& angle, const Real& intensity, const lambda::type<1>& lambda) const
+template <UInt ORDER, UInt mydim, UInt ndim>
+Real PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_K(const Real& angle, const Real& intensity, const lambda::type<1>& lambda) const
 {
 	// Check for proper values of angle and intensity
 	// Notice that we keep angle in [0.0, EIGEN_PI] exploiting the periodicity of the matrix K
@@ -72,51 +87,67 @@ Real PDE_Parameter_Functional<InputCarrier>::eval_K(const Real& angle, const Rea
 		set_K(angle, intensity);
 		
 		// solve the regression problem
-		solver.update_parameters(lambda);
+		Carrier<RegressionDataElliptic> carrier = CarrierBuilder<RegressionDataElliptic>::build_plain_carrier(model.getRegressionData(), model, model.getOptimizationData());
+		
+		GCV_Stochastic<Carrier<RegressionDataElliptic>, 1> GS(carrier, true); // "true" only the first time would be better
+		
+		carrier.get_opt_data() -> set_current_lambdaS(lambda); // dovrebbe farlo già in carrier.apply
 
-		// compute the value of the functional and return it
-		VectorXr z_hat = solver.get_z_hat();
-		return (*(solver.get_carrier().get_zp()) - z_hat).squaredNorm();
+		GS.update_parameters(lambda);
+
+		VectorXr z_hat = GS.get_z_hat();
+		VectorXr zp = *(model.getRegressionData().getObservations());
+		Real res = (zp - z_hat).squaredNorm();
+		Rprintf("Result of eval_k: %f\n", res);
+
+		return res;
     }
+
 }
 
 
-template <typename InputCarrier>
-Real PDE_Parameter_Functional<InputCarrier>::eval_b(const Real& b1, const Real& b2, const lambda::type<1>& lambda) const
+template <UInt ORDER, UInt mydim, UInt ndim>
+Real PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_b(const Real& b1, const Real& b2, const lambda::type<1>& lambda) const
 {
 	// set parameter in RegressionData
 	set_b(b1, b2);
 	
 	// solve the regression problem
-	solver.update_parameters(lambda);
-
-	// compute the value of the functional and return it
-	VectorXr z_hat = solver.get_z_hat();
-	return (*(solver.get_carrier().get_zp()) - z_hat).squaredNorm();
+	Carrier<RegressionDataElliptic> carrier = CarrierBuilder<RegressionDataElliptic>::build_plain_carrier(model.getRegressionData(), model, model.getOptimizationData());
+		
+	GCV_Stochastic<Carrier<RegressionDataElliptic>, 1> GS(carrier, true);
+		
+	GS.update_parameters(lambda);
+	VectorXr z_hat = GS.get_z_hat();
+	VectorXr zp = *(model.getRegressionData().getObservations());
+	return (zp - z_hat).squaredNorm();
 
 }
 
 
-template <typename InputCarrier>
-Real PDE_Parameter_Functional<InputCarrier>::eval_c(const Real& c, const lambda::type<1>& lambda) const
+template <UInt ORDER, UInt mydim, UInt ndim>
+Real PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_c(const Real& c, const lambda::type<1>& lambda) const
 {
 	// set parameter in RegressionData
 	set_c(c);
 
 	// solve the regression problem
-	solver.update_parameters(lambda);
-
-	// compute the value of the functional and return it
-	VectorXr z_hat = solver.get_z_hat();
-	return (*(solver.get_carrier().get_zp()) - z_hat).squaredNorm();
+	Carrier<RegressionDataElliptic> carrier = CarrierBuilder<RegressionDataElliptic>::build_plain_carrier(model.getRegressionData(), model, model.getOptimizationData());
+		
+	GCV_Stochastic<Carrier<RegressionDataElliptic>, 1> GS(carrier, true);
+		
+	GS.update_parameters(lambda);
+	VectorXr z_hat = GS.get_z_hat();
+	VectorXr zp = *(model.getRegressionData().getObservations());
+	return (zp - z_hat).squaredNorm();
 
 }
 
 
-template <typename InputCarrier>
-VectorXr PDE_Parameter_Functional<InputCarrier>::eval_grad_K(const Real& angle, const Real& intensity, const lambda::type<1>& lambda, const Real& h) const
+template <UInt ORDER, UInt mydim, UInt ndim>
+VectorXr PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_grad_K(const Real& angle, const Real& intensity, const lambda::type<1>& lambda, const Real& h) const
 {
-	VectorXr res;
+	VectorXr res(2,1);
 
 	// Check if angle and intensity remain in a proper range after finite difference schemes
 	Real angle_lower, angle_upper, intensity_lower;
@@ -161,10 +192,10 @@ VectorXr PDE_Parameter_Functional<InputCarrier>::eval_grad_K(const Real& angle, 
 }
 
 
-template <typename InputCarrier>
-VectorXr PDE_Parameter_Functional<InputCarrier>::eval_grad_b(const Real& b1, const Real& b2, const lambda::type<1>& lambda, const Real& h) const
+template <UInt ORDER, UInt mydim, UInt ndim>
+VectorXr PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_grad_b(const Real& b1, const Real& b2, const lambda::type<1>& lambda, const Real& h) const
 {
-	VectorXr res;
+	VectorXr res(2,1);
 	
 	res << (eval_b(b1 + h, b2, lambda) - eval_b(b1 - h, b2, lambda)) / (2. * h),
 		   (eval_b(b1, b2 + h, lambda) - eval_b(b1, b2 - h, lambda)) / (2. * h);
@@ -174,8 +205,8 @@ VectorXr PDE_Parameter_Functional<InputCarrier>::eval_grad_b(const Real& b1, con
 }
 
 
-template <typename InputCarrier>
-Real PDE_Parameter_Functional<InputCarrier>::eval_grad_c(const Real& c, const lambda::type<1>& lambda, const Real& h) const
+template <UInt ORDER, UInt mydim, UInt ndim>
+Real PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_grad_c(const Real& c, const lambda::type<1>& lambda, const Real& h) const
 {
 	return (eval_c(c + h, lambda) - eval_c(c - h, lambda)) / (2. * h);
 }

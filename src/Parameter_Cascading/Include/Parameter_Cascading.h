@@ -4,11 +4,11 @@
 #include "../../FdaPDE.h"
 #include "PDE_Parameter_Functionals.h"
 
-template <typename InputCarrier>
+template <UInt ORDER, UInt mydim, UInt ndim>
 class Parameter_Cascading
 {
 	private: // Functional to optimize in the parameter cascading algorithm
-			 PDE_Parameter_Functional<InputCarrier> & H;
+			 PDE_Parameter_Functional<ORDER, mydim, ndim> & H;
 
 			 // Booleans to keep track of the wanted parameters to optimize
 			 bool update_K;
@@ -37,18 +37,18 @@ class Parameter_Cascading
 			 const Real tol_parameter_cascading;				// tolerance 
 			 
 			 // function to compute the optimal lambda through GCV
-			 Real compute_optimal_lambda(void) const;
+			 Real compute_optimal_lambda(Carrier<RegressionDataElliptic>& carrier, GCV_Stochastic<Carrier<RegressionDataElliptic>, 1>& GS) const;
 			 
 			 void step_K(void); // find and update diffusion parameters via optimization algorithm
 			 void step_b(void); // find and update advection components via optimization algorithm
 			 void step_c(void); // find and update reaction parameter via optimization algorithm
 			 
 	public: // Constructor that computes the vector of lambdas from the vector of rhos presented in \cite{Bernardi}
-			template<UInt ORDER, UInt mydim, UInt ndim>
-			Parameter_Cascading(PDE_Parameter_Functional<InputCarrier>& H_,
+			Parameter_Cascading(PDE_Parameter_Functional<ORDER, mydim, ndim>& H_,
 								bool update_K_, bool update_b_, bool update_c_, 
 								const Real& angle_, const Real& intensity_, const Real& b1_, const Real& b2_, const Real& c_,
-								const MeshHandler<ORDER, mydim, ndim> & mesh, const unsigned int& max_iter_parameter_cascading_, 
+								const MeshHandler<ORDER, mydim, ndim> & mesh, // we could also get mesh from H (?)
+								const unsigned int& max_iter_parameter_cascading_, 
 								const Real & tol_parameter_cascading_)
 			: H(H_), update_K(update_K_), update_b(update_b_), update_c(update_c_),
 			  angle(angle_), intensity(intensity_), b1(b1_), b2(b2_), c(c_), 
@@ -57,28 +57,29 @@ class Parameter_Cascading
 			{
 				// compute the lambdas for the parameter cascading algorithm from the rhos introduced in \cite{Bernardi}
 				VectorXr rhos;
-				rhos = VectorXr::LinSpaced(0.01, 0, 1);
+				rhos = VectorXr::LinSpaced(3, 0.01, 0.99); // set length vector
 
-				unsigned int n = H.get_solver().get_carrier().get_n_obs();
+				unsigned int n = H.getModel().getRegressionData().getNumberofObservations();
 
 				Real area = 0.0;
 				for(unsigned int i = 0u; i < mesh.num_elements(); ++i)
 					area += mesh.elementMeasure(i);
 
+				Rprintf("area computed from mesh = %e\n", area);
+
 				lambdas = rhos.array() / (1 - rhos.array()) * n / area;
 			};
 			
 			// Constructor that set max_iter and tolerance with default values 
-			template<UInt ORDER, UInt mydim, UInt ndim>
-			Parameter_Cascading(PDE_Parameter_Functional<InputCarrier>& H_,
+			Parameter_Cascading(PDE_Parameter_Functional<ORDER, mydim, ndim>& H_,
 								bool update_K_, bool update_b_, bool update_c_, 
 								const Real& angle_, const Real& intensity_, const Real& b1_, const Real& b2_, const Real& c_,
 								const MeshHandler<ORDER, mydim, ndim> & mesh)
-			: Parameter_Cascading(H_, update_K_, update_b_, update_c_, angle_, intensity_, b1_, b2_, c_, mesh, 200u, 1e-3) {};
-
+			: Parameter_Cascading(H_, update_K_, update_b_, update_c_, angle_, intensity_, b1_, b2_, c_, mesh, 2u, 1e-3) {};
+			// set default max number of iter
 
 			// Function to apply the parameter cascading algorithm
-			bool apply(void);
+			void apply(void);
 
 };
 

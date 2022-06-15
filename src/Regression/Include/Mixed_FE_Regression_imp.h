@@ -795,7 +795,7 @@ void MixedFERegressionBase<InputHandler>::computeDegreesOfFreedomExact(UInt outp
 
     if (isRcomputed_ == false)
     {
-        isRcomputed_ = true;
+        //isRcomputed_ = true;
         //take R0 from the final matrix since it has already applied the dirichlet boundary conditions
         SpMat R0 = matrixNoCov_.bottomRightCorner(nnodes,nnodes)/lambdaS;
 
@@ -1167,7 +1167,7 @@ void MixedFERegressionBase<InputHandler>::preapply(EOExpr<A> oper, const Forcing
 	if(!isR1Computed)
 	{
 		Assembler::operKernel(oper, mesh_, fe, R1_);
-		isR1Computed = true;
+		//isR1Computed = true;
 	}
 
 	if(!isR0Computed)
@@ -1347,9 +1347,9 @@ MatrixXv  MixedFERegressionBase<InputHandler>::apply(void)
 		 		
 			_rightHandSide = rhs;
 
-			if(isGAMData || optimizationData_.get_current_lambdaS()!=optimizationData_.get_last_lS_used() ||
-				optimizationData_.get_current_lambdaT()!=optimizationData_.get_last_lT_used())
-			{
+			//if(isGAMData || optimizationData_.get_current_lambdaS()!=optimizationData_.get_last_lS_used() ||
+			//	optimizationData_.get_current_lambdaT()!=optimizationData_.get_last_lT_used())
+			//{
 				if(!regressionData_.isSpaceTime())
 				{
 					buildSystemMatrix(lambdaS);
@@ -1358,7 +1358,7 @@ MatrixXv  MixedFERegressionBase<InputHandler>::apply(void)
 				{
 					buildSystemMatrix(lambdaS, lambdaT);
 				}
-			}
+			//}
 
 			// Right-hand side correction for space varying PDEs
 			if(this->isSpaceVarying)
@@ -1381,11 +1381,11 @@ MatrixXv  MixedFERegressionBase<InputHandler>::apply(void)
 
 
 			//f Factorization of the system for woodbury decomposition
-			if(isGAMData || optimizationData_.get_current_lambdaS()!=optimizationData_.get_last_lS_used() ||
-				optimizationData_.get_current_lambdaT()!=optimizationData_.get_last_lT_used())
-			{
+			//if(isGAMData || optimizationData_.get_current_lambdaS()!=optimizationData_.get_last_lS_used() ||
+			//	optimizationData_.get_current_lambdaT()!=optimizationData_.get_last_lT_used())
+			//{
 				system_factorize();
-			}
+			//}
 
 			// system solution
 			_solution(s,t) = this->template system_solve(this->_rightHandSide);
@@ -1793,6 +1793,9 @@ class MixedFERegression<RegressionDataElliptic>: public MixedFERegressionBase<Re
 	  		const Advection<PDEParameterOptions::Constant>& b = this->regressionData_.getBeta();
 
 			MixedFERegressionBase<RegressionDataElliptic>::preapply(c*mass+stiff[K]+b.dot(grad), ForcingTerm(), mesh);
+
+			Eigen::SparseMatrix<Real>::InnerIterator it(R1_,0);
+			Rprintf("preapply done: first coeff of R1 = %f", it.value());
 
 		}
 };

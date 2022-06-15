@@ -4,6 +4,7 @@
 #include "../../FdaPDE.h"
 #include "PDE_Parameter_Functionals.h"
 #include <functional>
+#include <vector>
 
 template <class DType>
 struct Parameter_Genetic_Algorithm
@@ -13,10 +14,10 @@ struct Parameter_Genetic_Algorithm
 	DType upper_bound;		// upper bound for output values
 };
 
-template <class DType, class CType> // DType=Domain variable type, CType = Codomain variable type;
+template <class DType, class CType, class SFINAE = void> // DType = Domain variable type, CType = Codomain variable type;
 class Genetic_Algorithm
 {
-	private: typedef Eigen::Matrix<DType,Eigen::Dynamic,1> VectorXdtype;
+	private: typedef std::vector<DType> VectorXdtype;
 			 typedef Eigen::Matrix<CType,Eigen::Dynamic,1> VectorXctype;
 
 			 // Function to optimize
@@ -39,7 +40,7 @@ class Genetic_Algorithm
 			 const Real tol_genetic_algorithm;
 
 			 // Generate random DType
-			 const DType& get_random_element(const DType& mean, const Real& sigma) const;
+			 const DType get_random_element(const DType& mean, const Real& sigma) const;
 
 			 // Initialization step
 			 void initialization(void);
@@ -64,8 +65,76 @@ class Genetic_Algorithm
 			max_iterations_genetic_algorithm(max_iterations_genetic_algorithm_),
 			tol_genetic_algorithm(tol_genetic_algorithm_)
 			 {
-			 	population << init;
 			 	population.resize(param_genetic_algorithm.N);
+				population[0] = init;
+			 	best = init;
+			 };
+
+			Genetic_Algorithm(const std::function<CType (DType)>& F_, const DType& init, const Parameter_Genetic_Algorithm<DType>& param_genetic_algorithm_)
+			: Genetic_Algorithm(F_, init, param_genetic_algorithm_, 100u, 1e-3) {};
+
+			// Function to apply the algorithm
+			void apply(void);
+
+			// Getters
+			inline DType get_solution(void) const {return best;};
+};
+
+
+
+template <class DType, class CType> // DType = Domain variable type, CType = Codomain variable type;
+class Genetic_Algorithm<DType, CType, typename std::enable_if< std::is_floating_point<DType>::value, void >::type>
+{
+	private: typedef Eigen::Matrix<DType,Eigen::Dynamic,1> VectorXdtype;
+			 typedef Eigen::Matrix<CType,Eigen::Dynamic,1> VectorXctype;
+
+			 // Function to optimize
+			 std::function<CType (DType)> F; 
+
+			 // Population of candidate solutions
+			 VectorXdtype population;
+			 
+			 // Best solution (minimum point)
+			 DType best;
+
+			 // Genetic algortihm parameters
+			 Parameter_Genetic_Algorithm<DType> param_genetic_algorithm;
+
+			 // Boolean to keep looping with genetic algorithm;
+			 // It becomes "false" if	|best_{k} - best_{k-1}| < tol_genetic_algorithm
+			 bool goOn = true;
+
+			 const unsigned int max_iterations_genetic_algorithm;
+			 const Real tol_genetic_algorithm;
+
+			 // Generate random DType
+			 const DType get_random_element(const DType& mean, const Real& sigma) const;
+
+			 // Initialization step
+			 void initialization(void);
+
+			 // Evaluation step
+			 VectorXctype evaluation(void) const;
+
+			 // Selection and Variation steps
+			 void selection_and_variation(VectorXctype values);
+
+			 // Mutation step
+			 void mutation(void);	
+
+			 // Compute error
+			 Real compute_increment(DType new_sol, DType old_sol) const;		 			 
+
+	public: // Constructors
+			Genetic_Algorithm(const std::function<CType (DType)>& F_, const DType& init, 
+			const Parameter_Genetic_Algorithm<DType>& param_genetic_algorithm_, const unsigned int& max_iterations_genetic_algorithm_,
+			const Real & tol_genetic_algorithm_)
+			: F(F_), param_genetic_algorithm(param_genetic_algorithm_), 
+			max_iterations_genetic_algorithm(max_iterations_genetic_algorithm_),
+			tol_genetic_algorithm(tol_genetic_algorithm_)
+			 {
+			 	population.resize(param_genetic_algorithm.N);
+				population[0] = init;
 			 	best = init;
 			 };
 
