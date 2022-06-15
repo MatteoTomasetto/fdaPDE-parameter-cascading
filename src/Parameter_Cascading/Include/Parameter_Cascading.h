@@ -45,14 +45,10 @@ class Parameter_Cascading
 			 
 	public: // Constructor that computes the vector of lambdas from the vector of rhos presented in \cite{Bernardi}
 			Parameter_Cascading(PDE_Parameter_Functional<ORDER, mydim, ndim>& H_,
-								bool update_K_, bool update_b_, bool update_c_, 
-								const Real& angle_, const Real& intensity_, const Real& b1_, const Real& b2_, const Real& c_,
 								const MeshHandler<ORDER, mydim, ndim> & mesh, // we could also get mesh from H (?)
 								const unsigned int& max_iter_parameter_cascading_, 
 								const Real & tol_parameter_cascading_)
-			: H(H_), update_K(update_K_), update_b(update_b_), update_c(update_c_),
-			  angle(angle_), intensity(intensity_), b1(b1_), b2(b2_), c(c_), 
-			  max_iter_parameter_cascading(max_iter_parameter_cascading_), 
+			: H(H_), max_iter_parameter_cascading(max_iter_parameter_cascading_), 
 			  tol_parameter_cascading(tol_parameter_cascading_) 
 			{
 				// compute the lambdas for the parameter cascading algorithm from the rhos introduced in \cite{Bernardi}
@@ -68,14 +64,27 @@ class Parameter_Cascading
 				Rprintf("area computed from mesh = %e\n", area);
 
 				lambdas = rhos.array() / (1 - rhos.array()) * n / area;
+
+				// initialize the parameters with the values in RegressionData
+				angle = H.getModel().getRegressionData().getK().getAngle();
+				intensity = H.getModel().getRegressionData().getK().getIntensity();
+				b1 = H.getModel().getRegressionData().getBeta().get_b1_coeff();
+				b2 = H.getModel().getRegressionData().getBeta().get_b2_coeff();
+				c = H.getModel().getRegressionData().getC().get_c_coeff();
+
+				// set which parameters to update
+				update_K = false;
+				update_b = false;
+				update_c = false;
+				UInt parameter_cascading_option = H.getModel().getRegressionData().get_parameter_cascading_option();
+				if(parameter_cascading_option == 1)
+					update_K = true;
 			};
 			
 			// Constructor that set max_iter and tolerance with default values 
 			Parameter_Cascading(PDE_Parameter_Functional<ORDER, mydim, ndim>& H_,
-								bool update_K_, bool update_b_, bool update_c_, 
-								const Real& angle_, const Real& intensity_, const Real& b1_, const Real& b2_, const Real& c_,
 								const MeshHandler<ORDER, mydim, ndim> & mesh)
-			: Parameter_Cascading(H_, update_K_, update_b_, update_c_, angle_, intensity_, b1_, b2_, c_, mesh, 2u, 1e-3) {};
+			: Parameter_Cascading(H_, mesh, 2u, 1e-3) {};
 			// set default max number of iter
 
 			// Function to apply the parameter cascading algorithm

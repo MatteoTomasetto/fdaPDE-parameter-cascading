@@ -49,7 +49,7 @@ checkSmoothingParameters<-function(locations = NULL, observations, FEMbasis, cov
       stop("'b' required in PDE_parameters;  is NULL.")
     if(is.null(PDE_parameters$c))
       stop("'c' required in PDE_parameters;  is NULL.")
-  }
+    }
   
   space_varying = FALSE
   

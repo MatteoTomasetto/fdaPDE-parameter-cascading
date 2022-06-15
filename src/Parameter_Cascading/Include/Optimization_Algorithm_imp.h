@@ -11,7 +11,7 @@
 template <class DType, class CType, class SFINAE>
 const DType Genetic_Algorithm<DType, CType, SFINAE>::get_random_element(const DType& mean, const Real& sigma) const
 {	
-	std::default_random_engine generator{std::random_device{}();};
+	std::default_random_engine generator{std::random_device{}()};
 
 	unsigned int ElemSize = mean.size();
 

@@ -2,6 +2,7 @@
 #define __PARAM_FUNCTORS_H__
 
 #include "Pde_Expression_Templates.h"
+#include <cmath>
 
 // Forward declaration!
 template <UInt ORDER, UInt mydim, UInt ndim>
@@ -31,6 +32,26 @@ public:
     K_ptr_[2] = K(0,1);
     K_ptr_[3] = K(1,1);
   }
+
+  Real getAngle(void) const
+  { 
+    Real intensity = getIntensity();
+
+    if(std::abs(K_ptr_[1]) < 1e-16)
+      return EIGEN_PI / 2;
+    else
+      return std::atan((K_ptr_[3] - std::sqrt(intensity)) / K_ptr_[1])
+  }
+
+  Real getIntensity(void) const
+  { 
+    Real intensity = K_ptr_[3] + K_ptr_[0] + std::sqrt((K_ptr_[3] + K_ptr_[0]) * (K_ptr_[3] + K_ptr_[0]) + 4. * K_ptr_[1] * K_ptr_[1] - 4. * K_ptr_[3] * K_ptr_[0]);
+
+    intensity /= 2.;
+
+    return intensity*intensity;
+  }
+
 
 private:
   Real* const K_ptr_;
@@ -77,6 +98,16 @@ public:
     b_ptr_[1] = b(1);
   }
 
+  Real get_b1_coeff(void) const
+  { 
+    return b_ptr_[0];
+  }
+
+  Real get_b2_coeff(void) const
+  { 
+    return b_ptr_[1];
+  }
+
 private:
   Real* const b_ptr_;
 };
@@ -120,6 +151,11 @@ public:
   }
 
   void setReaction(const Real & c) const { *c_ptr_ = c;}
+
+  Real get_c_coeff(void) const
+  { 
+    return *c_ptr_;
+  }
 
 private:
   Real* const c_ptr_;

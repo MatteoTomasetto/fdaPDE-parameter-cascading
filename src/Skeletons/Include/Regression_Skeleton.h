@@ -122,15 +122,15 @@ regression_skeleton(InputHandler & regressionData, OptimizationData & optimizati
 		{
 			Rprintf("Pointwise\n");
 
-			Rprintf("GCV object built\n");
-			PDE_Parameter_Functional<ORDER, mydim, ndim> H(regression, mesh);
-			Rprintf("PDE Parameter functional built\n");
-			Parameter_Cascading<ORDER, mydim, ndim> PC(H, true, false, false, 0.5, 5.0, 0.0, 0.0, 0.0, mesh);
-			Rprintf("Parameter Cascading object built\n");
-			Rprintf("Apply Parameter_Cascading Algorithm\n");
-			PC.apply();
-			Rprintf("Parameter_Cascading Algorithm done\n");
-			
+			Uint parameter_cascading_option = regressionData.get_parameter_cascading_option();
+			if(parameter_cascading_option != 0){
+				PDE_Parameter_Functional<ORDER, mydim, ndim> H(regression, mesh);
+				Parameter_Cascading<ORDER, mydim, ndim> PC(H, mesh);
+				Rprintf("Parameter_Cascading Algorithm\n");
+				PC.apply();
+				Rprintf("Parameter_Cascading Algorithm done\n");
+			}
+
 			Carrier<InputHandler>
 				carrier = CarrierBuilder<InputHandler>::build_plain_carrier(regressionData, regression, optimizationData);
 			solution_bricks = optimizer_method_selection<Carrier<InputHandler>>(carrier);

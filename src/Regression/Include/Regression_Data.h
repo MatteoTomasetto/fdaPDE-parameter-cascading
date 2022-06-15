@@ -183,6 +183,7 @@ class  RegressionDataElliptic:public RegressionData
 		Diffusion<PDEParameterOptions::Constant> K_;
 		Advection<PDEParameterOptions::Constant> beta_;
 		Real c_;
+		const Uint parameter_cascading_;
 
 	public:
 		//! A complete version of the constructor.
@@ -206,16 +207,17 @@ class  RegressionDataElliptic:public RegressionData
 		        \param Rsearch an R-integer to decide the search algorithm type (tree or naive or walking search algorithm).
 		*/
 		explicit RegressionDataElliptic(SEXP Rlocations, SEXP RbaryLocations, SEXP Robservations, SEXP Rorder,
-			 SEXP RK, SEXP Rbeta, SEXP Rc, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues,
+			 SEXP RK, SEXP Rbeta, SEXP Rc, SEXP Rparameter_cascading, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues,
 			 SEXP RincidenceMatrix, SEXP RarealDataAvg, SEXP Rsearch);
 
 		explicit RegressionDataElliptic(SEXP Rlocations, SEXP RbaryLocations, SEXP Rtime_locations, SEXP Robservations, SEXP Rorder,
-			SEXP RK, SEXP Rbeta, SEXP Rc, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues,
+			SEXP RK, SEXP Rbeta, SEXP Rc, SEXP Rparameter_cascading, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues,
 			SEXP RincidenceMatrix, SEXP RarealDataAvg, SEXP Rflag_mass, SEXP Rflag_parabolic, SEXP Rflag_iterative, SEXP Rmax_num_iteration, SEXP Rthreshold, SEXP Ric, SEXP Rsearch);
 
 		const Diffusion<PDEParameterOptions::Constant> & getK() const {return K_;}
 		const Advection<PDEParameterOptions::Constant> & getBeta() const {return beta_;}
 		const Real getC() const {return c_;}
+		const Uint get_parameter_cascading_option() const {return parameter_cascading_;}
 
 		void setC(const Real& c){ c_ = c;}
 
