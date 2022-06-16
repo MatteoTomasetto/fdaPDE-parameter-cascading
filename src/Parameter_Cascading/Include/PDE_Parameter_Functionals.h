@@ -47,6 +47,7 @@ class PDE_Parameter_Functional
 			
 			// GETTERS
 			inline MixedFERegression<RegressionDataElliptic> & getModel(void) const { return model; };
+			inline const MeshHandler<ORDER, mydim, ndim> & getMesh(void) const { return mesh; };
 };
 
 #include "PDE_Parameter_Functionals_imp.h"

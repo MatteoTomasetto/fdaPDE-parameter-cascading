@@ -42,9 +42,9 @@
 #' a vector with length #points.}
 #' }
 #' For 2.5D and 3D, only the Laplacian is available (\code{PDE_parameters=NULL}).
-#' In addition, with a further input in PDE_parameters list called 'parameter_cascading', it is possible to estimate the PDE_parameters via parameter cascading algorithm 
+#' In addition, with a further not mandatory input in PDE_parameters list called 'parameter_cascading', it is possible to estimate the PDE_parameters via parameter cascading algorithm 
 #' optimizing the mean squared error; in this case, the PDE_parameters in input will be used as initializations.
-#' The following possibilities are allowed: NULL (default option), 'K';
+#' The following possibilities are allowed for this further option: NULL (default option), 'K';
 #' If NULL is selected, the parameter cascading algorithm is not enabled.
 #' If 'K' is selected, the diffusion matrix K will be estimated via parameter cascading algorithm.
 #' @param BC A list with two vectors:
@@ -495,15 +495,6 @@ smooth.FEM<-function(locations = NULL, observations, FEMbasis,
   if(!is.null(DOF.matrix))
     DOF.matrix = as.matrix(DOF.matrix)
 
-  if(!is.null(PDE_parameters)){
-  	if(length(PDE_parameters) == 3 || is.null(PDE_parameters$parameter_cascading))
-  		PDE_parameters$parameter_cascading = 0
-  	else if(PDE_parameters$parameter_cascading == 'K')
-  		PDE_parameters$parameter_cascading = 1
-  	else 
-  		stop("Invalid input for Parameter Cascading algorithm in PDE_parameters") 
-  }
-
   space_varying = checkSmoothingParameters(locations = locations, observations = observations, FEMbasis = FEMbasis,
     covariates = covariates, PDE_parameters = PDE_parameters, BC = BC,
     incidence_matrix = incidence_matrix, areal.data.avg = areal.data.avg,
@@ -517,6 +508,14 @@ smooth.FEM<-function(locations = NULL, observations, FEMbasis,
     PDE_parameters$K = as.matrix(PDE_parameters$K)
     PDE_parameters$b = as.matrix(PDE_parameters$b)
     PDE_parameters$c = as.matrix(PDE_parameters$c)
+
+    # Set a convention for parameter cascading options
+    if(length(PDE_parameters) == 3 || is.null(PDE_parameters$parameter_cascading))
+  		PDE_parameters$parameter_cascading = 0
+  	else if(PDE_parameters$parameter_cascading == 'K')
+  		PDE_parameters$parameter_cascading = 1
+  	else 
+  		stop("Invalid input for Parameter Cascading algorithm in PDE_parameters") 
   }
 
 

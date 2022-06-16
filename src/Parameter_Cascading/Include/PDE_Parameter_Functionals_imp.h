@@ -13,7 +13,7 @@
 template <UInt ORDER, UInt mydim, UInt ndim>
 void PDE_Parameter_Functional<ORDER, mydim, ndim>::set_K(const Real& angle, const Real& intensity) const
 {
-	// build the diffusion matrix from angle and intensity
+	// Build the diffusion matrix from angle and intensity
 	MatrixXr Q(2,2);
 	Q << std::cos(angle), -std::sin(angle),
 		 std::sin(angle), std::cos(angle);
@@ -27,12 +27,13 @@ void PDE_Parameter_Functional<ORDER, mydim, ndim>::set_K(const Real& angle, cons
 
 	Rprintf("New K computed\n");
 
-	// set the diffusion in RegressionData
+	// Set the diffusion in RegressionData
 	model.getRegressionData().getK().setDiffusion(K_matrix);
 
 	Rprintf("New K set in RegressionData\n");
 	Rprintf("Preapply\n");
 
+	// Preapply needed to compute matrices with new data
 	model.template preapply<ORDER, mydim, ndim>(mesh);
 
 	return;
@@ -42,13 +43,14 @@ void PDE_Parameter_Functional<ORDER, mydim, ndim>::set_K(const Real& angle, cons
 template <UInt ORDER, UInt mydim, UInt ndim>
 void PDE_Parameter_Functional<ORDER, mydim, ndim>::set_b(const Real& b1, const Real& b2) const
 {
-	// build the advection vector from its components
+	// Build the advection vector from its components
 	VectorXr b_vector(2,1);
 	b_vector << b1, b2;
 	
-	// set the advection in RegressionData
-	model.getRegressionData().getBeta().setAdvection(b_vector);
+	// Set the advection in RegressionData
+	model.getRegressionData().getB().setAdvection(b_vector);
 
+	// Preapply needed to compute matrices with new data
 	model.template preapply<ORDER, mydim, ndim>(mesh);
 
 	return;
@@ -58,16 +60,11 @@ void PDE_Parameter_Functional<ORDER, mydim, ndim>::set_b(const Real& b1, const R
 template <UInt ORDER, UInt mydim, UInt ndim>
 void PDE_Parameter_Functional<ORDER, mydim, ndim>::set_c(const Real& c) const
 {	
-	// set the advection in RegressionData
-	//auto& regression_data = model.getRegressionData();
+	// Set the reaction in RegressionData
+	model.getRegressionData().getC().setReaction(c);
 
-	//if constexpr (std::is_same<RegressionDataElliptic, decltype(regression_data) >::value) // constexpr KO in c++11
-	//	regression_data.setC(c);
-	
-	//if constexpr (std::is_same<RegressionDataEllipticSpaceVarying, decltype(regression_data)>::value)
-	//	regression_data.getC().setReaction(c);
-
-	// PREAPPLY NEEDED
+	// Preapply needed to compute matrices with new data
+	model.template preapply<ORDER, mydim, ndim>(mesh);
 
 	return;
 }
@@ -91,8 +88,6 @@ Real PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_K(const Real& angle, con
 		
 		GCV_Stochastic<Carrier<RegressionDataElliptic>, 1> GS(carrier, true); // "true" only the first time would be better
 		
-		carrier.get_opt_data() -> set_current_lambdaS(lambda); // dovrebbe farlo già in carrier.apply
-
 		GS.update_parameters(lambda);
 
 		VectorXr z_hat = GS.get_z_hat();
@@ -118,10 +113,11 @@ Real PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_b(const Real& b1, const 
 	GCV_Stochastic<Carrier<RegressionDataElliptic>, 1> GS(carrier, true);
 		
 	GS.update_parameters(lambda);
+
 	VectorXr z_hat = GS.get_z_hat();
 	VectorXr zp = *(model.getRegressionData().getObservations());
-	return (zp - z_hat).squaredNorm();
 
+	return (zp - z_hat).squaredNorm();
 }
 
 
@@ -137,10 +133,11 @@ Real PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_c(const Real& c, const l
 	GCV_Stochastic<Carrier<RegressionDataElliptic>, 1> GS(carrier, true);
 		
 	GS.update_parameters(lambda);
+
 	VectorXr z_hat = GS.get_z_hat();
 	VectorXr zp = *(model.getRegressionData().getObservations());
-	return (zp - z_hat).squaredNorm();
 
+	return (zp - z_hat).squaredNorm();
 }
 
 

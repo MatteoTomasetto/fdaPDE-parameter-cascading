@@ -40,7 +40,7 @@ public:
     if(std::abs(K_ptr_[1]) < 1e-16)
       return EIGEN_PI / 2;
     else
-      return std::atan((K_ptr_[3] - std::sqrt(intensity)) / K_ptr_[1])
+      return std::atan((K_ptr_[3] - std::sqrt(intensity)) / K_ptr_[1]);
   }
 
   Real getIntensity(void) const
@@ -130,6 +130,7 @@ Real Advection<PDEParameterOptions::SpaceVarying>::operator() (const FiniteEleme
 }
 
 
+template<PDEParameterOptions OPTION>
 class Reaction{
 public:
 
@@ -139,11 +140,9 @@ public:
 	Reaction(SEXP RGlobalVector) :
     c_ptr_(REAL(RGlobalVector)) {}
 
+    
   template<UInt ORDER, UInt mydim, UInt ndim>
-  Real operator() (const FiniteElement<ORDER, mydim, ndim>& fe_, UInt iq, UInt i, UInt j) const {
-    const UInt index = fe_.getGlobalIndex(iq);
-    return c_ptr_[index]*fe_.mass_impl(iq, i, j);
-  }
+  Real operator() (const FiniteElement<ORDER, mydim, ndim>& fe_, UInt iq, UInt i, UInt j) const;
 
   EOExpr<const Reaction&> operator* (const EOExpr<Mass>&  mass) const {
       typedef EOExpr<const Reaction&> ExprT;
@@ -160,6 +159,21 @@ public:
 private:
   Real* const c_ptr_;
 };
+
+template<>
+template<UInt ORDER, UInt mydim, UInt ndim>
+Real Reaction<PDEParameterOptions::Constant>::operator() (const FiniteElement<ORDER, mydim, ndim>& fe_, UInt iq, UInt i, UInt j) const
+{
+  return c_ptr_[0]*fe_.mass_impl(iq, i, j);
+}
+
+template<>
+template<UInt ORDER, UInt mydim, UInt ndim>
+Real Reaction<PDEParameterOptions::SpaceVarying>::operator() (const FiniteElement<ORDER, mydim, ndim>& fe_, UInt iq, UInt i, UInt j) const
+{
+  const UInt index = fe_.getGlobalIndex(iq);
+  return c_ptr_[index]*fe_.mass_impl(iq, i, j);
+}
 
 
 class ForcingTerm{
