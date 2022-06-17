@@ -21,8 +21,10 @@ class  RegressionData
 		bool 		   arealDataAvg_{}; 		//!< Is areal data averaged ?
 		VectorXr	   WeightsMatrix_; 		//!< Weighted regression.
 		bool           isGAM = false;
-		bool           ParameterCascading = false; //!< Boolean to set if we can do Parameter cascading algorithm or not.
-		
+		UInt parameter_cascading_ = 0;	//!< Option for parameter cascading algortihm
+		// parameter_cascading_ can be != 0 only in RegressionDataElliptic so far;
+		// however it is defined here to extend easily the code and to skip some computations in preapply/apply functions 
+
 	private:
 		std::vector<UInt> observations_indices_;
 		std::vector<UInt> observations_na_;
@@ -170,9 +172,9 @@ class  RegressionData
 		bool getFlagParabolic(void) const {return flag_parabolic_;}
         bool getFlagIterative(void) const {return flag_iterative_;}
 		bool getisGAM(void) const {return isGAM;}
-		bool DoParameterCascading(void) const {return ParameterCascading;}
-		void DoParameterCascading(bool ParameterCascading_) {ParameterCascading = ParameterCascading_;}
-		
+		const UInt get_parameter_cascading_option() const {return parameter_cascading_;}
+		bool ParameterCascadingOn(void) const {return parameter_cascading_ != 0;} // return true if Parameter Cascading algorithm has to be done
+
 		// Search
 		//! A method returning the input search
 		UInt getSearch(void) const {return search_;}
@@ -185,8 +187,7 @@ class  RegressionDataElliptic:public RegressionData
 		Diffusion<PDEParameterOptions::Constant> K_;
 		Advection<PDEParameterOptions::Constant> b_;
 		Reaction<PDEParameterOptions::Constant> c_;
-		const UInt parameter_cascading_;		//!< Option for parameter cascading algortihm
-
+		
 	public:
 		//! A complete version of the constructor.
 		/*!
@@ -208,6 +209,7 @@ class  RegressionDataElliptic:public RegressionData
 		        \param Rnrealizations the number of random points used in the stochastic computation of the dofs
 		        \param Rsearch an R-integer to decide the search algorithm type (tree or naive or walking search algorithm).
 		*/
+		// Constructor that allows to set the option parameter_cascading_
 		explicit RegressionDataElliptic(SEXP Rlocations, SEXP RbaryLocations, SEXP Robservations, SEXP Rorder,
 			 SEXP RK, SEXP Rb, SEXP Rc, SEXP Rparameter_cascading, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues,
 			 SEXP RincidenceMatrix, SEXP RarealDataAvg, SEXP Rsearch);
@@ -223,7 +225,6 @@ class  RegressionDataElliptic:public RegressionData
 		const Diffusion<PDEParameterOptions::Constant> & getK() const {return K_;}
 		const Advection<PDEParameterOptions::Constant> & getB() const {return b_;}
 		const Reaction<PDEParameterOptions::Constant> & getC() const {return c_;}
-		const UInt get_parameter_cascading_option() const {return parameter_cascading_;}
 
 };
 

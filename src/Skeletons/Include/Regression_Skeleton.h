@@ -73,6 +73,7 @@ regression_skeleton(InputHandler & regressionData, OptimizationData & optimizati
 }
 
 
+// Specialization for InputHandler = RegressionDataElliptic in order to use Parameter Cascading algorithm in this case
 template<typename InputHandler, UInt ORDER, UInt mydim, UInt ndim>
 typename std::enable_if<std::is_same<InputHandler, RegressionDataElliptic>::value, SEXP>::type
 regression_skeleton(InputHandler & regressionData, OptimizationData & optimizationData, SEXP Rmesh)
@@ -88,11 +89,13 @@ regression_skeleton(InputHandler & regressionData, OptimizationData & optimizati
 		// Functional to optimize in the algorithm
 		PDE_Parameter_Functional<ORDER, mydim, ndim> H(regression, mesh);
 
-		// object to perform the algorithm
+		// Object to perform the algorithm
 		Parameter_Cascading<ORDER, mydim, ndim> PC(H);
 
 		Rprintf("Parameter_Cascading Algorithm\n");
+
 		PC.apply(); // Parameter cascading algorithm applied
+		
 		Rprintf("Parameter_Cascading Algorithm done\n");
 	}
 

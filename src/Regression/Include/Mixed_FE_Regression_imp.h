@@ -1167,7 +1167,7 @@ void MixedFERegressionBase<InputHandler>::preapply(EOExpr<A> oper, const Forcing
 	if(!isR1Computed)
 	{
 		Assembler::operKernel(oper, mesh_, fe, R1_);
-		if(!regressionData_.DoParameterCascading()) // with parameter cascading we need to recompute R1 multiple times
+		if(!regressionData_.ParameterCascadingOn()) // with parameter cascading we need to recompute R1 multiple times
 			isR1Computed = true;
 	}
 
@@ -1350,7 +1350,7 @@ MatrixXv  MixedFERegressionBase<InputHandler>::apply(void)
 
 			if(isGAMData || optimizationData_.get_current_lambdaS()!=optimizationData_.get_last_lS_used() ||
 				optimizationData_.get_current_lambdaT()!=optimizationData_.get_last_lT_used() ||
-				regressionData_.DoParameterCascading()) // with parameter cascading, we need a new system even if lambdas do not change
+				regressionData_.ParameterCascadingOn()) // with parameter cascading, we need a new system even if lambdas do not change
 			{
 				if(!regressionData_.isSpaceTime())
 				{
@@ -1385,7 +1385,7 @@ MatrixXv  MixedFERegressionBase<InputHandler>::apply(void)
 			//f Factorization of the system for woodbury decomposition
 			if(isGAMData || optimizationData_.get_current_lambdaS()!=optimizationData_.get_last_lS_used() ||
 				optimizationData_.get_current_lambdaT()!=optimizationData_.get_last_lT_used() ||
-				regressionData_.DoParameterCascading())
+				regressionData_.ParameterCascadingOn())
 			{
 				system_factorize();
 			}

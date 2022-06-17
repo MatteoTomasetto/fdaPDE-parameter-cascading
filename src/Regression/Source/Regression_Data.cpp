@@ -82,24 +82,24 @@ RegressionDataElliptic::RegressionDataElliptic(SEXP Rlocations, SEXP RbaryLocati
 	SEXP RincidenceMatrix, SEXP RarealDataAvg, SEXP Rsearch):
 	RegressionData(Rlocations, RbaryLocations, Robservations, Rorder, Rcovariates,
 		RBCIndices, RBCValues, RincidenceMatrix, RarealDataAvg, Rsearch),
-			K_(RK), b_(Rb), c_(0) parameter_cascading_(INTEGER(Rparameter_cascading)[0])
+			K_(RK), b_(Rb), c_(Rc)
 			{
-				if(parameter_cascading_ != 0)
-					ParameterCascading = true;
+				// Set the option for parameter cascading algorithm
+				parameter_cascading_ = INTEGER(Rparameter_cascading)[0];
 			}
 
 RegressionDataElliptic::RegressionDataElliptic(SEXP Rlocations, SEXP RbaryLocations, SEXP Robservations, SEXP Rorder,
 	SEXP RK, SEXP Rb, SEXP Rc, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues, SEXP RincidenceMatrix, SEXP RarealDataAvg, SEXP Rsearch):
 	RegressionData(Rlocations, RbaryLocations, Robservations, Rorder, Rcovariates,
 		RBCIndices, RBCValues, RincidenceMatrix, RarealDataAvg, Rsearch),
-			K_(RK), b_(Rb), c_(Rc) parameter_cascading_(0) {}
+			K_(RK), b_(Rb), c_(Rc) {}
 
 RegressionDataElliptic::RegressionDataElliptic(SEXP Rlocations, SEXP RbaryLocations, SEXP Rtime_locations, SEXP Robservations, SEXP Rorder,
 	SEXP RK, SEXP Rb, SEXP Rc, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues,
 	SEXP RincidenceMatrix, SEXP RarealDataAvg, SEXP Rflag_mass, SEXP Rflag_parabolic, SEXP Rflag_iterative, SEXP Rmax_num_iteration, SEXP Rthreshold, SEXP Ric, SEXP Rsearch):
 	RegressionData(Rlocations, RbaryLocations, Rtime_locations, Robservations, Rorder, Rcovariates,
 		RBCIndices, RBCValues, RincidenceMatrix, RarealDataAvg, Rflag_mass, Rflag_parabolic, Rflag_iterative, Rmax_num_iteration, Rthreshold, Ric, Rsearch),
-			K_(RK), b_(Rb), c_(Rc) parameter_cascading_(0) {}
+			K_(RK), b_(Rb), c_(Rc) {}
 
 RegressionDataEllipticSpaceVarying::RegressionDataEllipticSpaceVarying(SEXP Rlocations, SEXP RbaryLocations, SEXP Robservations, SEXP Rorder,
 	SEXP RK, SEXP Rb, SEXP Rc, SEXP Ru, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues,
