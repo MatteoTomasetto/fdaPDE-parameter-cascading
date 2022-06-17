@@ -22,7 +22,7 @@ class PDE_Parameter_Functional
 	private: // MixedFERegression object with to solve the regression problem
 			 MixedFERegression<RegressionDataElliptic> & model;
 
-			 // mesh needed to call .preapply() every time the parameters change in the problem
+			 // mesh needed to recompute R1 matrix every time the PDE parameters change
 			 const MeshHandler<ORDER, mydim, ndim> & mesh;
 			 
 	public: // Constructor to set the reference to the solver
@@ -30,7 +30,7 @@ class PDE_Parameter_Functional
 									 const MeshHandler<ORDER, mydim, ndim> & mesh_)
 			: model(model_), mesh(mesh_) {};
 
-			// Functions to build PDE parameters and set them in RegressionData
+			// Functions to build PDE parameters, set them in RegressionData and recompute R1 matrix 
 			void set_K(const Real& angle, const Real& intensity) const;
 			void set_b(const Real& b1, const Real& b2) const;
 			void set_c(const Real& c) const;

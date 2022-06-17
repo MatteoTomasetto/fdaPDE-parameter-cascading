@@ -18,7 +18,7 @@ template <class DType, class CType, class SFINAE = void> // DType = Domain varia
 class Genetic_Algorithm
 {
 	private: typedef std::vector<DType> VectorXdtype;
-			 typedef Eigen::Matrix<CType,Eigen::Dynamic,1> VectorXctype;
+			 typedef std::vector<CType> VectorXctype;
 
 			 // Function to optimize
 			 std::function<CType (DType)> F; 
@@ -26,20 +26,20 @@ class Genetic_Algorithm
 			 // Population of candidate solutions
 			 VectorXdtype population;
 			 
-			 // Best solution (minimum point)
+			 // Best solution (minimizer of F)
 			 DType best;
 
 			 // Genetic algortihm parameters
 			 Parameter_Genetic_Algorithm<DType> param_genetic_algorithm;
 
 			 // Boolean to keep looping with genetic algorithm;
-			 // It becomes "false" if	|best_{k} - best_{k-1}| < tol_genetic_algorithm
+			 // It becomes "false" if relative_increment = |best_{k} - best_{k-1}|/|best_{k}| < tol_genetic_algorithm
 			 bool goOn = true;
 
 			 const unsigned int max_iterations_genetic_algorithm;
 			 const Real tol_genetic_algorithm;
 
-			 // Generate random DType
+			 // Generate random DType centered in "mean" and with variability sigma
 			 const DType get_random_element(const DType& mean, const Real& sigma) const;
 
 			 // Initialization step
@@ -52,26 +52,23 @@ class Genetic_Algorithm
 			 void selection_and_variation(VectorXctype values);
 
 			 // Mutation step
-			 void mutation(void);	
-
-			 // Compute error
-			 Real compute_increment(DType new_sol, DType old_sol) const;		 			 
+			 void mutation(void);				 
 
 	public: // Constructors
 			Genetic_Algorithm(const std::function<CType (DType)>& F_, const DType& init, 
-			const Parameter_Genetic_Algorithm<DType>& param_genetic_algorithm_, const unsigned int& max_iterations_genetic_algorithm_,
+			const Parameter_Genetic_Algorithm<DType>& param_genetic_algorithm_,
+			const unsigned int& max_iterations_genetic_algorithm_,
 			const Real & tol_genetic_algorithm_)
-			: F(F_), param_genetic_algorithm(param_genetic_algorithm_), 
+			: F(F_), bes(init), param_genetic_algorithm(param_genetic_algorithm_), 
 			max_iterations_genetic_algorithm(max_iterations_genetic_algorithm_),
 			tol_genetic_algorithm(tol_genetic_algorithm_)
 			 {
 			 	population.resize(param_genetic_algorithm.N);
 				population[0] = init;
-			 	best = init;
 			 };
 
 			Genetic_Algorithm(const std::function<CType (DType)>& F_, const DType& init, const Parameter_Genetic_Algorithm<DType>& param_genetic_algorithm_)
-			: Genetic_Algorithm(F_, init, param_genetic_algorithm_, 100u, 1e-3) {};
+			: Genetic_Algorithm(F_, init, param_genetic_algorithm_, 100u, 1e-2) {};
 
 			// Function to apply the algorithm
 			void apply(void);
@@ -81,7 +78,7 @@ class Genetic_Algorithm
 };
 
 
-
+// specialization via SFINAE used when DType is a scalar (not a vector)
 template <class DType, class CType> // DType = Domain variable type, CType = Codomain variable type;
 class Genetic_Algorithm<DType, CType, typename std::enable_if< std::is_floating_point<DType>::value, void >::type>
 {
@@ -94,14 +91,15 @@ class Genetic_Algorithm<DType, CType, typename std::enable_if< std::is_floating_
 			 // Population of candidate solutions
 			 VectorXdtype population;
 			 
-			 // Best solution (minimum point)
+			 // Minimizer of F and minimal value of F
 			 DType best;
+			 CType min_value;
 
 			 // Genetic algortihm parameters
 			 Parameter_Genetic_Algorithm<DType> param_genetic_algorithm;
 
 			 // Boolean to keep looping with genetic algorithm;
-			 // It becomes "false" if	|best_{k} - best_{k-1}| < tol_genetic_algorithm
+			 // It becomes "false" if relative_increment = |best_{k} - best_{k-1}|/|best_{k}| < tol_genetic_algorithm
 			 bool goOn = true;
 
 			 const unsigned int max_iterations_genetic_algorithm;
@@ -109,6 +107,12 @@ class Genetic_Algorithm<DType, CType, typename std::enable_if< std::is_floating_
 
 			 // Generate random DType
 			 const DType get_random_element(const DType& mean, const Real& sigma) const;
+
+			 // Cumulative distribution function of a standard normal (phi function)
+			 Real normal_cdf(const Real& x) const;
+
+			 // Utility to compute the probit function, i.e. the quantile function of a standard normal
+			 Real probit(const Real& u) const;
 
 			 // Initialization step
 			 void initialization(void);
@@ -122,20 +126,18 @@ class Genetic_Algorithm<DType, CType, typename std::enable_if< std::is_floating_
 			 // Mutation step
 			 void mutation(void);	
 
-			 // Compute error
-			 Real compute_increment(DType new_sol, DType old_sol) const;		 			 
-
 	public: // Constructors
 			Genetic_Algorithm(const std::function<CType (DType)>& F_, const DType& init, 
-			const Parameter_Genetic_Algorithm<DType>& param_genetic_algorithm_, const unsigned int& max_iterations_genetic_algorithm_,
+			const Parameter_Genetic_Algorithm<DType>& param_genetic_algorithm_,
+			const unsigned int& max_iterations_genetic_algorithm_,
 			const Real & tol_genetic_algorithm_)
-			: F(F_), param_genetic_algorithm(param_genetic_algorithm_), 
+			: F(F_), best(init), param_genetic_algorithm(param_genetic_algorithm_), 
 			max_iterations_genetic_algorithm(max_iterations_genetic_algorithm_),
 			tol_genetic_algorithm(tol_genetic_algorithm_)
 			 {
 			 	population.resize(param_genetic_algorithm.N);
 				population[0] = init;
-			 	best = init;
+				min_value = F(init);
 			 };
 
 			Genetic_Algorithm(const std::function<CType (DType)>& F_, const DType& init, const Parameter_Genetic_Algorithm<DType>& param_genetic_algorithm_)
@@ -152,21 +154,3 @@ class Genetic_Algorithm<DType, CType, typename std::enable_if< std::is_floating_
 #include "Optimization_Algorithm_imp.h"
 
 #endif
-
-/* NEWTON
-H.set_lambda(lambdas(iter))
-Function_Wrapper<lambda::type<2>, Real, lambda::type<2>, MatrixXr, PDE_Parameter_Functional<InputCarrier>> F(H);
-// TODO in PDE_Param_Functional we need compute_f, compute_fp, compute_fs;
-
-Newton_ex<lambda::type<2>, MatrixXr, PDE_Parameter_Functional<InputCarrier>> opt_method(F);
-
-lambda::type<2> x0 = lambda::make_pair(angles(iter), intensities(iter));
-Checker ch;
-std::vector<Real> Fun_values;
-std::vector<lambda::type<2>> param_values;
-
-std::pair<Real, UInt> sol = opt_method.compute(x0, tol_parameter_cascading, max_iter_parameter_cascading, Checker & ch, Fun_values, param_values);
-
-// NB: We can use a VectorXr instead of lambda::type<2> (?).
-
-*/

@@ -84,17 +84,17 @@ regression_skeleton(InputHandler & regressionData, OptimizationData & optimizati
 	regression.preapply(mesh); // preliminary apply (preapply) to store all problem matrices
 
 	// Parameter cascading algorithm to estimate the PDE_parameters optimally
-	if(regressionData.DoParameterCascading())
+	if(regressionData.ParameterCascadingOn())
 	{
 		// Functional to optimize in the algorithm
 		PDE_Parameter_Functional<ORDER, mydim, ndim> H(regression, mesh);
 
 		// Object to perform the algorithm
-		Parameter_Cascading<ORDER, mydim, ndim> PC(H);
+		Parameter_Cascading<ORDER, mydim, ndim> ParameterCascadingEngine(H);
 
 		Rprintf("Parameter_Cascading Algorithm\n");
 
-		PC.apply(); // Parameter cascading algorithm applied
+		ParameterCascadingEngine.apply(); // Parameter cascading algorithm applied
 		
 		Rprintf("Parameter_Cascading Algorithm done\n");
 	}

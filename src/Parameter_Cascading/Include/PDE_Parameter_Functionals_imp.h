@@ -31,10 +31,11 @@ void PDE_Parameter_Functional<ORDER, mydim, ndim>::set_K(const Real& angle, cons
 	model.getRegressionData().getK().setDiffusion(K_matrix);
 
 	Rprintf("New K set in RegressionData\n");
-	Rprintf("Preapply\n");
+	
+	Rprintf("SetR1\n");
 
-	// Preapply needed to compute matrices with new data
-	model.template preapply<ORDER, mydim, ndim>(mesh);
+	// Recompute R1 matrix with new data
+	model.template setR1<ORDER, mydim, ndim>(mesh);
 
 	return;
 }
@@ -50,8 +51,8 @@ void PDE_Parameter_Functional<ORDER, mydim, ndim>::set_b(const Real& b1, const R
 	// Set the advection in RegressionData
 	model.getRegressionData().getB().setAdvection(b_vector);
 
-	// Preapply needed to compute matrices with new data
-	model.template preapply<ORDER, mydim, ndim>(mesh);
+	// Recompute R1 matrix with new data
+	model.template setR1<ORDER, mydim, ndim>(mesh);
 
 	return;
 }
@@ -63,8 +64,8 @@ void PDE_Parameter_Functional<ORDER, mydim, ndim>::set_c(const Real& c) const
 	// Set the reaction in RegressionData
 	model.getRegressionData().getC().setReaction(c);
 
-	// Preapply needed to compute matrices with new data
-	model.template preapply<ORDER, mydim, ndim>(mesh);
+	// Recompute R1 matrix with new data
+	model.template setR1<ORDER, mydim, ndim>(mesh);
 
 	return;
 }
@@ -76,21 +77,20 @@ Real PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_K(const Real& angle, con
 	// Check for proper values of angle and intensity
 	// Notice that we keep angle in [0.0, EIGEN_PI] exploiting the periodicity of the matrix K
 	if (angle < 0.0 || angle > EIGEN_PI || intensity <= 0.0)
-		return std::numeric_limits<Real>::infinity();
+		return std::numeric_limits<Real>::max();
 	
 	else
 	{
-		// set parameter in RegressionData
+		// Set parameter in RegressionData
 		set_K(angle, intensity);
 		
-		// solve the regression problem
+		// Solve the regression problem
 		Carrier<RegressionDataElliptic> carrier = CarrierBuilder<RegressionDataElliptic>::build_plain_carrier(model.getRegressionData(), model, model.getOptimizationData());
+		GCV_Stochastic<Carrier<RegressionDataElliptic>, 1> solver(carrier, true);
 		
-		GCV_Stochastic<Carrier<RegressionDataElliptic>, 1> GS(carrier, true); // "true" only the first time would be better
-		
-		GS.update_parameters(lambda);
+		solver.update_parameters(lambda); // solve the problem and compute z_hat
 
-		VectorXr z_hat = GS.get_z_hat();
+		VectorXr z_hat = solver.get_z_hat();
 		VectorXr zp = *(model.getRegressionData().getObservations());
 		Real res = (zp - z_hat).squaredNorm();
 		Rprintf("Result of eval_k: %f\n", res);
@@ -104,17 +104,16 @@ Real PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_K(const Real& angle, con
 template <UInt ORDER, UInt mydim, UInt ndim>
 Real PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_b(const Real& b1, const Real& b2, const lambda::type<1>& lambda) const
 {
-	// set parameter in RegressionData
+	// Set parameter in RegressionData
 	set_b(b1, b2);
 	
-	// solve the regression problem
+	// Solve the regression problem
 	Carrier<RegressionDataElliptic> carrier = CarrierBuilder<RegressionDataElliptic>::build_plain_carrier(model.getRegressionData(), model, model.getOptimizationData());
+	GCV_Stochastic<Carrier<RegressionDataElliptic>, 1> solver(carrier, true);
 		
-	GCV_Stochastic<Carrier<RegressionDataElliptic>, 1> GS(carrier, true);
-		
-	GS.update_parameters(lambda);
+	solver.update_parameters(lambda); // solve the problem and compute z_hat
 
-	VectorXr z_hat = GS.get_z_hat();
+	VectorXr z_hat = solver.get_z_hat();
 	VectorXr zp = *(model.getRegressionData().getObservations());
 
 	return (zp - z_hat).squaredNorm();
@@ -124,17 +123,16 @@ Real PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_b(const Real& b1, const 
 template <UInt ORDER, UInt mydim, UInt ndim>
 Real PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_c(const Real& c, const lambda::type<1>& lambda) const
 {
-	// set parameter in RegressionData
+	// Set parameter in RegressionData
 	set_c(c);
-
-	// solve the regression problem
+	
+	// Solve the regression problem
 	Carrier<RegressionDataElliptic> carrier = CarrierBuilder<RegressionDataElliptic>::build_plain_carrier(model.getRegressionData(), model, model.getOptimizationData());
+	GCV_Stochastic<Carrier<RegressionDataElliptic>, 1> solver(carrier, true);
 		
-	GCV_Stochastic<Carrier<RegressionDataElliptic>, 1> GS(carrier, true);
-		
-	GS.update_parameters(lambda);
+	solver.update_parameters(lambda); // solve the problem and compute z_hat
 
-	VectorXr z_hat = GS.get_z_hat();
+	VectorXr z_hat = solver.get_z_hat();
 	VectorXr zp = *(model.getRegressionData().getObservations());
 
 	return (zp - z_hat).squaredNorm();

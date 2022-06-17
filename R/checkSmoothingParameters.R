@@ -43,6 +43,7 @@ checkSmoothingParameters<-function(locations = NULL, observations, FEMbasis, cov
 
   # PDE_parameters
   if(!is.null(PDE_parameters)){
+
     if(is.null(PDE_parameters$K))
       stop("'K' required in PDE_parameters;  is NULL.")
     if(is.null(PDE_parameters$b))

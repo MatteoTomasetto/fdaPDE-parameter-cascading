@@ -795,7 +795,8 @@ void MixedFERegressionBase<InputHandler>::computeDegreesOfFreedomExact(UInt outp
 
     if (isRcomputed_ == false)
     {
-        //isRcomputed_ = true;
+    	isRcomputed_ = true;
+        
         //take R0 from the final matrix since it has already applied the dirichlet boundary conditions
         SpMat R0 = matrixNoCov_.bottomRightCorner(nnodes,nnodes)/lambdaS;
 
@@ -1167,8 +1168,7 @@ void MixedFERegressionBase<InputHandler>::preapply(EOExpr<A> oper, const Forcing
 	if(!isR1Computed)
 	{
 		Assembler::operKernel(oper, mesh_, fe, R1_);
-		if(!regressionData_.ParameterCascadingOn()) // with parameter cascading we need to recompute R1 multiple times
-			isR1Computed = true;
+		isR1Computed = true;
 	}
 
 	if(!isR0Computed)
@@ -1797,7 +1797,24 @@ class MixedFERegression<RegressionDataElliptic>: public MixedFERegressionBase<Re
 
 			MixedFERegressionBase<RegressionDataElliptic>::preapply(c*mass+stiff[K]+b.dot(grad), ForcingTerm(), mesh);
 		}
+
+		template<UInt ORDER, UInt mydim, UInt ndim>
+		void setR1(const MeshHandler<ORDER,mydim,ndim> & mesh)
+		{
+			typedef EOExpr<Mass>  ETMass;  Mass EMass;   ETMass mass(EMass);
+			typedef EOExpr<Stiff> ETStiff; Stiff EStiff; ETStiff stiff(EStiff);
+			typedef EOExpr<Grad>  ETGrad;  Grad EGrad;   ETGrad grad(EGrad);
+
+	  		const Diffusion<PDEParameterOptions::Constant>& K = this->regressionData_.getK();
+	  		const Advection<PDEParameterOptions::Constant>& b = this->regressionData_.getB();
+	  		const Reaction<PDEParameterOptions::Constant>& c = this->regressionData_.getC();
+
+	  		FiniteElement<ORDER, mydim, ndim> fe;
+
+			Assembler::operKernel(c*mass+stiff[K]+b.dot(grad), mesh, fe, R1_);
+		}
 };
+		
 
 template<>
 class MixedFERegression<RegressionDataEllipticSpaceVarying> : public MixedFERegressionBase<RegressionDataEllipticSpaceVarying>

@@ -19,6 +19,7 @@ std::pair<Real, Real> Parameter_Cascading<ORDER, mydim, ndim>::compute_optimal_l
 
 	const OptimizationData optr = H.getModel().getOptimizationData();
 
+	// Stochastic computation of the GCV will be used with Newton_fd to be faster
 	std::unique_ptr<Opt_methods<Real,Real,GCV_Stochastic<Carrier<RegressionDataElliptic>, 1>>>
 	optim_p = Opt_method_factory<Real, Real, GCV_Stochastic<Carrier<RegressionDataElliptic>, 1>>::create_Opt_method(optr.get_criterion(), Fun);
 
@@ -48,7 +49,7 @@ std::pair<Real, Real> Parameter_Cascading<ORDER, mydim, ndim>::compute_optimal_l
 	std::vector<Real> lambda_values;
 	std::vector<Real> GCV_values;
 
-	// Compute optimal lambda
+	// Compute optimal lambda 
 	std::pair<Real, UInt> lambda_couple = 
 	optim_p->compute(lambda_init, optr.get_stopping_criterion_tol(), 40, ch, GCV_values, lambda_values);
 
@@ -79,14 +80,15 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_K(void)
 
 	// Parameters for optimization algorithm
 	Eigen::Vector2d lower_bound(0.0, 0.0);
-	Eigen::Vector2d upper_bound(EIGEN_PI, std::numeric_limits<Real>::infinity());
+	Eigen::Vector2d upper_bound(EIGEN_PI, std::numeric_limits<Real>::max());
 	Parameter_Genetic_Algorithm<Eigen::Vector2d> param = {100, lower_bound, upper_bound}; // set number of iter
 	
 	for (UInt iter = 0; iter < lambdas.size(); ++iter)
 	{
-		// Optimization step
+		// Function to optimize
 		auto F = [this, &iter](Eigen::Vector2d x){return this -> H.eval_K(x(0),x(1), this -> lambdas(iter));};
 
+		// PROVA
 		Eigen::Vector2d x1(2);
 		x1 << 0.5, 5.0;
 		Eigen::Vector2d x2(2);
@@ -96,7 +98,9 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_K(void)
 		Real sol2 = F(x2);
 		Real sol3 = H.eval_K(0.5, 5.0, lambdas(iter));
 		Real sol4 = H.eval_K(1.3, 12.0, lambdas(iter));
-		
+
+
+		// Optimization step		
 		Eigen::Vector2d init(angles(iter), intensities(iter));
 
 		Rprintf("Optimization Algorithm started\n");
@@ -136,6 +140,7 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_K(void)
 
 	Rprintf("New K found: angle and intensity are %f, %f\n", angle, intensity);
 
+	// Set the new parameter in RegressionData
 	H.set_K(angle, intensity);
 	
 	Rprintf("Parameters updated\n");
@@ -162,15 +167,16 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_b(void)
 	lambdas_opt(0) = H.getModel().getOptimizationData().get_initial_lambda_S();
 
 	// Parameters for optimization algorithm
-	Eigen::Vector2d lower_bound(-std::numeric_limits<Real>::infinity(), -std::numeric_limits<Real>::infinity());
-	Eigen::Vector2d upper_bound(std::numeric_limits<Real>::infinity(), std::numeric_limits<Real>::infinity());
+	Eigen::Vector2d lower_bound(std::numeric_limits<Real>::min(), std::numeric_limits<Real>::min());
+	Eigen::Vector2d upper_bound(std::numeric_limits<Real>::max(), std::numeric_limits<Real>::max());
 	Parameter_Genetic_Algorithm<Eigen::Vector2d> param = {100, lower_bound, upper_bound};
 
 	for (UInt iter = 0; iter < lambdas.size(); ++iter)
 	{
-		// Optimization step
+		// Function to optimize
 		auto F = [this, &iter](Eigen::Vector2d x){return this -> H.eval_b(x(0),x(1), this -> lambdas(iter));};
 		
+		// Optimization step
 		Eigen::Vector2d init(b1_values(iter), b2_values(iter));
 
 		Genetic_Algorithm<Eigen::Vector2d, Real> opt(F, init, param);
@@ -204,6 +210,7 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_b(void)
 	b1 = b1_values(min_GCV_pos + 1); // GCV_values is shorter than b1_values due to initialization => index shifted
 	b2 = b2_values(min_GCV_pos + 1); // GCV_values is shorter than b2_values due to initialization => index shifted
 
+	// Set the new parameter in RegressionData
 	H.set_b(b1, b2);
 	
 	return;
@@ -226,15 +233,16 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_c(void)
 	lambdas_opt(0) = H.getModel().getOptimizationData().get_initial_lambda_S();
 
 	// Parameters for optimization algorithm
-	Real lower_bound(-std::numeric_limits<Real>::infinity());
-	Real upper_bound(std::numeric_limits<Real>::infinity());
+	Real lower_bound(std::numeric_limits<Real>::min());
+	Real upper_bound(std::numeric_limits<Real>::max());
 	Parameter_Genetic_Algorithm<Real> param = {100, lower_bound, upper_bound};
 
 	for (UInt iter = 0; iter < lambdas.size(); ++iter)
 	{
-		// Optimization step
+		// Function to optimize
 		auto F = [this, &iter](Real x){return this -> H.eval_c(x, this -> lambdas(iter));};
 		
+		// Optimization step
 		Real init{c_values(iter)};
 
 		Genetic_Algorithm<Real, Real> opt(F, init, param);
@@ -264,6 +272,7 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_c(void)
 
 	c = c_values(min_GCV_pos + 1); // GCV_values is shorter than c_values due to initialization => index shifted
 	
+	// Set the new parameter in RegressionData
 	H.set_c(c);
 		
 	return;

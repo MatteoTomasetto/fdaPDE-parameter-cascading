@@ -1,8 +1,8 @@
 #ifndef __OPTIMIZATION_ALGORITHM_IMP_H__
 #define __OPTIMIZATION_ALGORTIHM_IMP_H__
 
+#include <array>
 #include <random>
-#include <chrono>
 #include <algorithm>
 #include <type_traits>
 
@@ -21,40 +21,94 @@ const DType Genetic_Algorithm<DType, CType, SFINAE>::get_random_element(const DT
 	for(unsigned int j = 0u; j < ElemSize; ++j) // loop over each component of mean and res
 	{	
 		// Set lower and upper values for the uniform distribution
-		Real a = std::max(mean(j) - sigma, param_genetic_algorithm.lower_bound(j));
-		Real b = std::min(mean(j) + sigma, param_genetic_algorithm.upper_bound(j));
+		Real a = std::max(mean[j] - sigma, param_genetic_algorithm.lower_bound[j]);
+		Real b = std::min(mean[j] + sigma, param_genetic_algorithm.upper_bound[j]);
 
-		// Generate the j-th random component
-		std::uniform_real_distribution<double> distr(a, b); // not general, we should use decltype(mean(j)) instead of double
+		// Generate the j-th random component from a normal truncated in (a,b)
+		std::uniform_real_distribution<decltype(mean[0])> unif_distr(normal_cdf((a - mean[j])/sigma), normal_cdf((b - mean[j])/sigma));
 
-		res(j) = distr(generator);
+		res[j] = mean[j] + sigma*probit(unif_distr(generator));
 	}
 
 	return res;
 }
 
-
 // Random element generator used if DType is a scalar
 template <class DType, class CType>
 const DType Genetic_Algorithm<DType, CType, typename std::enable_if< std::is_floating_point<DType>::value >::type>::get_random_element(const DType& mean, const Real& sigma) const
 {	
-	std::default_random_engine generator{time(0)};
+	std::default_random_engine generator{std::random_device{}()};
 
 	// Set lower and upper values for the uniform distribution
 	Real a = std::max(mean - sigma, param_genetic_algorithm.lower_bound);
 	Real b = std::min(mean + sigma, param_genetic_algorithm.upper_bound);
-	std::uniform_real_distribution<DType> distr(a, b);
 
-	return distr(generator);
+	// Generate the a number from a normal truncated in (a,b)
+	std::uniform_real_distribution<DType> unif_distr(normal_cdf((a - mean)/sigma), normal_cdf((b - mean)/sigma));
+
+	return mean + sigma*probit(unif_distr(generator));
+}
+
+
+// Cumulative distribution function of a standard normal (phi function)
+template <class DType, class CType, class SFINAE>
+Real Genetic_Algorithm<DType, CType, SFINAE>::normal_cdf(const Real& x) const {
+	return 0.5 + 0.5 * std::erf(x * M_SQRT1_2);
+}
+
+// Inverse cumulative distribution function of a standard normal (probit function)
+// approximated via Beasley-Springer-Moro algorithm.
+template <class DType, class CType, class SFINAE>
+Real Genetic_Algorithm<DType, CType, SFINAE>::probit(const Real& u) const {
+	
+	std::array<Real, 4> a = {2.50662823884, -18.61500062529, 41.39119773534, -25.44106049637};
+
+	std::array<Real, 4> b = {-8.47351093090, 23.08336743743, -21.06224101826, 3.13082909833};
+
+	std::array<Real, 9> c = {0.3374754822726147, 0.9761690190917186, 0.1607979714918209, 0.0276438810333863,
+							 0.0038405729373609, 0.0003951896511919, 0.0000321767881768, 0.0000002888167364,
+							 0.0000003960315187};
+
+	if(u >= 0.5 && u <= 0.92)
+	{
+		Real num = 0.0;
+    	Real denom = 1.0;
+
+		for (unsigned int i = 0u; i < 4u; ++i)
+		{
+			num += a[i] * std::pow((u - 0.5), 2u * i + 1u);
+			denom += b[i] * std::pow((u - 0.5), 2u * i);
+		}
+    
+		return num/denom;
+	
+	}
+
+	else if (u > 0.92 && u < 1)
+	{
+		Real num = 0.0;
+
+		for (unsigned int i = 0u; i < 9u; ++i)
+		{
+			num += c[i] * std::pow((std::log(-std::log(1 - u))), i);
+		}
+
+		return num;
+	}
+
+	else
+	{
+		return -1.0*inv_cdf(1-u);
+	}
 }
 
 
 template <class DType, class CType, class SFINAE>
 void Genetic_Algorithm<DType, CType, SFINAE>::initialization(void)
 {	
-	const Real sigma = 1.5;
+	const Real sigma = 2.0;
 
-	// Populate the candidate solutions container "population"
+	// Populate the candidate solutions in population
 	for(unsigned int i = 1u; i < param_genetic_algorithm.N; ++i)
 		population[i] = get_random_element(population[0], sigma);
 
@@ -64,9 +118,9 @@ void Genetic_Algorithm<DType, CType, SFINAE>::initialization(void)
 template <class DType, class CType>
 void Genetic_Algorithm<DType, CType, typename std::enable_if< std::is_floating_point<DType>::value >::type>::initialization(void)
 {	
-	const Real sigma = 1.5;
+	const Real sigma = 2.0;
 
-	// populate the candidate solutions container "population"
+	// Populate the candidate solutions container "population"
 	for(unsigned int i = 1u; i < param_genetic_algorithm.N; ++i)
 		population[i] = get_random_element(population[0], sigma);
 
@@ -80,7 +134,7 @@ typename Genetic_Algorithm<DType, CType, SFINAE>::VectorXctype Genetic_Algorithm
 	VectorXctype res(param_genetic_algorithm.N);
 
 	for(unsigned int i = 0u; i < param_genetic_algorithm.N; ++i)
-		res(i) = F(population[i]);
+		res[i] = F(population[i]);
 
 	return res;
 }
@@ -91,41 +145,38 @@ typename Genetic_Algorithm<DType, CType, typename std::enable_if< std::is_floati
 	VectorXctype res(param_genetic_algorithm.N);
 
 	for(unsigned int i = 0u; i < param_genetic_algorithm.N; ++i)
-		res(i) = F(population[i]);
+		res[i] = F(population[i]);
 
 	return res;
 }
 
-// selection of best candidates and variation to investigate new solutions (case when DType is a vector)
+// Selection of best candidates and variation to investigate new solutions (case when DType is a vector)
 template <class DType, class CType, class SFINAE>
 void Genetic_Algorithm<DType, CType, SFINAE>::selection_and_variation(VectorXctype values)
 {
 	// Binary tournament selection: for each couple in population we keep the best one (winner) in terms of loss function
 	// Then we replace the worst one with a little variation of the winner 
-	const Real sigma = 1.0;
-	DType zero_elem(population[0].size());
-
-	std::fill(zero_elem.data(), zero_elem.data() + zero_elem.size(), 0.0);
+	const Real sigma = 0.5;
 
 	unsigned int i = 0u;
 
 	for (; i < param_genetic_algorithm.N - 2; i += 2u)
 	{	
-		if(values(i) > values(i+1))
+		if(values[i] > values[i+1]) // ATTENTION: if CType è vettore?... potremmo confrontare norme...
 		{
-			population[i] = population[i+1] + get_random_element(zero_elem, sigma);
+			population[i] = get_random_element(population[i+1], sigma);
 		}
 
 		else
-			population[i+1] = population[i] + get_random_element(zero_elem, sigma);
+			population[i+1] = get_random_element(population[i+1], sigma);
 	}
 
 	if(i == param_genetic_algorithm.N - 2) // Extra case to manage the case with N odd
 	{
-		if(values(i) > values(i+1))
-			population[i] = population[i+1] + get_random_element(zero_elem, sigma);
+		if(values[i] > values[i+1])
+			population[i] = get_random_element(population[i+1], sigma);
 		else
-			population[i+1] = population[i] + get_random_element(zero_elem, sigma);
+			population[i+1] = get_random_element(population[i], sigma);
 
 	}
 
@@ -133,36 +184,33 @@ void Genetic_Algorithm<DType, CType, SFINAE>::selection_and_variation(VectorXcty
 }
 
 
-// selection of best candidates and variation to investigate new solutions (case when DType is a scalar)
+// Selection of best candidates and variation to investigate new solutions (case when DType is a scalar)
 template <class DType, class CType>
 void Genetic_Algorithm<DType, CType, typename std::enable_if< std::is_floating_point<DType>::value, void >::type>::selection_and_variation(VectorXctype values)
 {
 	// Binary tournament selection: for each couple in population we keep the best one (winner) in terms of loss function
 	// Then we replace the worst one with a little variation of the winner 
-	const Real sigma = 1.0;
-	DType zero_elem;
-
-	zero_elem = static_cast<DType>(0);
+	const Real sigma = 0.5;
 	
 	unsigned int i = 0u;
 
 	for (; i < param_genetic_algorithm.N - 2; i += 2u)
 	{	
-		if(values(i) > values(i+1))
+		if(values[i] > values[i+1])
 		{
-			population[i] = population[i+1] + get_random_element(zero_elem, sigma);
+			population[i] = get_random_element(population[i+1], sigma);
 		}
 
 		else
-			population[i+1] = population[i] + get_random_element(zero_elem, sigma);
+			population[i+1] = get_random_element(population[i], sigma);
 	}
 
 	if(i == param_genetic_algorithm.N - 2) // Extra case to manage the case with N odd
 	{
-		if(values(i) > values(i+1))
-			population[i] = population[i+1] + get_random_element(zero_elem, sigma);
+		if(values[i] > values[i+1])
+			population[i] = get_random_element(population[i+1], sigma);
 		else
-			population[i+1] = population[i] + get_random_element(zero_elem, sigma);
+			population[i+1] = get_random_element(population[i], sigma);
 
 	}
 
@@ -170,43 +218,33 @@ void Genetic_Algorithm<DType, CType, typename std::enable_if< std::is_floating_p
 }
 
 
-// mutation step when DType is a vector
+// Mutation step when DType is a vector
 template <class DType, class CType, class SFINAE>
 void Genetic_Algorithm<DType, CType, SFINAE>::mutation(void)
 {	
-	std::default_random_engine generator{time(0)};
+	std::default_random_engine generator{std::random_device{}()};
 
-	std::uniform_real_distribution<double> distr(0.0, 1.0);
+	std::uniform_real_distribution<Real> distr(0.0, 1.0);
+	std::uniform_int_distribution<UInt> distr_indices(0, param_genetic_algorithm.N - 1);
 
 	for(unsigned int i = 0u; i < param_genetic_algorithm.N; ++i)
 	{	
-		if(distr(generator) < 0.25)  // mutation for 1/4 of the population on average
-			std::swap(population[i](0), population[i](1));
+		if(distr(generator) < 0.25)  // mutation (crossover) for 1/4 of the population on average
+		{
+			idx1 = distr_indices(generator);
+			idx2 = distr_indices(generator);
+			std::swap(population[idx1][0], population[idx2][0]);
+		}
 	}
 	return;
 }
 
 
-// mutation step when DType is a scalar
+// Mutation step when DType is a scalar
 template <class DType, class CType>
 void Genetic_Algorithm<DType, CType, typename std::enable_if< std::is_floating_point<DType>::value >::type>::mutation(void)
 {	
 	return;
-}
-
-// Compute increment between old and new solution (case when DType is a vector)
-template <class DType, class CType, class SFINAE>
-Real Genetic_Algorithm<DType, CType, SFINAE>::compute_increment(DType new_sol, DType old_sol) const
-{
-	return (new_sol - old_sol).norm();
-}
-
-
-// Compute increment between old and new solution (case when DType is a scalar)
-template <class DType, class CType>
-Real Genetic_Algorithm<DType, CType, typename std::enable_if< std::is_floating_point<DType>::value >::type>::compute_increment(DType new_sol, DType old_sol) const
-{
-	return std::abs(new_sol - old_sol);
 }
 
 
@@ -222,6 +260,7 @@ void Genetic_Algorithm<DType, CType, SFINAE>::apply(void)
 	Rprintf("evaluation done\n");
 
 	unsigned int iter = 0u;
+	unsigned int counter = 0u; // counter how many times "best" does not change
 
 	while(iter < max_iterations_genetic_algorithm && goOn)
 	{	
@@ -236,18 +275,31 @@ void Genetic_Algorithm<DType, CType, SFINAE>::apply(void)
 		mutation();
 		Rprintf("mutation done\n");
 
-		// Find the best solution
+		// Find the best solution of this iteration
 		F_values = evaluation();
 		Rprintf("evaluation done\n");
 		UInt best_index;
 		F_values.minCoeff(&best_index);
-		best = population[best_index];
+		
+		// New solution beats the current best solution
+		if(min_value > F_values[best_index])
+		{
+			best = population[best_index];
+			counter = 0u;
+		}
 
+		else
+			++counter;
+		
+		goOn = counter < 5;
+
+
+
+		// CHECK
 		double best1 = best(0);
 		double best2 = best(1);
 		Rprintf("best angle and intensity %f , %f \n", best1, best2);
 
-		goOn = compute_increment(best, old_solution) > tol_genetic_algorithm;
 
 	}
 	
@@ -265,8 +317,8 @@ void Genetic_Algorithm<DType, CType, typename std::enable_if< std::is_floating_p
 	F_values = evaluation();
 	Rprintf("evaluation done\n");
 
-
 	unsigned int iter = 0u;
+	unsigned int counter = 0u; // counter how many times "best" does not change
 
 	while(iter < max_iterations_genetic_algorithm && goOn)
 	{	
@@ -286,11 +338,20 @@ void Genetic_Algorithm<DType, CType, typename std::enable_if< std::is_floating_p
 		Rprintf("evaluation done\n");
 		UInt best_index;
 		F_values.minCoeff(&best_index);
-		best = population[best_index];
-
+		
 		Rprintf("best %f\n", best);
 
-		goOn = compute_increment(best, old_solution) > tol_genetic_algorithm;
+		// New solution beats the current best solution
+		if(min_value > F_values[best_index])
+		{
+			best = population[best_index];
+			counter = 0u;
+		}
+
+		else
+			++counter;
+		
+		goOn = counter < 5;
 
 	}
 	

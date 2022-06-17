@@ -42,11 +42,13 @@
 #' a vector with length #points.}
 #' }
 #' For 2.5D and 3D, only the Laplacian is available (\code{PDE_parameters=NULL}).
-#' In addition, with a further not mandatory input in PDE_parameters list called 'parameter_cascading', it is possible to estimate the PDE_parameters via parameter cascading algorithm 
-#' optimizing the mean squared error; in this case, the PDE_parameters in input will be used as initializations.
+#' In addition, with a further not mandatory input in PDE_parameters called 'parameter_cascading', it is possible to estimate
+#' the PDE_parameters via Parameter Cascading algorithm optimizing the mean squared error.
 #' The following possibilities are allowed for this further option: NULL (default option), 'K';
 #' If NULL is selected, the parameter cascading algorithm is not enabled.
 #' If 'K' is selected, the diffusion matrix K will be estimated via parameter cascading algorithm.
+#' Notice that, if also the parameters K, b and c are provided in PDE_parameters, Parameter Cascading algorithm uses them as initialization.
+#' Otherwise, it is possible to provide only a non-NULL option for parameter_cascading in PDE_paramters: in this case the parameters K,b and c will be automatically initialized (K = Identity matrix, b = zero vector, c = zero). 
 #' @param BC A list with two vectors:
 #'  \code{BC_indices}, a vector with the indices in \code{nodes} of boundary nodes where a Dirichlet Boundary Condition should be applied;
 #'  \code{BC_values}, a vector with the values that the spatial field must take at the nodes indicated in \code{BC_indices}.
@@ -495,29 +497,52 @@ smooth.FEM<-function(locations = NULL, observations, FEMbasis,
   if(!is.null(DOF.matrix))
     DOF.matrix = as.matrix(DOF.matrix)
 
-  space_varying = checkSmoothingParameters(locations = locations, observations = observations, FEMbasis = FEMbasis,
+
+
+  # Set a convention for parameter cascading options
+  if(!is.null(PDE_parameters))
+  {
+  	if(is.null(PDE_parameters$parameter_cascading))
+    	PDE_parameters$parameter_cascading = 0
+  	else if(PDE_parameters$parameter_cascading == 'K')
+    	PDE_parameters$parameter_cascading = 1
+    # Other cases not implemented yet
+  	else 
+    	stop("Invalid input for Parameter Cascading algorithm in PDE_parameters")
+  }
+
+  # Set initial values for the PDE_parameters if user passes only PDE_parameters$parameter_cascading
+  if(length(PDE_parameters) == 1)
+  {	
+  	if(PDE_parameters$parameter_cascading != 0)
+  	{
+  	  	PDE_parameters$K <- cbind(c(1, 0), c(0, 1))
+  		PDE_parameters$b <- c(0, 0)
+  		PDE_parameters$c <- 0
+	}
+
+    else
+  	  stop("Specify a parameter_cascading option different from NULL in PDE_parameters")
+  }
+  
+
+ space_varying = checkSmoothingParameters(locations = locations, observations = observations, FEMbasis = FEMbasis,
     covariates = covariates, PDE_parameters = PDE_parameters, BC = BC,
     incidence_matrix = incidence_matrix, areal.data.avg = areal.data.avg,
     search = search, bary.locations = bary.locations,
     optim = optim, lambda = lambda, DOF.stochastic.realizations = DOF.stochastic.realizations, DOF.stochastic.seed = DOF.stochastic.seed,
     DOF.matrix = DOF.matrix, GCV.inflation.factor = GCV.inflation.factor, lambda.optimization.tolerance = lambda.optimization.tolerance)
 
-  # If I have PDE non-sv case I need matrices as parameters
+  
   if(!is.null(PDE_parameters) & space_varying == FALSE)
   {
+  
+  	# If I have PDE non-sv case I need matrices as parameters
     PDE_parameters$K = as.matrix(PDE_parameters$K)
     PDE_parameters$b = as.matrix(PDE_parameters$b)
     PDE_parameters$c = as.matrix(PDE_parameters$c)
 
-    # Set a convention for parameter cascading options
-    if(length(PDE_parameters) == 3 || is.null(PDE_parameters$parameter_cascading))
-  		PDE_parameters$parameter_cascading = 0
-  	else if(PDE_parameters$parameter_cascading == 'K')
-  		PDE_parameters$parameter_cascading = 1
-  	else 
-  		stop("Invalid input for Parameter Cascading algorithm in PDE_parameters") 
   }
-
 
   checkSmoothingParametersSize(locations = locations, observations = observations, FEMbasis = FEMbasis,
     covariates = covariates, PDE_parameters = PDE_parameters, incidence_matrix = incidence_matrix,

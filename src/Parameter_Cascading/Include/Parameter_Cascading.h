@@ -67,6 +67,7 @@ class Parameter_Cascading
 				UInt parameter_cascading_option = H.getModel().getRegressionData().get_parameter_cascading_option();
 				if(parameter_cascading_option == 1)
 					update_K = true;
+				// Other cases not implemented yet
 			};
 			
 			// Function to apply the parameter cascading algorithm
