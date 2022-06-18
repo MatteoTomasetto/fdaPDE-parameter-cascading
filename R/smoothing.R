@@ -43,7 +43,7 @@
 #' }
 #' For 2.5D and 3D, only the Laplacian is available (\code{PDE_parameters=NULL}).
 #' In addition, with a further not mandatory input in PDE_parameters called 'parameter_cascading', it is possible to estimate
-#' the PDE_parameters via Parameter Cascading algorithm optimizing the mean squared error.
+#' the PDE_parameters via Parameter Cascading algorithm optimizing the mean squared error (in 2D case only).
 #' The following possibilities are allowed for this further option: NULL (default option), 'K';
 #' If NULL is selected, the parameter cascading algorithm is not enabled.
 #' If 'K' is selected, the diffusion matrix K will be estimated via parameter cascading algorithm.
@@ -498,33 +498,34 @@ smooth.FEM<-function(locations = NULL, observations, FEMbasis,
     DOF.matrix = as.matrix(DOF.matrix)
 
 
-
   # Set a convention for parameter cascading options
   if(!is.null(PDE_parameters))
   {
-  	if(is.null(PDE_parameters$parameter_cascading))
-    	PDE_parameters$parameter_cascading = 0
-  	else if(PDE_parameters$parameter_cascading == 'K')
-    	PDE_parameters$parameter_cascading = 1
-    # Other cases not implemented yet
-  	else 
-    	stop("Invalid input for Parameter Cascading algorithm in PDE_parameters")
+    if(is.null(PDE_parameters$parameter_cascading)){
+      PDE_parameters$parameter_cascading = 0
+    }else if(PDE_parameters$parameter_cascading == 'K'){
+      PDE_parameters$parameter_cascading = 1
+    }else{
+      stop("Invalid input for Parameter Cascading algorithm in PDE_parameters")
+    }
   }
+
+
 
   # Set initial values for the PDE_parameters if user passes only PDE_parameters$parameter_cascading
   if(length(PDE_parameters) == 1)
   {	
   	if(PDE_parameters$parameter_cascading != 0)
   	{
-  	  	PDE_parameters$K <- cbind(c(1, 0), c(0, 1))
+  	  PDE_parameters$K <- cbind(c(1, 0), c(0, 1))
   		PDE_parameters$b <- c(0, 0)
   		PDE_parameters$c <- 0
-	}
-
-    else
+  	}else{
   	  stop("Specify a parameter_cascading option different from NULL in PDE_parameters")
+  	}
   }
   
+
 
  space_varying = checkSmoothingParameters(locations = locations, observations = observations, FEMbasis = FEMbasis,
     covariates = covariates, PDE_parameters = PDE_parameters, BC = BC,

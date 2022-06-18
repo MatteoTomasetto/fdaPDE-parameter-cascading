@@ -43,14 +43,13 @@ checkSmoothingParameters<-function(locations = NULL, observations, FEMbasis, cov
 
   # PDE_parameters
   if(!is.null(PDE_parameters)){
-
     if(is.null(PDE_parameters$K))
       stop("'K' required in PDE_parameters;  is NULL.")
     if(is.null(PDE_parameters$b))
       stop("'b' required in PDE_parameters;  is NULL.")
     if(is.null(PDE_parameters$c))
       stop("'c' required in PDE_parameters;  is NULL.")
-    }
+  }
   
   space_varying = FALSE
   
@@ -66,8 +65,7 @@ checkSmoothingParameters<-function(locations = NULL, observations, FEMbasis, cov
       stop("'c' in 'PDE_parameters' is not a function")
     if(!is.function(PDE_parameters$u))
       stop("'u' in 'PDE_parameters' is not a function")
-  }
-  else if(!is.null(PDE_parameters)){
+  }else if(!is.null(PDE_parameters)){
     message("Smoothing: anysotropic and stationary case")
   }
   

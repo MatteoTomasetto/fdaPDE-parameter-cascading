@@ -23,13 +23,32 @@ typename std::enable_if<size==1, std::pair<MatrixXr, output_Data<1>>>::type
 	optimizer_strategy_selection(EvaluationType & optim, CarrierType & carrier);
 
 template<typename InputHandler, UInt ORDER, UInt mydim, UInt ndim>
-typename std::enable_if<!std::is_same<InputHandler, RegressionDataElliptic>::value, SEXP>::type
-regression_skeleton(InputHandler & regressionData, OptimizationData & optimizationData, SEXP Rmesh)
+SEXP regression_skeleton(InputHandler & regressionData, OptimizationData & optimizationData, SEXP Rmesh)
 {
 	MeshHandler<ORDER, mydim, ndim> mesh(Rmesh, regressionData.getSearch());	// Create the mesh
 	MixedFERegression<InputHandler> regression(regressionData, optimizationData, mesh.num_nodes()); // Define the mixed object
 
 	regression.preapply(mesh); // preliminary apply (preapply) to store all problem matrices
+
+	// Parameter Cascading algortihm available only with RegressionDataElliptic
+	if constexpr (std::is_same<InputHandler, RegressionDataElliptic>::value)
+	{
+		// Parameter cascading algorithm to estimate the PDE_parameters optimally
+		if(regressionData.ParameterCascadingOn())
+		{
+			// Functional to optimize in the algorithm
+			PDE_Parameter_Functional<ORDER, mydim, ndim> H(regression, mesh);
+
+			// Object to perform the algorithm
+			Parameter_Cascading<ORDER, mydim, ndim> ParameterCascadingEngine(H);
+
+			Rprintf("Parameter_Cascading Algorithm\n");
+
+			ParameterCascadingEngine.apply(); // Parameter cascading algorithm applied
+		
+			Rprintf("Parameter_Cascading Algorithm done\n");
+		}
+	}
 
 	std::pair<MatrixXr, output_Data<1>> solution_bricks; // Prepare solution to be filled
 
@@ -71,76 +90,6 @@ regression_skeleton(InputHandler & regressionData, OptimizationData & optimizati
 
  	return Solution_Builders::build_solution_plain_regression<InputHandler, ORDER, mydim, ndim>(solution_bricks.first, solution_bricks.second, mesh, regressionData, regression);
 }
-
-
-// Specialization for InputHandler = RegressionDataElliptic in order to use Parameter Cascading algorithm in this case
-template<typename InputHandler, UInt ORDER, UInt mydim, UInt ndim>
-typename std::enable_if<std::is_same<InputHandler, RegressionDataElliptic>::value, SEXP>::type
-regression_skeleton(InputHandler & regressionData, OptimizationData & optimizationData, SEXP Rmesh)
-{
-	MeshHandler<ORDER, mydim, ndim> mesh(Rmesh, regressionData.getSearch());	// Create the mesh
-	MixedFERegression<InputHandler> regression(regressionData, optimizationData, mesh.num_nodes()); // Define the mixed object
-
-	regression.preapply(mesh); // preliminary apply (preapply) to store all problem matrices
-
-	// Parameter cascading algorithm to estimate the PDE_parameters optimally
-	if(regressionData.ParameterCascadingOn())
-	{
-		// Functional to optimize in the algorithm
-		PDE_Parameter_Functional<ORDER, mydim, ndim> H(regression, mesh);
-
-		// Object to perform the algorithm
-		Parameter_Cascading<ORDER, mydim, ndim> ParameterCascadingEngine(H);
-
-		Rprintf("Parameter_Cascading Algorithm\n");
-
-		ParameterCascadingEngine.apply(); // Parameter cascading algorithm applied
-		
-		Rprintf("Parameter_Cascading Algorithm done\n");
-	}
-
-    std::pair<MatrixXr, output_Data<1>> solution_bricks;	// Prepare solution to be filled
-
-	// Build the Carrier according to problem type
-	if(regression.isSV())
-	{
-		if(regressionData.getNumberOfRegions()>0)
-		{
-			//Rprintf("Areal-forced\n");
-			Carrier<InputHandler,Forced,Areal>
-				carrier = CarrierBuilder<InputHandler>::build_forced_areal_carrier(regressionData, regression, optimizationData);
-			solution_bricks = optimizer_method_selection<Carrier<InputHandler, Forced,Areal>>(carrier);
-		}
-		else
-		{
-			//Rprintf("Pointwise-forced\n");
-			Carrier<InputHandler,Forced>
-				carrier = CarrierBuilder<InputHandler>::build_forced_carrier(regressionData, regression, optimizationData);
-			solution_bricks = optimizer_method_selection<Carrier<InputHandler,Forced>>(carrier);
-		}
-	}
-	else
-	{
-		if(regressionData.getNumberOfRegions()>0)
-		{
-			//Rprintf("Areal\n");
-			Carrier<InputHandler,Areal>
-				carrier = CarrierBuilder<InputHandler>::build_areal_carrier(regressionData, regression, optimizationData);
-			solution_bricks = optimizer_method_selection<Carrier<InputHandler,Areal>>(carrier);
-		}
-		else
-		{
-			//Rprintf("Pointwise\n");
-			Carrier<InputHandler>
-				carrier = CarrierBuilder<InputHandler>::build_plain_carrier(regressionData, regression, optimizationData);
-			solution_bricks = optimizer_method_selection<Carrier<InputHandler>>(carrier);
-		}
-	}
-
- 	return Solution_Builders::build_solution_plain_regression<InputHandler, ORDER, mydim, ndim>(solution_bricks.first, solution_bricks.second, mesh, regressionData, regression);
-}
-
-
 
 
 //! Function to select the right optimization method
