@@ -2,52 +2,8 @@
 #define __OPTIMIZATION_ALGORTIHM_IMP_H__
 
 #include <array>
-#include <random>
 #include <algorithm>
 #include <type_traits>
-
-
-template <class DType, class CType>
-const DType Genetic_Algorithm<DType, CType>::get_random_element(const DType& mean, const DType& sigma) const
-{	
-	std::default_random_engine generator{std::random_device{}()};
-
-	unsigned int ElemSize;
-	DType res;
-
-	if constexpr(!std::is_floating_point<DType>::value) // case with DType = vector
-	{	
-		ElemSize = mean.size();
-		res.resize(ElemSize);
-
-		for(unsigned int j = 0u; j < ElemSize; ++j) // loop over each component of mean and res
-		{	
-			// Set lower and upper values for the uniform distribution
-			typename DType::value_type a = std::max(mean[j] - sigma[j], param_genetic_algorithm.lower_bound[j]);
-			typename DType::value_type b = std::min(mean[j] + sigma[j], param_genetic_algorithm.upper_bound[j]);
-
-			// Generate the j-th random component from a normal truncated in (a,b)
-			std::uniform_real_distribution<typename DType::value_type> unif_distr(normal_cdf((a - mean[j])/sigma[j]), normal_cdf((b - mean[j])/sigma[j]));
-
-			res[j] = mean[j] + sigma[j] * probit(unif_distr(generator));
-		}
-	}
-	else // case with DType = scalar
-	{
-		DType a = std::max(mean - sigma, param_genetic_algorithm.lower_bound);
-		DType b = std::min(mean + sigma, param_genetic_algorithm.upper_bound);
-	
-		// Generate the a number from a normal truncated in (a,b)
-		std::uniform_real_distribution<Real>
-		unif_distr(normal_cdf(static_cast<Real>((a - mean)/sigma)), static_cast<Real>(normal_cdf((b - mean)/sigma)));
-		
-		res = mean + sigma * static_cast<DType>(probit(unif_distr(generator)));
-		
-	}
-
-	return res;
-}
-
 
 // Cumulative distribution function of a standard normal (phi function)
 template <class DType, class CType>
@@ -112,17 +68,7 @@ Real Genetic_Algorithm<DType, CType>::probit(const Real& u) const
 template <class DType, class CType>
 void Genetic_Algorithm<DType, CType>::initialization(void)
 {	
-	DType sigma;
-
-	if constexpr(!std::is_floating_point<DType>::value) // case with DType = vector
-	{
-		sigma.resize(population[0].size());
-		std::fill(sigma.data(), sigma.data() + sigma.size(), static_cast<typename DType::value_type>(2.0));
-	}
-	else // case with DType = scalar 
-	{
-		sigma = static_cast<DType>(2.0);
-	}
+	Real sigma = 2.0; // Not small standard deviation to explore enough a region near population[0]
 
 	// Populate the candidate solutions in population
 	for(unsigned int i = 1u; i < param_genetic_algorithm.N; ++i)
@@ -150,26 +96,11 @@ void Genetic_Algorithm<DType, CType>::selection_and_variation(VectorXctype value
 	// Binary tournament selection: for each couple in population we keep the best one (winner) in terms of loss function
 	// Then we replace the worst one with a little variation of the winner 
 
-	DType sigma1, sigma2;
-
 	std::default_random_engine generator{std::random_device{}()};
 	std::uniform_int_distribution<UInt> dice(0, 3);
 
-	if constexpr(!std::is_floating_point<DType>::value) // case with DType = vector
-	{
-		sigma1.resize(population[0].size());
-		std::fill(sigma1.data(), sigma1.data() + sigma1.size(), static_cast<typename DType::value_type>(0.5));
-
-		sigma2.resize(population[0].size());
-		std::fill(sigma2.data(), sigma2.data() + sigma2.size(), static_cast<typename DType::value_type>(1.5));
-	}
-	else // case with DType = scalar 
-	{
-		sigma1 = static_cast<DType>(0.5);
-
-		sigma2 = static_cast<DType>(1.5);
-	}
-
+	Real sigma1 = 0.5;
+	Real sigma2 = 1.5;
 
 	for (unsigned int i = 0u; i < param_genetic_algorithm.N - 1; i += 2u)
 	{	
@@ -187,35 +118,6 @@ void Genetic_Algorithm<DType, CType>::selection_and_variation(VectorXctype value
 
 	return;
 }
-
-
-// Mutation step when DType is a vector
-template <class DType, class CType>
-void Genetic_Algorithm<DType, CType>::mutation(void)
-{	
-	if constexpr(std::is_floating_point<DType>::value) // No mutation in scalar case
-		return;
-	else
-	{
-		std::default_random_engine generator{std::random_device{}()};
-
-		std::uniform_real_distribution<Real> distr(0.0, 1.0);
-		std::uniform_int_distribution<UInt> distr_indices(0, param_genetic_algorithm.N - 1);
-
-		for(unsigned int i = 0u; i < param_genetic_algorithm.N; ++i)
-		{	
-			if(distr(generator) < 0.25)  // mutation for 1/4 of the population on average
-			{
-				UInt idx1 = distr_indices(generator);
-				UInt idx2 = distr_indices(generator);
-				std::swap(population[idx1][0], population[idx2][0]); // swap the first component between two candidate solutions (crossover)
-			}
-		}
-
-		return;
-	}
-}
-
 
 template <class DType, class CType>
 void Genetic_Algorithm<DType, CType>::apply(void)
@@ -238,8 +140,6 @@ void Genetic_Algorithm<DType, CType>::apply(void)
 		// Genetic algorithm steps to modify the population (keep most promising candidate + generate new candidate solutions)
 		selection_and_variation(F_values);
 		Rprintf("selection and variation done\n");
-		mutation();
-		Rprintf("mutation done\n");
 
 		// Find the best solution of this iteration
 		F_values = evaluation();

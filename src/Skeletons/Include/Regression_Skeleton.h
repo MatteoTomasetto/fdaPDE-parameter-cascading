@@ -30,26 +30,6 @@ SEXP regression_skeleton(InputHandler & regressionData, OptimizationData & optim
 
 	regression.preapply(mesh); // preliminary apply (preapply) to store all problem matrices
 
-	// Parameter Cascading algortihm available only with RegressionDataElliptic
-	if constexpr (std::is_same<InputHandler, RegressionDataElliptic>::value)
-	{
-		// Parameter cascading algorithm to estimate the PDE_parameters optimally
-		if(regressionData.ParameterCascadingOn())
-		{
-			// Functional to optimize in the algorithm
-			PDE_Parameter_Functional<ORDER, mydim, ndim> H(regression, mesh);
-
-			// Object to perform the algorithm
-			Parameter_Cascading<ORDER, mydim, ndim> ParameterCascadingEngine(H);
-
-			Rprintf("Parameter_Cascading Algorithm\n");
-
-			ParameterCascadingEngine.apply(); // Parameter cascading algorithm applied
-		
-			Rprintf("Parameter_Cascading Algorithm done\n");
-		}
-	}
-
 	std::pair<MatrixXr, output_Data<1>> solution_bricks; // Prepare solution to be filled
 
 	// Build the Carrier according to problem type
@@ -89,6 +69,72 @@ SEXP regression_skeleton(InputHandler & regressionData, OptimizationData & optim
 	}
 
  	return Solution_Builders::build_solution_plain_regression<InputHandler, ORDER, mydim, ndim>(solution_bricks.first, solution_bricks.second, mesh, regressionData, regression);
+}
+
+// Specialization for RegressionDataElliptic to allow parameter cascading algorithm in that case
+template<UInt ORDER, UInt mydim, UInt ndim>
+SEXP regression_skeleton(RegressionDataElliptic & regressionData, OptimizationData & optimizationData, SEXP Rmesh)
+{
+	MeshHandler<ORDER, mydim, ndim> mesh(Rmesh, regressionData.getSearch());	// Create the mesh
+	MixedFERegression<RegressionDataElliptic> regression(regressionData, optimizationData, mesh.num_nodes()); // Define the mixed object
+
+	regression.preapply(mesh); // preliminary apply (preapply) to store all problem matrices
+
+	// Parameter cascading algorithm to estimate the PDE_parameters optimally
+	if(regressionData.ParameterCascadingOn())
+	{
+		// Functional to optimize in the algorithm
+		PDE_Parameter_Functional<ORDER, mydim, ndim> H(regression, mesh);
+
+		// Object to perform the algorithm
+		Parameter_Cascading<ORDER, mydim, ndim> ParameterCascadingEngine(H);
+
+		Rprintf("Parameter_Cascading Algorithm\n");
+
+		ParameterCascadingEngine.apply(); // Parameter cascading algorithm applied
+		
+		Rprintf("Parameter_Cascading Algorithm done\n");
+	}
+
+	std::pair<MatrixXr, output_Data<1>> solution_bricks; // Prepare solution to be filled
+
+	// Build the Carrier according to problem type
+	if(regression.isSV())
+	{
+		if(regressionData.getNumberOfRegions()>0)
+		{
+			//Rprintf("Areal-forced\n");
+			Carrier<RegressionDataElliptic,Forced,Areal>
+				carrier = CarrierBuilder<RegressionDataElliptic>::build_forced_areal_carrier(regressionData, regression, optimizationData);
+			solution_bricks = optimizer_method_selection<Carrier<RegressionDataElliptic, Forced,Areal>>(carrier);
+		}
+		else
+		{
+			//Rprintf("Pointwise-forced\n");
+			Carrier<RegressionDataElliptic,Forced>
+				carrier = CarrierBuilder<RegressionDataElliptic>::build_forced_carrier(regressionData, regression, optimizationData);
+			solution_bricks = optimizer_method_selection<Carrier<RegressionDataElliptic,Forced>>(carrier);
+		}
+	}
+	else
+	{
+		if(regressionData.getNumberOfRegions()>0)
+		{
+			//Rprintf("Areal\n");
+			Carrier<RegressionDataElliptic,Areal>
+				carrier = CarrierBuilder<RegressionDataElliptic>::build_areal_carrier(regressionData, regression, optimizationData);
+			solution_bricks = optimizer_method_selection<Carrier<RegressionDataElliptic,Areal>>(carrier);
+		}
+		else
+		{
+			//Rprintf("Pointwise\n");
+			Carrier<RegressionDataElliptic>
+				carrier = CarrierBuilder<RegressionDataElliptic>::build_plain_carrier(regressionData, regression, optimizationData);
+			solution_bricks = optimizer_method_selection<Carrier<RegressionDataElliptic>>(carrier);
+		}
+	}
+
+ 	return Solution_Builders::build_solution_plain_regression<RegressionDataElliptic, ORDER, mydim, ndim>(solution_bricks.first, solution_bricks.second, mesh, regressionData, regression);
 }
 
 
