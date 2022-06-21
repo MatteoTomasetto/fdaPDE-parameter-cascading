@@ -4,10 +4,18 @@
 #include "../../FdaPDE.h"
 #include "PDE_Parameter_Functionals.h"
 
+/* *** Parameter_Cascading ***
+ *
+ * Class Parameter_Cascading performs the Parameter Cascading algorithm that aims to estimate the PDE_parameters (diffusion matrix K,
+ * advection vector b and reaction coefficient c) minimizing the mean squared error of the approximation of z_i with
+ * z_hat through regression. 
+ *
+*/
+
 template <UInt ORDER, UInt mydim, UInt ndim>
 class Parameter_Cascading
 {
-	private: // Functional to optimize in the parameter cascading algorithm
+	private: // Functional to optimize in the Parameter Cascading algorithm (mean squared error)
 			 PDE_Parameter_Functional<ORDER, mydim, ndim> & H;
 
 			 // Booleans to keep track of the wanted parameters to optimize
@@ -15,19 +23,21 @@ class Parameter_Cascading
 			 bool update_b;
 			 bool update_c;
 			 
-			 // Diffusion parameters to optimize
+			 // Diffusion parameters
 			 Real angle;
 			 Real intensity;
-			 // Advection components to optimize
+			 // Advection components
 			 Real b1;
 			 Real b2;
-			 // Reaction coefficient to optimize
+			 // Reaction coefficient
 			 Real c;
 
 			 VectorXr lambdas; // lambdas used to search the optimal PDE parameters
 			 
 			 // Function to compute the optimal lambda through GCV
-			 std::pair<Real, Real> compute_optimal_lambda(Carrier<RegressionDataElliptic>& carrier, GCV_Stochastic<Carrier<RegressionDataElliptic>, 1>& GS, Real lambda_init) const;
+			 std::pair<Real, Real> compute_GCV(Carrier<RegressionDataElliptic>& carrier,
+			 								   GCV_Stochastic<Carrier<RegressionDataElliptic>, 1>& solver,
+			 								   Real lambda_init) const;
 			 
 			 void step_K(void); // Find and update diffusion parameters via optimization algorithm
 			 void step_b(void); // Find and update advection components via optimization algorithm
@@ -37,34 +47,32 @@ class Parameter_Cascading
 			Parameter_Cascading(PDE_Parameter_Functional<ORDER, mydim, ndim>& H_)
 			: H(H_) 
 			{
-				// compute the lambdas for the parameter cascading algorithm from the rhos introduced in \cite{Bernardi}
+				// Compute the lambdas for the parameter cascading algorithm from the rhos introduced in \cite{Bernardi}
 				VectorXr rhos;
-				rhos = VectorXr::LinSpaced(3, 0.01, 0.99); // set length vector
+				rhos = {0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99};
 
 				unsigned int n = H.getModel().getRegressionData().getNumberofObservations();
 
 				Real area = 0.0;
 				const MeshHandler<ORDER, mydim, ndim> & mesh = H.getMesh();
-
 				for(unsigned int i = 0u; i < mesh.num_elements(); ++i)
 					area += mesh.elementMeasure(i);
 
-				Rprintf("area computed from mesh = %e\n", area);
-
 				lambdas = rhos.array() / (1 - rhos.array()) * n / area;
 
-				// initialize the parameters with the values in RegressionData
+				// Initialize the parameters with the values in RegressionData
 				angle = H.getModel().getRegressionData().getK().getAngle();
 				intensity = H.getModel().getRegressionData().getK().getIntensity();
 				b1 = H.getModel().getRegressionData().getB().get_b1_coeff();
 				b2 = H.getModel().getRegressionData().getB().get_b2_coeff();
 				c = H.getModel().getRegressionData().getC().get_c_coeff();
 
-				// set which parameters to update
+				// Set which parameters to update
 				update_K = false;
 				update_b = false;
 				update_c = false;
 				UInt parameter_cascading_option = H.getModel().getRegressionData().get_parameter_cascading_option();
+
 				if(parameter_cascading_option == 1)
 					update_K = true;
 				// Other cases not implemented yet

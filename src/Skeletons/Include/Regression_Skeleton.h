@@ -23,7 +23,8 @@ typename std::enable_if<size==1, std::pair<MatrixXr, output_Data<1>>>::type
 	optimizer_strategy_selection(EvaluationType & optim, CarrierType & carrier);
 
 template<typename InputHandler, UInt ORDER, UInt mydim, UInt ndim>
-SEXP regression_skeleton(InputHandler & regressionData, OptimizationData & optimizationData, SEXP Rmesh)
+typename std::enable_if<!std::is_same<InputHandler, RegressionDataElliptic>::value, SEXP>::type
+regression_skeleton(InputHandler & regressionData, OptimizationData & optimizationData, SEXP Rmesh)
 {
 	MeshHandler<ORDER, mydim, ndim> mesh(Rmesh, regressionData.getSearch());	// Create the mesh
 	MixedFERegression<InputHandler> regression(regressionData, optimizationData, mesh.num_nodes()); // Define the mixed object
@@ -72,11 +73,12 @@ SEXP regression_skeleton(InputHandler & regressionData, OptimizationData & optim
 }
 
 // Specialization for RegressionDataElliptic to allow parameter cascading algorithm in that case
-template<UInt ORDER, UInt mydim, UInt ndim>
-SEXP regression_skeleton(RegressionDataElliptic & regressionData, OptimizationData & optimizationData, SEXP Rmesh)
+template<typename InputHandler, UInt ORDER, UInt mydim, UInt ndim>
+typename std::enable_if<std::is_same<InputHandler, RegressionDataElliptic>::value, SEXP>::type
+regression_skeleton(InputHandler & regressionData, OptimizationData & optimizationData, SEXP Rmesh)
 {
 	MeshHandler<ORDER, mydim, ndim> mesh(Rmesh, regressionData.getSearch());	// Create the mesh
-	MixedFERegression<RegressionDataElliptic> regression(regressionData, optimizationData, mesh.num_nodes()); // Define the mixed object
+	MixedFERegression<InputHandler> regression(regressionData, optimizationData, mesh.num_nodes()); // Define the mixed object
 
 	regression.preapply(mesh); // preliminary apply (preapply) to store all problem matrices
 
@@ -90,10 +92,7 @@ SEXP regression_skeleton(RegressionDataElliptic & regressionData, OptimizationDa
 		Parameter_Cascading<ORDER, mydim, ndim> ParameterCascadingEngine(H);
 
 		Rprintf("Parameter_Cascading Algorithm\n");
-
 		ParameterCascadingEngine.apply(); // Parameter cascading algorithm applied
-		
-		Rprintf("Parameter_Cascading Algorithm done\n");
 	}
 
 	std::pair<MatrixXr, output_Data<1>> solution_bricks; // Prepare solution to be filled
@@ -104,16 +103,16 @@ SEXP regression_skeleton(RegressionDataElliptic & regressionData, OptimizationDa
 		if(regressionData.getNumberOfRegions()>0)
 		{
 			//Rprintf("Areal-forced\n");
-			Carrier<RegressionDataElliptic,Forced,Areal>
-				carrier = CarrierBuilder<RegressionDataElliptic>::build_forced_areal_carrier(regressionData, regression, optimizationData);
-			solution_bricks = optimizer_method_selection<Carrier<RegressionDataElliptic, Forced,Areal>>(carrier);
+			Carrier<InputHandler,Forced,Areal>
+				carrier = CarrierBuilder<InputHandler>::build_forced_areal_carrier(regressionData, regression, optimizationData);
+			solution_bricks = optimizer_method_selection<Carrier<InputHandler, Forced,Areal>>(carrier);
 		}
 		else
 		{
 			//Rprintf("Pointwise-forced\n");
-			Carrier<RegressionDataElliptic,Forced>
-				carrier = CarrierBuilder<RegressionDataElliptic>::build_forced_carrier(regressionData, regression, optimizationData);
-			solution_bricks = optimizer_method_selection<Carrier<RegressionDataElliptic,Forced>>(carrier);
+			Carrier<InputHandler,Forced>
+				carrier = CarrierBuilder<InputHandler>::build_forced_carrier(regressionData, regression, optimizationData);
+			solution_bricks = optimizer_method_selection<Carrier<InputHandler,Forced>>(carrier);
 		}
 	}
 	else
@@ -121,20 +120,20 @@ SEXP regression_skeleton(RegressionDataElliptic & regressionData, OptimizationDa
 		if(regressionData.getNumberOfRegions()>0)
 		{
 			//Rprintf("Areal\n");
-			Carrier<RegressionDataElliptic,Areal>
-				carrier = CarrierBuilder<RegressionDataElliptic>::build_areal_carrier(regressionData, regression, optimizationData);
-			solution_bricks = optimizer_method_selection<Carrier<RegressionDataElliptic,Areal>>(carrier);
+			Carrier<InputHandler,Areal>
+				carrier = CarrierBuilder<InputHandler>::build_areal_carrier(regressionData, regression, optimizationData);
+			solution_bricks = optimizer_method_selection<Carrier<InputHandler,Areal>>(carrier);
 		}
 		else
 		{
 			//Rprintf("Pointwise\n");
-			Carrier<RegressionDataElliptic>
-				carrier = CarrierBuilder<RegressionDataElliptic>::build_plain_carrier(regressionData, regression, optimizationData);
-			solution_bricks = optimizer_method_selection<Carrier<RegressionDataElliptic>>(carrier);
+			Carrier<InputHandler>
+				carrier = CarrierBuilder<InputHandler>::build_plain_carrier(regressionData, regression, optimizationData);
+			solution_bricks = optimizer_method_selection<Carrier<InputHandler>>(carrier);
 		}
 	}
 
- 	return Solution_Builders::build_solution_plain_regression<RegressionDataElliptic, ORDER, mydim, ndim>(solution_bricks.first, solution_bricks.second, mesh, regressionData, regression);
+ 	return Solution_Builders::build_solution_plain_regression<InputHandler, ORDER, mydim, ndim>(solution_bricks.first, solution_bricks.second, mesh, regressionData, regression);
 }
 
 
@@ -258,8 +257,6 @@ typename std::enable_if<size==1, std::pair<MatrixXr, output_Data<1>>>::type
         // Choose initial lambdaS with grid
 		Real lambdaS_init = optr->get_initial_lambda_S();   // first value of lambdaS sequence
 
-		Rprintf("Initial lambdaS in skeleton, %e\n", lambdaS_init);
-
 		std::vector<Real> lambdaS_grid = {5.000000e-05, 1.442700e-03, 4.162766e-02, 1.201124e+00, 3.465724e+01, 1.000000e+03};
 			// Start from 6 lambda and find the minimum value of GCV to start from it the newton's method
 
@@ -284,12 +281,9 @@ typename std::enable_if<size==1, std::pair<MatrixXr, output_Data<1>>>::type
 		if (lambdaS_init>lambdaS_min/4 || lambdaS_init<=0)
 			lambdaS_init = lambdaS_min/8;
 
-		Rprintf("new Initial lambdaS in skeleton, %e\n", lambdaS_init);
-
 		Checker ch;
 		std::vector<Real> lambda_v_;
 		std::vector<Real> GCV_v_;
-		
 
 		timer Time_partial; // Of the sole optimization
 		Time_partial.start();
@@ -298,7 +292,6 @@ typename std::enable_if<size==1, std::pair<MatrixXr, output_Data<1>>>::type
 		// Compute optimal lambda
 		std::pair<Real, UInt> lambda_couple = optim_p->compute(lambdaS_init, optr->get_stopping_criterion_tol(), 40, ch, GCV_v_, lambda_v_);
 
-		Rprintf("Optimal Lambda computed in regression_skeleton = %e\n", lambda_couple.first);
 		//Rprintf("WARNING: partial time after the optimization method\n");
 		timespec T = Time_partial.stop();
 

@@ -21,9 +21,6 @@ class  RegressionData
 		bool 		   arealDataAvg_{}; 		//!< Is areal data averaged ?
 		VectorXr	   WeightsMatrix_; 		//!< Weighted regression.
 		bool           isGAM = false;
-		UInt parameter_cascading_ = 0;	//!< Option for parameter cascading algortihm
-		// parameter_cascading_ can be != 0 only in RegressionDataElliptic so far;
-		// however it is defined here to extend easily the code and to skip some computations in preapply/apply functions 
 
 	private:
 		std::vector<UInt> observations_indices_;
@@ -172,8 +169,7 @@ class  RegressionData
 		bool getFlagParabolic(void) const {return flag_parabolic_;}
         bool getFlagIterative(void) const {return flag_iterative_;}
 		bool getisGAM(void) const {return isGAM;}
-		const UInt get_parameter_cascading_option() const {return parameter_cascading_;}
-		bool ParameterCascadingOn(void) const {return parameter_cascading_ != 0;} // return true if Parameter Cascading algorithm has to be done
+		bool ParameterCascadingOn(void) const { return false;} // It will be redefined in RegressionDataElliptic; needed here to skip some computations in preapply/apply functions 
 
 		// Search
 		//! A method returning the input search
@@ -187,7 +183,9 @@ class  RegressionDataElliptic:public RegressionData
 		Diffusion<PDEParameterOptions::Constant> K_;
 		Advection<PDEParameterOptions::Constant> b_;
 		Reaction<PDEParameterOptions::Constant> c_;
-		
+
+		UInt parameter_cascading_ = 0;	// Option for parameter cascading algortihm
+
 	public:
 		//! A complete version of the constructor.
 		/*!
@@ -199,6 +197,7 @@ class  RegressionDataElliptic:public RegressionData
 			\param RK an R-double 2X2 matrix containing the coefficients for a anisotropic DIFFUSION term.
 			\param Rb an R-double 2-dim vector that contains the coefficients for the TRANSPORT coefficients.
 			\param Rc an R-double that contains the coefficient of the REACTION term
+			\param Rparameter_cascading an R-integer that contain the option for Parameter Cascading algorithm
 			\param Rcovariates an R-matrix storing the covariates of the regression
 			\param RincidenceMatrix an R-matrix containing the incidence matrix defining the regions in the model with areal data
 			\param RBCIndices an R-integer containing the indexes of the nodes the user want to apply a Dirichlet Condition,
@@ -213,7 +212,7 @@ class  RegressionDataElliptic:public RegressionData
 		explicit RegressionDataElliptic(SEXP Rlocations, SEXP RbaryLocations, SEXP Robservations, SEXP Rorder,
 			 SEXP RK, SEXP Rb, SEXP Rc, SEXP Rparameter_cascading, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues,
 			 SEXP RincidenceMatrix, SEXP RarealDataAvg, SEXP Rsearch);
-
+		
 		explicit RegressionDataElliptic(SEXP Rlocations, SEXP RbaryLocations, SEXP Robservations, SEXP Rorder,
 			 SEXP RK, SEXP Rb, SEXP Rc, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues,
 			 SEXP RincidenceMatrix, SEXP RarealDataAvg, SEXP Rsearch);
@@ -225,6 +224,10 @@ class  RegressionDataElliptic:public RegressionData
 		const Diffusion<PDEParameterOptions::Constant> & getK() const {return K_;}
 		const Advection<PDEParameterOptions::Constant> & getB() const {return b_;}
 		const Reaction<PDEParameterOptions::Constant> & getC() const {return c_;}
+
+		const UInt get_parameter_cascading_option() const {return parameter_cascading_;}
+
+		bool ParameterCascadingOn(void) const { return parameter_cascading_ != 0;} // return true if Parameter Cascading algorithm has to be done
 
 };
 

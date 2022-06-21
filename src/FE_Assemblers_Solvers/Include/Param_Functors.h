@@ -55,7 +55,6 @@ public:
 
   void setDiffusion(const MatrixXr & K) const
   { 
-    Rprintf("Setting K in R: %f, %f, %f, %f", K(0,0), K(1,0), K(1,0), K(1,1));
     K_ptr_[0] = K(0,0);
     K_ptr_[1] = K(1,0);
     K_ptr_[2] = K(0,1);

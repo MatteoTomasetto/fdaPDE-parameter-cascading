@@ -25,14 +25,8 @@ void PDE_Parameter_Functional<ORDER, mydim, ndim>::set_K(const Real& angle, cons
 	MatrixXr K_matrix(2,2);
 	K_matrix = Q * Sigma * Q.inverse();
 
-	Rprintf("New K computed\n");
-
 	// Set the diffusion in RegressionData
 	model.getRegressionData().getK().setDiffusion(K_matrix);
-
-	Rprintf("New K set in RegressionData\n");
-	
-	Rprintf("SetR1\n");
 
 	// Recompute R1 matrix with new data
 	model.template setR1<ORDER, mydim, ndim>(mesh);
@@ -76,7 +70,7 @@ Real PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_K(const Real& angle, con
 {
 	// Check for proper values of angle and intensity
 	// Notice that we keep angle in [0.0, EIGEN_PI] exploiting the periodicity of the matrix K
-	if (angle < 0.0 || angle > EIGEN_PI || intensity <= 0.0)
+	if (angle < 1.e-10 || angle > EIGEN_PI - 1.e-10 || intensity <= 1.e-10)
 		return std::numeric_limits<Real>::max();
 	
 	else
@@ -93,7 +87,6 @@ Real PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_K(const Real& angle, con
 		VectorXr z_hat = solver.get_z_hat();
 		VectorXr zp = *(model.getRegressionData().getObservations());
 		Real res = (zp - z_hat).squaredNorm();
-		Rprintf("Result of eval_k: %f\n", res);
 
 		return res;
     }

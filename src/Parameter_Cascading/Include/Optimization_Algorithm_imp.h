@@ -71,8 +71,9 @@ void Genetic_Algorithm<DType, CType>::initialization(void)
 	Real sigma = 2.0; // Not small standard deviation to explore enough a region near population[0]
 
 	// Populate the candidate solutions in population
-	for(unsigned int i = 1u; i < param_genetic_algorithm.N; ++i)
+	for(unsigned int i = 1u; i < param_genetic_algorithm.N; ++i){
 		population[i] = get_random_element(population[0], sigma);
+	}
 
 	return;
 }
@@ -84,7 +85,7 @@ typename Genetic_Algorithm<DType, CType>::VectorXctype Genetic_Algorithm<DType, 
 	VectorXctype res(param_genetic_algorithm.N);
 
 	for(unsigned int i = 0u; i < param_genetic_algorithm.N; ++i)
-		res[i] = F(population[i]);
+		res[i] = F(population[i]); // Evaluate F in each candidate solution in population
 
 	return res;
 }
@@ -94,9 +95,11 @@ template <class DType, class CType>
 void Genetic_Algorithm<DType, CType>::selection_and_variation(VectorXctype values)
 {
 	// Binary tournament selection: for each couple in population we keep the best one (winner) in terms of loss function
-	// Then we replace the worst one with a little variation of the winner 
-
-	std::default_random_engine generator{std::random_device{}()};
+	// Then we replace the worst one in 3 different ways:
+	// 		a) winner + little gaussian noise
+	//		b) winner + larger gaussian noise
+	// 		c) best + little gaussian noise
+	std::default_random_engine generator(seed++);
 	std::uniform_int_distribution<UInt> dice(0, 3);
 
 	Real sigma1 = 0.5;
@@ -123,13 +126,11 @@ template <class DType, class CType>
 void Genetic_Algorithm<DType, CType>::apply(void)
 {	
 	initialization();
-	Rprintf("initialization done\n");
-
+	
 	// Evaluate the loss function for population elements: this is needed for selection process
 	VectorXctype F_values(param_genetic_algorithm.N);
 	F_values = evaluation();
-	Rprintf("evaluation done\n");
-
+	
 	unsigned int iter = 0u;
 	unsigned int counter = 0u; // counter how many times "best" does not change
 
@@ -139,12 +140,9 @@ void Genetic_Algorithm<DType, CType>::apply(void)
 
 		// Genetic algorithm steps to modify the population (keep most promising candidate + generate new candidate solutions)
 		selection_and_variation(F_values);
-		Rprintf("selection and variation done\n");
-
+		
 		// Find the best solution of this iteration
 		F_values = evaluation();
-		Rprintf("evaluation done\n");
-
 		auto ptr_min_value = std::min_element(F_values.begin(), F_values.end());
     	UInt best_index = std::distance(F_values.begin(), ptr_min_value);
 
@@ -158,17 +156,9 @@ void Genetic_Algorithm<DType, CType>::apply(void)
 		else
 			++counter;
 		
-		goOn = counter < 4;
-
-
-
-		// CHECK
-		double best1 = best[0];
-		double best2 = best[1];
-		Rprintf("best angle and intensity %f , %f \n", best1, best2);
-
-
-	}
+		goOn = counter < 3;
+		
+}
 	
 	return;
 }

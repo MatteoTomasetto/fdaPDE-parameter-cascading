@@ -223,8 +223,6 @@ std::pair<lambda::type<1>, UInt> Newton_fd<lambda::type<1>, Real, Extensions...>
         Real fsx = (fxph+fxmh-(2*fx))/(h*h);
         // Rprintf("fs(x): %f\n", fsx);
 
-        Rprintf("\n Some values in Newton_fd: %f, %f, %f, %f, %f\n",fx, fxph, fxmh, fpx, fsx);
-
         while(n_iter < max_iter)
         {
                 GCV_v.push_back(fx);
@@ -244,8 +242,6 @@ std::pair<lambda::type<1>, UInt> Newton_fd<lambda::type<1>, Real, Extensions...>
                 x_old = x;
                 Auxiliary<Real>::divide(fsx, fpx, x);
                 x = x_old - x;
-
-                Rprintf("\n new lambda in Newton_fd: %e\n",x);
 
                 if (x<=0)
                 { //too small value

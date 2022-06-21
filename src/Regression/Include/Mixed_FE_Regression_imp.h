@@ -1350,7 +1350,7 @@ MatrixXv  MixedFERegressionBase<InputHandler>::apply(void)
 
 			if(isGAMData || optimizationData_.get_current_lambdaS()!=optimizationData_.get_last_lS_used() ||
 				optimizationData_.get_current_lambdaT()!=optimizationData_.get_last_lT_used() ||
-				regressionData_.ParameterCascadingOn()) // with parameter cascading, we need a new system even if lambdas do not change
+				regressionData_.ParameterCascadingOn()) // with Parameter Cascading, we need a new system even if lambdas do not change
 			{
 				if(!regressionData_.isSpaceTime())
 				{

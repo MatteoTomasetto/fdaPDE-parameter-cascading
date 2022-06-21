@@ -26,7 +26,7 @@ extern "C"
                 \param RK an R-matrix representing the diffusivity matrix of the model
                 \param Rb an R-vector representing the advection term of the model
                 \param Rc an R-double representing the reaction term of the model
-                \param Rparameter_cascading an R-int representing the option for parameter cascading algorithm
+                \param Rparameter_cascading an R-integer representing the option for parameter cascading algorithm
                 \param Rcovariates an R-matrix of covariates for the regression model
                 \param RBCIndices an R-integer containing the indexes of the nodes the user want to apply a Dirichlet Condition,
                                 the other are automatically considered in Neumann Condition.
@@ -44,10 +44,12 @@ extern "C"
                 \return R-vectors containg the coefficients of the solution, prediction of the values, optimization data and much more
         */
         SEXP regression_PDE(SEXP Rlocations, SEXP RbaryLocations, SEXP Robservations, SEXP Rmesh, SEXP Rorder, SEXP Rmydim, SEXP Rndim,
-                SEXP RK, SEXP Rb, SEXP Rc, SEXP Rparameter_cascading, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues, SEXP RincidenceMatrix, SEXP RarealDataAvg, SEXP Rsearch,
+                SEXP RK, SEXP Rb, SEXP Rc, //SEXP Rparameter_cascading, 
+                SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues, SEXP RincidenceMatrix, SEXP RarealDataAvg, SEXP Rsearch,
                 SEXP Roptim, SEXP Rlambda, SEXP Rnrealizations, SEXP Rseed, SEXP RDOF_matrix, SEXP Rtune, SEXP Rsct)
         {
-        	RegressionDataElliptic regressionData(Rlocations, RbaryLocations, Robservations, Rorder, RK, Rb, Rc, Rparameter_cascading, Rcovariates, RBCIndices, RBCValues, RincidenceMatrix, RarealDataAvg, Rsearch);
+        	RegressionDataElliptic regressionData(Rlocations, RbaryLocations, Robservations, Rorder, RK, Rb, Rc, //Rparameter_cascading, 
+        		Rcovariates, RBCIndices, RBCValues, RincidenceMatrix, RarealDataAvg, Rsearch);
                 OptimizationData optimizationData(Roptim, Rlambda, Rnrealizations, Rseed, RDOF_matrix, Rtune, Rsct);
 
         	UInt mydim = INTEGER(Rmydim)[0];

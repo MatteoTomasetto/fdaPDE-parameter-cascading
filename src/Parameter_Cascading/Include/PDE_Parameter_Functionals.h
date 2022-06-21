@@ -15,14 +15,13 @@
  *
 */
 
-// TODO For now we do not consider spacevarying case / GAM / temporal case (with lambdaS and lambdaT).
 template <UInt ORDER, UInt mydim, UInt ndim>
 class PDE_Parameter_Functional
 {
 	private: // MixedFERegression object with to solve the regression problem
 			 MixedFERegression<RegressionDataElliptic> & model;
 
-			 // mesh needed to recompute R1 matrix every time the PDE parameters change
+			 // Mesh needed to recompute R1 matrix every time the PDE parameters change
 			 const MeshHandler<ORDER, mydim, ndim> & mesh;
 			 
 	public: // Constructor to set the reference to the solver
@@ -41,6 +40,7 @@ class PDE_Parameter_Functional
 			Real eval_c(const Real& c, const lambda::type<1>& lambda) const;
 			
 			// Functions to retrieve the derivatives of the functional approximated via finite differences
+			// (these could be useful for optimization methods)
 			VectorXr eval_grad_K(const Real& angle, const Real& intensity, const lambda::type<1>& lambda, const Real& h = 1e-3) const;
 			VectorXr eval_grad_b(const Real& b1, const Real& b2, const lambda::type<1>& lambda, const Real& h = 1e-3) const;
 			Real	 eval_grad_c(const Real& c, const lambda::type<1>& lambda, const Real& h = 1e-3) const;

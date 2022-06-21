@@ -12,18 +12,18 @@
 #include <limits>
 
 template <UInt ORDER, UInt mydim, UInt ndim>
-std::pair<Real, Real> Parameter_Cascading<ORDER, mydim, ndim>::compute_optimal_lambda(Carrier<RegressionDataElliptic>& carrier, GCV_Stochastic<Carrier<RegressionDataElliptic>, 1>& GS, Real lambda_init) const
+std::pair<Real, Real>
+Parameter_Cascading<ORDER, mydim, ndim>::compute_GCV(Carrier<RegressionDataElliptic>& carrier,
+													 GCV_Stochastic<Carrier<RegressionDataElliptic>, 1>& solver,
+													 Real lambda_init) const
 {	
 
-	Function_Wrapper<Real, Real, Real, Real, GCV_Stochastic<Carrier<RegressionDataElliptic>, 1>> Fun(GS);
-
+	Function_Wrapper<Real, Real, Real, Real, GCV_Stochastic<Carrier<RegressionDataElliptic>, 1>> Fun(solver);
 	const OptimizationData optr = H.getModel().getOptimizationData();
 
 	// Stochastic computation of the GCV will be used with Newton_fd to be faster
 	std::unique_ptr<Opt_methods<Real,Real,GCV_Stochastic<Carrier<RegressionDataElliptic>, 1>>>
 	optim_p = Opt_method_factory<Real, Real, GCV_Stochastic<Carrier<RegressionDataElliptic>, 1>>::create_Opt_method(optr.get_criterion(), Fun);
-
-	Rprintf("initial lambda for compute_opt_lambda: %e\n", lambda_init);
 
 	// Start from 6 lambda and find the minimum value of GCV to pick a good initialization for Newton method
 	std::vector<Real> lambda_grid = {5.000000e-05, 1.442700e-03, 4.162766e-02, 1.201124e+00, 3.465724e+01, 1.000000e+03};
@@ -43,18 +43,15 @@ std::pair<Real, Real> Parameter_Cascading<ORDER, mydim, ndim>::compute_optimal_l
 	if (lambda_init > lambda_min/4 || lambda_init <= 0)
 		lambda_init = lambda_min/8;
 
-	Rprintf("new initial lambda for compute_opt_lambda: %e\n", lambda_init);
-
 	Checker ch;
 	std::vector<Real> lambda_values;
 	std::vector<Real> GCV_values;
 
-	// Compute optimal lambda 
+	// Compute optimal lambda
 	std::pair<Real, UInt> lambda_couple = 
 	optim_p->compute(lambda_init, optr.get_stopping_criterion_tol(), 40, ch, GCV_values, lambda_values);
 
-	Rprintf("optimal lambda is = %e\n", lambda_couple.first);
-
+	// Return the GCV and the optimal lambda found
 	return {lambda_couple.first, GCV_values[GCV_values.size()-1]};
 }
 
@@ -62,88 +59,73 @@ std::pair<Real, Real> Parameter_Cascading<ORDER, mydim, ndim>::compute_optimal_l
 template <UInt ORDER, UInt mydim, UInt ndim>
 void Parameter_Cascading<ORDER, mydim, ndim>::step_K(void)
 {
-	// Vectors to store the optimal values for each lambda in lambdas
-	VectorXr angles(lambdas.size() + 1);
-	VectorXr intensities(lambdas.size() + 1);
+	// Current solution and the previous solution for initialization
+	Real old_angle = angle;
+	Real old_intensity = intensity;
+	Real new_angle;
+	Real new_intensity;
 
-	// Initialization
-	angles(0) = angle;
-	intensities(0) = intensity;
-	Rprintf("Initial angle and intensity %f , %f\n", angle, intensity);
+	Rprintf("Initial angle and intensity: %f , %f\n", old_angle, old_intensity);
 
-	// Vectors to store the GCV values for each lambda in lambdas
-	VectorXr GCV_values(lambdas.size());
+	// GCV value
+	Real GCV_value = -1.0;
 
-	// Optimal lambdas to compute GCV
-	VectorXr lambdas_opt(lambdas.size() + 1);
-	lambdas_opt(0) = H.getModel().getOptimizationData().get_initial_lambda_S();
+	// Optimal lambda found in compute_GCV
+	Real lambda_opt = H.getModel().getOptimizationData().get_initial_lambda_S();
 
 	// Parameters for optimization algorithm
 	Eigen::Vector2d lower_bound(0.0, 0.0);
 	Eigen::Vector2d upper_bound(EIGEN_PI, std::numeric_limits<Real>::max());
-	Parameter_Genetic_Algorithm<Eigen::Vector2d> param = {100, lower_bound, upper_bound}; // set number of iter
+	Parameter_Genetic_Algorithm<Eigen::Vector2d> param = {100, lower_bound, upper_bound};
 	
 	for (UInt iter = 0; iter < lambdas.size(); ++iter)
 	{
 		// Function to optimize
 		auto F = [this, &iter](Eigen::Vector2d x){return this -> H.eval_K(x(0),x(1), this -> lambdas(iter));};
 
-		// PROVA
-		Eigen::Vector2d x1(2);
-		x1 << 0.5, 5.0;
-		Eigen::Vector2d x2(2);
-		x2 << 1.3, 12.0;
-		Rprintf("Prova di eval_K with lambda = %f: ", lambdas(iter));
-		Real sol1 = F(x1);
-		Real sol2 = F(x2);
-		Real sol3 = H.eval_K(0.5, 5.0, lambdas(iter));
-		Real sol4 = H.eval_K(1.3, 12.0, lambdas(iter));
-
-
-		// Optimization step		
-		Eigen::Vector2d init(angles(iter), intensities(iter));
-
-		Rprintf("Optimization Algorithm started\n");
+		// Optimization step
+		Eigen::Vector2d init(old_angle, old_intensity); // Initialization done with previous solution as presented in \cite{Bernardi}
 
 		Genetic_Algorithm<Eigen::Vector2d, Real> opt(F, init, param);
 		opt.apply();
-
-		Rprintf("Optimization Algorithm done\n");
 		
 		// Store the optimal solution
 		Eigen::Vector2d opt_sol = opt.get_solution();
-		angles(iter + 1) = opt_sol(0);
-		intensities(iter + 1) = opt_sol(1);
+		new_angle = opt_sol(0);
+		new_intensity = opt_sol(1);
 
 		// Compute GCV with the new parameters
-		H.set_K(angles(iter + 1), intensities(iter + 1));
+		H.set_K(new_angle, new_intensity);
 
 		Carrier<RegressionDataElliptic> carrier = CarrierBuilder<RegressionDataElliptic>::build_plain_carrier(H.getModel().getRegressionData(), H.getModel(), H.getModel().getOptimizationData());
-		GCV_Stochastic<Carrier<RegressionDataElliptic>, 1> GS(carrier, true);  // GCV_Stochastic is used to be faster with computations
+		GCV_Stochastic<Carrier<RegressionDataElliptic>, 1> solver(carrier, true);  // GCV_Stochastic is used to be faster with computations
 		
-		std::pair<Real, Real> opt_sol_GCV = compute_optimal_lambda(carrier, GS, lambdas_opt(iter));
-		lambdas_opt(iter + 1) = opt_sol_GCV.first;
-		GCV_values(iter) = opt_sol_GCV.second;
-
-		Rprintf("GCV: %f", GCV_values(iter));
+		std::pair<Real, Real> opt_sol_GCV = compute_GCV(carrier, solver, lambda_opt); // Use the last optimal lambda found as initial lambda computing GCV
 		
-		iter += 1;
+		old_angle = new_angle;
+		old_intensity = new_intensity;
 
+		if(iter == 0 || opt_sol_GCV.first < GCV_value)
+		{
+			lambda_opt = opt_sol_GCV.first;
+			GCV_value = opt_sol_GCV.second;
+			angle = new_angle;
+			intensity = new_intensity;
+		}
+
+		Rprintf("Optimal K for lambda = %e found\n", lambdas(iter));
+		Rprintf("Optimal angle and intensity: %f, %f\n", new_angle, new_intensity);
+		
+		++iter;
 	}
-
-	// Find the minimum GCV and save the related parameters
-	UInt min_GCV_pos;
-	GCV_values.minCoeff(&min_GCV_pos);
-
-	angle = angles(min_GCV_pos + 1); // GCV_values is shorter than angles due to initialization => index shifted
-	intensity = intensities(min_GCV_pos + 1); // GCV_values is shorter than intensities due to initialization => index shifted
-
-	Rprintf("New K found: angle and intensity are %f, %f\n", angle, intensity);
 
 	// Set the new parameter in RegressionData
 	H.set_K(angle, intensity);
-	
-	Rprintf("Parameters updated\n");
+
+	Rprintf("Optimal K found\n");
+	Rprintf("Optimal angle and intensity: %f, %f\n", angle, intensity);
+	Rprintf("GCV: %f\n", GCV_value);
+	Rprintf("Optimal lambda for GCV: %e\n", lambda_opt);
 	
 	return;
 }
@@ -151,20 +133,19 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_K(void)
 template <UInt ORDER, UInt mydim, UInt ndim>
 void Parameter_Cascading<ORDER, mydim, ndim>::step_b(void)
 {
-	// Vectors to store the optimal values for each lambda in lambdas
-	VectorXr b1_values(lambdas.size() + 1);
-	VectorXr b2_values(lambdas.size() + 1);
+	// Current solution in the loop and the previous solution for initialization
+	Real old_b1 = b1;
+	Real old_b2 = b2;
+	Real new_b1;
+	Real new_b1;
 
-	// Initialization
-	b1_values(0) = b1;
-	b2_values(0) = b2;
+	Rprintf("Initial b: %f , %f\n", old_b1, old_b2);
 
-	// Vectors to store the GCV values for each lambda in lambdas_
-	VectorXr GCV_values(lambdas.size());
+	// GCV value
+	Real GCV_value = -1.0;
 
-	// Optimal lambdas to compute GCV
-	VectorXr lambdas_opt(lambdas.size() + 1);
-	lambdas_opt(0) = H.getModel().getOptimizationData().get_initial_lambda_S();
+	// Optimal lambda found in compute_GCV
+	Real lambda_opt = H.getModel().getOptimizationData().get_initial_lambda_S();
 
 	// Parameters for optimization algorithm
 	Eigen::Vector2d lower_bound(std::numeric_limits<Real>::min(), std::numeric_limits<Real>::min());
@@ -177,41 +158,49 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_b(void)
 		auto F = [this, &iter](Eigen::Vector2d x){return this -> H.eval_b(x(0),x(1), this -> lambdas(iter));};
 		
 		// Optimization step
-		Eigen::Vector2d init(b1_values(iter), b2_values(iter));
+		Eigen::Vector2d init(old_b1, old_b2); // Initialization done with previous solution as presented in \cite{Bernardi}
 
 		Genetic_Algorithm<Eigen::Vector2d, Real> opt(F, init, param);
 		opt.apply();
 		
 		// Store the optimal solution
 		Eigen::Vector2d opt_sol = opt.get_solution();
-		b1_values(iter + 1) = opt_sol(0);
-		b2_values(iter + 1) = opt_sol(1);
+		new_b1 = opt_sol(0);
+		new_b2 = opt_sol(1);
 		
 		// Compute GCV with the new parameters
-		// Compute GCV with the new parameters
-		H.set_b(b1_values(iter + 1), b2_values(iter + 1));
+		H.set_b(new_b1, new_b2);
 
 		Carrier<RegressionDataElliptic> carrier = CarrierBuilder<RegressionDataElliptic>::build_plain_carrier(H.getModel().getRegressionData(), H.getModel(), H.getModel().getOptimizationData());
-		GCV_Stochastic<Carrier<RegressionDataElliptic>, 1> GS(carrier, true);  // GCV_Stochastic is used to be faster with computations
+		GCV_Stochastic<Carrier<RegressionDataElliptic>, 1> solver(carrier, true);  // GCV_Stochastic is used to be faster with computations
 
-		std::pair<Real, Real> opt_sol_GCV = compute_optimal_lambda(carrier, GS, lambdas_opt(iter));
-		lambdas_opt(iter + 1) = opt_sol_GCV.first;
-		GCV_values(iter) = opt_sol_GCV.second;
-
-		Rprintf("GCV: %f", GCV_values(iter));
+		std::pair<Real, Real> opt_sol_GCV = compute_GCV(carrier, solver, lambda_opt); // Use the last optimal lambda found as initial lambda computing GCV
 		
-		iter += 1;
+		old_b1 = new_b1;
+		old_b2 = new_b2;
+
+		if(iter == 0 || opt_sol_GCV.first < GCV_value)
+		{
+			lambda_opt = opt_sol_GCV.first;
+			GCV_value = opt_sol_GCV.second;
+			b1= new_b1;
+			b2 = new_b2;
+		}
+
+		Rprintf("Optimal b for lambda = %e found\n", lambdas(iter));
+		Rprintf("Optimal b: %f, %f\n", new_b1, new_b2);
+			
+		++iter;
 	}
-
-	// Find the minimum GCV and save the related parameters
-	UInt min_GCV_pos;
-	GCV_values.minCoeff(&min_GCV_pos);
-
-	b1 = b1_values(min_GCV_pos + 1); // GCV_values is shorter than b1_values due to initialization => index shifted
-	b2 = b2_values(min_GCV_pos + 1); // GCV_values is shorter than b2_values due to initialization => index shifted
 
 	// Set the new parameter in RegressionData
 	H.set_b(b1, b2);
+
+	Rprintf("Optimal b found\n");
+	Rprintf("Optimal b: %f, %f\n", b1, b2);
+	Rprintf("GCV: %f\n", GCV_value);
+	Rprintf("Optimal lambda for GCV: %e\n", lambda_opt);
+	
 	
 	return;
 }
@@ -219,18 +208,17 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_b(void)
 template <UInt ORDER, UInt mydim, UInt ndim>
 void Parameter_Cascading<ORDER, mydim, ndim>::step_c(void)
 {
-	// Vector to store the optimal values for each lambda in lambdas
-	VectorXr c_values(lambdas.size() + 1);
+	// Current solution in the loop and the previous solution for initialization
+	Real old_c = c;
+	Real new_c;
 
-	// Initialization
-	c_values(0) = c;
+	Rprintf("Initial c: %f\n", old_c);
 
-	// Vectors to store the GCV values for each lambda in lambdas
-	VectorXr GCV_values(lambdas.size());
+	// GCV value
+	Real GCV_value = -1.0;
 
-	// Optimal lambdas to compute GCV
-	VectorXr lambdas_opt(lambdas.size() + 1);
-	lambdas_opt(0) = H.getModel().getOptimizationData().get_initial_lambda_S();
+	// Optimal lambda found in compute_GCV
+	Real lambda_opt = H.getModel().getOptimizationData().get_initial_lambda_S();
 
 	// Parameters for optimization algorithm
 	Real lower_bound(std::numeric_limits<Real>::min());
@@ -243,38 +231,46 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_c(void)
 		auto F = [this, &iter](Real x){return this -> H.eval_c(x, this -> lambdas(iter));};
 		
 		// Optimization step
-		Real init{c_values(iter)};
+		Real init{old_c}; // Initialization done with previous solution as presented in \cite{Bernardi}
 
 		Genetic_Algorithm<Real, Real> opt(F, init, param);
 		opt.apply();
 
 		// Store the optimal solution
-		Real opt_sol = opt.get_solution();
-		c_values(iter + 1) = opt_sol;
-		
+		Real new_c = opt.get_solution();
+				
 		// Compute GCV with the new parameters
-		H.set_c(c_values(iter + 1));
+		H.set_c(new_c);
 
 		Carrier<RegressionDataElliptic> carrier = CarrierBuilder<RegressionDataElliptic>::build_plain_carrier(H.getModel().getRegressionData(), H.getModel(), H.getModel().getOptimizationData());
-		GCV_Stochastic<Carrier<RegressionDataElliptic>, 1> GS(carrier, true);  // GCV_Stochastic is used to be faster with computations
+		GCV_Stochastic<Carrier<RegressionDataElliptic>, 1> solver(carrier, true);  // GCV_Stochastic is used to be faster with computations
 
-		std::pair<Real, Real> opt_sol_GCV = compute_optimal_lambda(carrier, GS, lambdas_opt(iter));
-		lambdas_opt(iter + 1) = opt_sol_GCV.first;
-		GCV_values(iter) = opt_sol_GCV.second;
+		std::pair<Real, Real> opt_sol_GCV = compute_GCV(carrier, solver, lambda_opt); // Use the last optimal lambda found as initial lambda computing GCV
 		
-		iter += 1;
+		old_c = new_c;
+
+		if(iter == 0 || opt_sol_GCV.first < GCV_value)
+		{
+			lambda_opt = opt_sol_GCV.first;
+			GCV_value = opt_sol_GCV.second;
+			c = new_c;
+		}
+		
+		Rprintf("Optimal c for lambda = %e found\n", lambdas(iter));
+		Rprintf("Optimal c: %f\n", c);
+
+		++iter;
 		
 	}
 
-	// Find the minimum GCV and save the related parameters
-	UInt min_GCV_pos;
-	GCV_values.minCoeff(&min_GCV_pos);
-
-	c = c_values(min_GCV_pos + 1); // GCV_values is shorter than c_values due to initialization => index shifted
-	
 	// Set the new parameter in RegressionData
 	H.set_c(c);
-		
+	
+	Rprintf("Optimal c found\n");
+	Rprintf("Optimal c: %f\n", c);
+	Rprintf("GCV: %f\n", GCV_value);
+	Rprintf("Optimal lambda for GCV: %e\n", lambda_opt);
+
 	return;
 
 }
@@ -283,17 +279,23 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_c(void)
 template <UInt ORDER, UInt mydim, UInt ndim>
 void Parameter_Cascading<ORDER, mydim, ndim>::apply(void)
 {
-	Rprintf("Step K\n");		
 	if(update_K)
+	{	
+		Rprintf("Estimate diffusion matrix K\n");		
 		step_K();
+	}
 	
-	Rprintf("Step b\n");
 	if(update_b)
+	{
+		Rprintf("Estimate advection vector b\n");
 		step_b();
+	}
 			
-	Rprintf("Step c\n");
 	if(update_c)
+	{
+		Rprintf("Estimate reaction coefficient c\n");
 		step_c();
+	}
 		
 	return;
 }
