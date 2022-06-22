@@ -119,6 +119,7 @@ class Genetic_Algorithm
 				min_value = F(init);
 
 				seed = std::random_device{}();
+				Rprintf("seed = %d", seed);
 			 };
 
 			Genetic_Algorithm(const std::function<CType (DType)>& F_, const DType& init, const Parameter_Genetic_Algorithm<DType>& param_genetic_algorithm_)

@@ -33,6 +33,7 @@ class Parameter_Cascading
 			 Real c;
 
 			 VectorXr lambdas; // lambdas used to search the optimal PDE parameters
+			 Real lambda_opt; // Optimal lambda for GCV
 			 
 			 // Function to compute the optimal lambda through GCV
 			 std::pair<Real, Real> compute_GCV(Carrier<RegressionDataElliptic>& carrier,
@@ -49,7 +50,7 @@ class Parameter_Cascading
 			{
 				// Compute the lambdas for the parameter cascading algorithm from the rhos introduced in \cite{Bernardi}
 				VectorXr rhos;
-				rhos = {0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99};
+				rhos << 0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99;
 
 				unsigned int n = H.getModel().getRegressionData().getNumberofObservations();
 
@@ -60,12 +61,13 @@ class Parameter_Cascading
 
 				lambdas = rhos.array() / (1 - rhos.array()) * n / area;
 
-				// Initialize the parameters with the values in RegressionData
+				// Initialize the parameters with the values in RegressionData and OptimizationData
 				angle = H.getModel().getRegressionData().getK().getAngle();
 				intensity = H.getModel().getRegressionData().getK().getIntensity();
 				b1 = H.getModel().getRegressionData().getB().get_b1_coeff();
 				b2 = H.getModel().getRegressionData().getB().get_b2_coeff();
 				c = H.getModel().getRegressionData().getC().get_c_coeff();
+				Real lambda_opt = H.getModel().getOptimizationData().get_initial_lambda_S();
 
 				// Set which parameters to update
 				update_K = false;

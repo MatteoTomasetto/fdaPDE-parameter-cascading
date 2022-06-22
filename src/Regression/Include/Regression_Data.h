@@ -226,6 +226,7 @@ class  RegressionDataElliptic:public RegressionData
 		const Reaction<PDEParameterOptions::Constant> & getC() const {return c_;}
 
 		const UInt get_parameter_cascading_option() const {return parameter_cascading_;}
+		void set_parameter_cascading_option(UInt new_option) {parameter_cascading_ = new_option;}
 
 		bool ParameterCascadingOn(void) const { return parameter_cascading_ != 0;} // return true if Parameter Cascading algorithm has to be done
 

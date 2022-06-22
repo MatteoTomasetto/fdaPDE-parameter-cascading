@@ -78,8 +78,7 @@ RegressionData::RegressionData(SEXP Rlocations, SEXP RbaryLocations, SEXP Rtime_
 
 
 RegressionDataElliptic::RegressionDataElliptic(SEXP Rlocations, SEXP RbaryLocations, SEXP Robservations, SEXP Rorder,
-	SEXP RK, SEXP Rb, SEXP Rc, SEXP Rparameter_cascading, 
-	SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues,
+	SEXP RK, SEXP Rb, SEXP Rc, SEXP Rparameter_cascading, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues,
 	SEXP RincidenceMatrix, SEXP RarealDataAvg, SEXP Rsearch):
 	RegressionData(Rlocations, RbaryLocations, Robservations, Rorder, Rcovariates, 
 		RBCIndices, RBCValues, RincidenceMatrix, RarealDataAvg, Rsearch),
@@ -89,10 +88,8 @@ RegressionDataElliptic::RegressionDataElliptic(SEXP Rlocations, SEXP RbaryLocati
 	SEXP RK, SEXP Rb, SEXP Rc, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues, SEXP RincidenceMatrix, SEXP RarealDataAvg, SEXP Rsearch):
 	RegressionData(Rlocations, RbaryLocations, Robservations, Rorder, Rcovariates,
 		RBCIndices, RBCValues, RincidenceMatrix, RarealDataAvg, Rsearch),
-			K_(RK), b_(Rb), c_(Rc), 
-
-			parameter_cascading_(1) // TO REMOVE WHEN regression_PDE IS FIXED
-			
+			K_(RK), b_(Rb), c_(Rc)
+			parameter_cascading_(1) // TO DELETE
 			{}
 
 RegressionDataElliptic::RegressionDataElliptic(SEXP Rlocations, SEXP RbaryLocations, SEXP Rtime_locations, SEXP Robservations, SEXP Rorder,

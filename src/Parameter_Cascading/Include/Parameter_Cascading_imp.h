@@ -70,9 +70,6 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_K(void)
 	// GCV value
 	Real GCV_value = -1.0;
 
-	// Optimal lambda found in compute_GCV
-	Real lambda_opt = H.getModel().getOptimizationData().get_initial_lambda_S();
-
 	// Parameters for optimization algorithm
 	Eigen::Vector2d lower_bound(0.0, 0.0);
 	Eigen::Vector2d upper_bound(EIGEN_PI, std::numeric_limits<Real>::max());
@@ -105,7 +102,7 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_K(void)
 		old_angle = new_angle;
 		old_intensity = new_intensity;
 
-		if(iter == 0 || opt_sol_GCV.first < GCV_value)
+		if(iter == 0 || opt_sol_GCV.first <= GCV_value)
 		{
 			lambda_opt = opt_sol_GCV.first;
 			GCV_value = opt_sol_GCV.second;
@@ -124,6 +121,8 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_K(void)
 
 	Rprintf("Optimal K found\n");
 	Rprintf("Optimal angle and intensity: %f, %f\n", angle, intensity);
+
+	// DEBUGGING
 	Rprintf("GCV: %f\n", GCV_value);
 	Rprintf("Optimal lambda for GCV: %e\n", lambda_opt);
 	
@@ -137,15 +136,12 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_b(void)
 	Real old_b1 = b1;
 	Real old_b2 = b2;
 	Real new_b1;
-	Real new_b1;
+	Real new_b2;
 
 	Rprintf("Initial b: %f , %f\n", old_b1, old_b2);
 
 	// GCV value
 	Real GCV_value = -1.0;
-
-	// Optimal lambda found in compute_GCV
-	Real lambda_opt = H.getModel().getOptimizationData().get_initial_lambda_S();
 
 	// Parameters for optimization algorithm
 	Eigen::Vector2d lower_bound(std::numeric_limits<Real>::min(), std::numeric_limits<Real>::min());
@@ -179,7 +175,7 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_b(void)
 		old_b1 = new_b1;
 		old_b2 = new_b2;
 
-		if(iter == 0 || opt_sol_GCV.first < GCV_value)
+		if(iter == 0 || opt_sol_GCV.first <= GCV_value)
 		{
 			lambda_opt = opt_sol_GCV.first;
 			GCV_value = opt_sol_GCV.second;
@@ -198,6 +194,8 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_b(void)
 
 	Rprintf("Optimal b found\n");
 	Rprintf("Optimal b: %f, %f\n", b1, b2);
+
+	// DEBUGGING
 	Rprintf("GCV: %f\n", GCV_value);
 	Rprintf("Optimal lambda for GCV: %e\n", lambda_opt);
 	
@@ -216,9 +214,6 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_c(void)
 
 	// GCV value
 	Real GCV_value = -1.0;
-
-	// Optimal lambda found in compute_GCV
-	Real lambda_opt = H.getModel().getOptimizationData().get_initial_lambda_S();
 
 	// Parameters for optimization algorithm
 	Real lower_bound(std::numeric_limits<Real>::min());
@@ -249,7 +244,7 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_c(void)
 		
 		old_c = new_c;
 
-		if(iter == 0 || opt_sol_GCV.first < GCV_value)
+		if(iter == 0 || opt_sol_GCV.first <= GCV_value)
 		{
 			lambda_opt = opt_sol_GCV.first;
 			GCV_value = opt_sol_GCV.second;
@@ -268,6 +263,8 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_c(void)
 	
 	Rprintf("Optimal c found\n");
 	Rprintf("Optimal c: %f\n", c);
+
+	// DEBUGGING
 	Rprintf("GCV: %f\n", GCV_value);
 	Rprintf("Optimal lambda for GCV: %e\n", lambda_opt);
 
@@ -296,7 +293,16 @@ void Parameter_Cascading<ORDER, mydim, ndim>::apply(void)
 		Rprintf("Estimate reaction coefficient c\n");
 		step_c();
 	}
-		
+
+	// Set parameter_cascading_option = 0 to avoid useless re-computations in MixedFeRegression.apply()
+	H.getModel().getRegressionData().set_parameter_cascading_option(0);
+
+	// Reset the last lambdaS used in OptimizationData
+	H.getModel().getOptimizationData().set_last_lS_used(std::numeric_limits<Real>::infinity());
+
+	// Set initial lambdaS in OptimizationData (better initialization for future computations)
+	H.getModel().getOptimizationData().set_initial_lambda_S(lambda_opt);
+
 	return;
 }
 
