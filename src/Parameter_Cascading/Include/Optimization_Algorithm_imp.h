@@ -125,6 +125,8 @@ void Genetic_Algorithm<DType, CType>::selection_and_variation(VectorXctype value
 template <class DType, class CType>
 void Genetic_Algorithm<DType, CType>::apply(void)
 {	
+	Rprintf("Start genetic algorithm\n");
+
 	initialization();
 	
 	// Evaluate the loss function for population elements: this is needed for selection process
@@ -157,8 +159,14 @@ void Genetic_Algorithm<DType, CType>::apply(void)
 			++counter;
 		
 		goOn = counter < 3;
+
+		Rprintf("Current min value reached: %f\n", min_value);
 		
 }
+
+Rprintf("Final min value reached: %f\n", min_value);
+
+Rprintf("End genetic algorithm\n");
 	
 	return;
 }

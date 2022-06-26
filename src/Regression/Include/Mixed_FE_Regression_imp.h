@@ -1163,14 +1163,14 @@ void MixedFERegressionBase<InputHandler>::preapply(EOExpr<A> oper, const Forcing
 		setH();
 		setQ();
 	}
-Rprintf("CHECK4preppaly\n");
+
 	typedef EOExpr<Mass> ETMass; Mass EMass; ETMass mass(EMass);
 	if(!isR1Computed)
 	{
 		Assembler::operKernel(oper, mesh_, fe, R1_);
 		isR1Computed = true;
 	}
-Rprintf("CHECK5preppaly\n");
+
 	if(!isR0Computed)
 	{
 		Assembler::operKernel(mass, mesh_, fe, R0_);
@@ -1787,8 +1787,6 @@ class MixedFERegression<RegressionDataElliptic>: public MixedFERegressionBase<Re
 		template<UInt ORDER, UInt mydim, UInt ndim>
 		void preapply(const MeshHandler<ORDER,mydim,ndim> & mesh)
 		{
-			Rprintf("CHECK1preppaly\n");
-
 			typedef EOExpr<Mass>  ETMass;  Mass EMass;   ETMass mass(EMass);
 			typedef EOExpr<Stiff> ETStiff; Stiff EStiff; ETStiff stiff(EStiff);
 			typedef EOExpr<Grad>  ETGrad;  Grad EGrad;   ETGrad grad(EGrad);
@@ -1797,11 +1795,8 @@ class MixedFERegression<RegressionDataElliptic>: public MixedFERegressionBase<Re
 	  		const Advection<PDEParameterOptions::Constant>& b = this->regressionData_.getB();
 	  		const Reaction<PDEParameterOptions::Constant>& c = this->regressionData_.getC();
 
-	  		Rprintf("CHECK2preppaly\n");
+	  		MixedFERegressionBase<RegressionDataElliptic>::preapply(c*mass+stiff[K]+b.dot(grad), ForcingTerm(), mesh);
 
-			MixedFERegressionBase<RegressionDataElliptic>::preapply(c*mass+stiff[K]+b.dot(grad), ForcingTerm(), mesh);
-
-			Rprintf("CHECK3preppaly\n");
 		}
 
 		template<UInt ORDER, UInt mydim, UInt ndim>

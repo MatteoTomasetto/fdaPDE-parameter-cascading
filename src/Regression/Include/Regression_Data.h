@@ -184,7 +184,7 @@ class  RegressionDataElliptic:public RegressionData
 		Advection<PDEParameterOptions::Constant> b_;
 		Reaction<PDEParameterOptions::Constant> c_;
 
-		UInt parameter_cascading_;	// Option for parameter cascading algortihm
+		UInt parameter_cascading_ = 0;	// Option for parameter cascading algortihm
 
 	public:
 		//! A complete version of the constructor.

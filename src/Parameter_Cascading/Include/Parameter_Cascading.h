@@ -50,7 +50,7 @@ class Parameter_Cascading
 			{
 				// Compute the lambdas for the parameter cascading algorithm from the rhos introduced in \cite{Bernardi}
 				VectorXr rhos;
-				rhos = VectorXr::LinSpaced(3, 0.01, 0.99);
+				rhos = VectorXr::LinSpaced(3, 0.01, 0.99); // TO FIX
 
 				unsigned int n = H.getModel().getRegressionData().getNumberofObservations();
 

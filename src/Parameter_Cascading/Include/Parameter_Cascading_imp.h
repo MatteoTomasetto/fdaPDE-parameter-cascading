@@ -79,6 +79,8 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_K(void)
 	
 	for (UInt iter = 0; iter < lambdas.size(); ++iter)
 	{
+		Rprintf("Finding optimal K for lambda = %e\n", lambdas(iter));
+
 		// Function to optimize
 		auto F = [this, &iter](Eigen::Vector2d x){return this -> H.eval_K(x(0),x(1), this -> lambdas(iter));};
 
@@ -99,6 +101,8 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_K(void)
 		Carrier<RegressionDataElliptic> carrier = CarrierBuilder<RegressionDataElliptic>::build_plain_carrier(H.getModel().getRegressionData(), H.getModel(), H.getModel().getOptimizationData());
 		GCV_Stochastic<Carrier<RegressionDataElliptic>, 1> solver(carrier, true);  // GCV_Stochastic is used to be faster with computations
 		
+		Rprintf("Computing GCV with the optimal K for lambda = %e\n", lambdas(iter));
+
 		std::pair<Real, Real> opt_sol_GCV = compute_GCV(carrier, solver, lambda_opt); // Use the last optimal lambda found as initial lambda computing GCV
 		
 		old_angle = new_angle;
@@ -123,13 +127,13 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_K(void)
 	// Set the new parameter in RegressionData
 	H.set_K(angle, intensity);
 
-	Rprintf("Optimal K found\n");
-	Rprintf("Optimal angle and intensity: %f, %f\n", angle, intensity);
+	Rprintf("Final optimal K found\n");
+	Rprintf("Final optimal angle and intensity: %f, %f\n", angle, intensity);
 
 	// DEBUGGING
 	Rprintf("best iter = %d\n", best_iter);
-	Rprintf("GCV: %f\n", GCV_value);
-	Rprintf("Optimal lambda for GCV: %e\n", lambda_opt);
+	Rprintf("Final GCV: %f\n", GCV_value);
+	Rprintf("Final optimal lambda for GCV: %e\n", lambda_opt);
 	
 	return;
 }
@@ -155,6 +159,8 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_b(void)
 
 	for (UInt iter = 0; iter < lambdas.size(); ++iter)
 	{
+		Rprintf("Finding optimal b for lambda = %e\n", lambdas(iter));
+
 		// Function to optimize
 		auto F = [this, &iter](Eigen::Vector2d x){return this -> H.eval_b(x(0),x(1), this -> lambdas(iter));};
 		
@@ -174,6 +180,8 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_b(void)
 
 		Carrier<RegressionDataElliptic> carrier = CarrierBuilder<RegressionDataElliptic>::build_plain_carrier(H.getModel().getRegressionData(), H.getModel(), H.getModel().getOptimizationData());
 		GCV_Stochastic<Carrier<RegressionDataElliptic>, 1> solver(carrier, true);  // GCV_Stochastic is used to be faster with computations
+
+		Rprintf("Computing GCV with the optimal b for lambda = %e\n", lambdas(iter));
 
 		std::pair<Real, Real> opt_sol_GCV = compute_GCV(carrier, solver, lambda_opt); // Use the last optimal lambda found as initial lambda computing GCV
 		
@@ -197,12 +205,12 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_b(void)
 	// Set the new parameter in RegressionData
 	H.set_b(b1, b2);
 
-	Rprintf("Optimal b found\n");
-	Rprintf("Optimal b: %f, %f\n", b1, b2);
+	Rprintf("Final optimal b found\n");
+	Rprintf("Final optimal b: %f, %f\n", b1, b2);
 
 	// DEBUGGING
-	Rprintf("GCV: %f\n", GCV_value);
-	Rprintf("Optimal lambda for GCV: %e\n", lambda_opt);
+	Rprintf("Final GCV: %f\n", GCV_value);
+	Rprintf("Final optimal lambda for GCV: %e\n", lambda_opt);
 	
 	
 	return;
@@ -211,6 +219,8 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_b(void)
 template <UInt ORDER, UInt mydim, UInt ndim>
 void Parameter_Cascading<ORDER, mydim, ndim>::step_c(void)
 {
+	Rprintf("Finding optimal c for lambda = %e\n", lambdas(iter));
+
 	// Current solution in the loop and the previous solution for initialization
 	Real old_c = c;
 	Real new_c;
@@ -245,6 +255,8 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_c(void)
 		Carrier<RegressionDataElliptic> carrier = CarrierBuilder<RegressionDataElliptic>::build_plain_carrier(H.getModel().getRegressionData(), H.getModel(), H.getModel().getOptimizationData());
 		GCV_Stochastic<Carrier<RegressionDataElliptic>, 1> solver(carrier, true);  // GCV_Stochastic is used to be faster with computations
 
+		Rprintf("Computing GCV with the optimal c for lambda = %e\n", lambdas(iter));
+
 		std::pair<Real, Real> opt_sol_GCV = compute_GCV(carrier, solver, lambda_opt); // Use the last optimal lambda found as initial lambda computing GCV
 		
 		old_c = new_c;
@@ -266,12 +278,12 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_c(void)
 	// Set the new parameter in RegressionData
 	H.set_c(c);
 	
-	Rprintf("Optimal c found\n");
-	Rprintf("Optimal c: %f\n", c);
+	Rprintf("Final optimal c found\n");
+	Rprintf("Final optimal c: %f\n", c);
 
 	// DEBUGGING
-	Rprintf("GCV: %f\n", GCV_value);
-	Rprintf("Optimal lambda for GCV: %e\n", lambda_opt);
+	Rprintf("Final GCV: %f\n", GCV_value);
+	Rprintf("Final optimal lambda for GCV: %e\n", lambda_opt);
 
 	return;
 
@@ -283,19 +295,19 @@ Real Parameter_Cascading<ORDER, mydim, ndim>::apply(void)
 {
 	if(update_K)
 	{	
-		Rprintf("Estimate diffusion matrix K\n");		
+		Rprintf("Finding diffusion matrix K\n");		
 		step_K();
 	}
 	
 	if(update_b)
 	{
-		Rprintf("Estimate advection vector b\n");
+		Rprintf("Finding advection vector b\n");
 		step_b();
 	}
 			
 	if(update_c)
 	{
-		Rprintf("Estimate reaction coefficient c\n");
+		Rprintf("Finding reaction coefficient c\n");
 		step_c();
 	}
 
