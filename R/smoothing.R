@@ -350,8 +350,7 @@ smooth.FEM<-function(locations = NULL, observations, FEMbasis,
                      family = "gaussian", mu0 = NULL, scale.param = NULL, threshold.FPIRLS = 0.0002020, max.steps.FPIRLS = 15,
                      lambda.selection.criterion = "grid", DOF.evaluation = NULL, lambda.selection.lossfunction = NULL,
                      lambda = NULL, DOF.stochastic.realizations = 100, DOF.stochastic.seed = 0, DOF.matrix = NULL, GCV.inflation.factor = 1, lambda.optimization.tolerance = 0.05)
-{
-  # Mesh identification
+{ # Mesh identification
   if(is(FEMbasis$mesh, "mesh.2D"))
   {
     ndim = 2
@@ -497,7 +496,6 @@ smooth.FEM<-function(locations = NULL, observations, FEMbasis,
   if(!is.null(DOF.matrix))
     DOF.matrix = as.matrix(DOF.matrix)
 
-
   # Set a convention for parameter cascading options
   if(!is.null(PDE_parameters) & is.null(PDE_parameters$u))
   {
@@ -572,8 +570,6 @@ smooth.FEM<-function(locations = NULL, observations, FEMbasis,
   if(sum(family==family_admit)==0){
    stop("'family' parameter required.\nCheck if it is one of the following: binomial, exponential, gamma, poisson, gaussian")
   }
-
-
 
   ################## End checking parameters, sizes and conversion #############################
   if(family == "gaussian")

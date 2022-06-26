@@ -361,7 +361,8 @@ CPP_smooth.FEM.PDE.time<-function(locations, time_locations, observations, FEMba
     lambdaSIC <- as.matrix(lambdaSIC)
     storage.mode(lambdaSIC) <- "double"
     ICsol <- .Call("regression_PDE", locations, bary.locations, observations[1:NobsIC], FEMbasis$mesh, FEMbasis$order,
-      mydim, ndim, PDE_parameters$K, PDE_parameters$b, PDE_parameters$c, PDE_parameters$parameter_cascading, covariatesIC, BC$BC_indices, BC$BC_values,
+      mydim, ndim, PDE_parameters$K, PDE_parameters$b, PDE_parameters$c, #PDE_parameters$parameter_cascading, 
+      covariatesIC, BC$BC_indices, BC$BC_values,
       incidence_matrix, areal.data.avg, search, as.integer(c(0,2,1)), lambdaSIC, DOF.stochastic.realizations, DOF.stochastic.seed,  DOF.matrix_IC, GCV.inflation.factor, lambda.optimization.tolerance, PACKAGE = "fdaPDE")
 
     if(ICsol[[6]]==1)
@@ -370,7 +371,8 @@ CPP_smooth.FEM.PDE.time<-function(locations, time_locations, observations, FEMba
       lambdaSIC <- as.matrix(lambdaSIC)
       storage.mode(lambdaSIC) <- "double"
       ICsol <- .Call("regression_PDE", locations, bary.locations, observations[1:NobsIC], FEMbasis$mesh, FEMbasis$order,
-       mydim, ndim, PDE_parameters$K, PDE_parameters$b, PDE_parameters$c, PDE_parameters$parameter_cascading, covariatesIC, BC$BC_indices, BC$BC_values,
+       mydim, ndim, PDE_parameters$K, PDE_parameters$b, PDE_parameters$c, #PDE_parameters$parameter_cascading, 
+       covariatesIC, BC$BC_indices, BC$BC_values,
        incidence_matrix, areal.data.avg, search, as.integer(c(0,2,1)), lambdaSIC, DOF.stochastic.realizations, DOF.stochastic.seed,  DOF.matrix_IC, GCV.inflation.factor, lambda.optimization.tolerance, PACKAGE = "fdaPDE")
     }
     else
@@ -381,7 +383,8 @@ CPP_smooth.FEM.PDE.time<-function(locations, time_locations, observations, FEMba
         lambdaSIC <- as.matrix(lambdaSIC)
         storage.mode(lambdaSIC) <- "double"
         ICsol <- .Call("regression_PDE", locations, bary.locations, observations[1:NobsIC], FEMbasis$mesh, FEMbasis$order,
-         mydim, ndim, PDE_parameters$K, PDE_parameters$b, PDE_parameters$c, PDE_parameters$parameter_cascading, covariatesIC, BC$BC_indices, BC$BC_values,
+         mydim, ndim, PDE_parameters$K, PDE_parameters$b, PDE_parameters$c, #PDE_parameters$parameter_cascading, 
+         covariatesIC, BC$BC_indices, BC$BC_values,
          incidence_matrix, areal.data.avg, search, as.integer(c(0,2,1)), lambdaSIC, DOF.stochastic.realizations, DOF.stochastic.seed,  DOF.matrix_IC, GCV.inflation.factor, lambda.optimization.tolerance, PACKAGE = "fdaPDE")
       }
     }

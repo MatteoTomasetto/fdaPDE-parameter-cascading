@@ -72,28 +72,55 @@ regression_skeleton(InputHandler & regressionData, OptimizationData & optimizati
  	return Solution_Builders::build_solution_plain_regression<InputHandler, ORDER, mydim, ndim>(solution_bricks.first, solution_bricks.second, mesh, regressionData, regression);
 }
 
-// Specialization for RegressionDataElliptic to allow parameter cascading algorithm in that case
+// Specialization for RegressionDataElliptic to allow parameter cascading algorithm in this case
 template<typename InputHandler, UInt ORDER, UInt mydim, UInt ndim>
 typename std::enable_if<std::is_same<InputHandler, RegressionDataElliptic>::value, SEXP>::type
 regression_skeleton(InputHandler & regressionData, OptimizationData & optimizationData, SEXP Rmesh)
 {
+	Rprintf("CHECK1: param casc option &d\n", regressionData.get_parameter_cascading_option()); 
+
 	MeshHandler<ORDER, mydim, ndim> mesh(Rmesh, regressionData.getSearch());	// Create the mesh
+	
+	Rprintf("CHECK2\n");
+
 	MixedFERegression<InputHandler> regression(regressionData, optimizationData, mesh.num_nodes()); // Define the mixed object
+
+	Rprintf("CHECK3\n");
 
 	regression.preapply(mesh); // preliminary apply (preapply) to store all problem matrices
 
+	Rprintf("CHECK4\n");
+
 	// Parameter cascading algorithm to estimate the PDE_parameters optimally
-	if(regressionData.ParameterCascadingOn() && optr->get_loss_function() == "GCV" && optr->get_DOF_evaluation() == "stochastic") // LEAVE ONLY THE FIRST CONDITION AT THE END
+	if(regressionData.ParameterCascadingOn() && optimizationData.get_loss_function() == "GCV" && optimizationData.get_DOF_evaluation() == "stochastic") // LEAVE ONLY THE FIRST CONDITION AT THE END
 	{
+		Rprintf("CHECK5\n");
+
 		// Functional to optimize in the algorithm
 		PDE_Parameter_Functional<ORDER, mydim, ndim> H(regression, mesh);
 
+Rprintf("CHECK6\n");
 		// Object to perform the algorithm
 		Parameter_Cascading<ORDER, mydim, ndim> ParameterCascadingEngine(H);
 
 		Rprintf("Parameter_Cascading Algorithm\n");
-		ParameterCascadingEngine.apply(); // Parameter cascading algorithm applied
+		Real lambda_opt = ParameterCascadingEngine.apply(); // Parameter cascading algorithm applied
+
+Rprintf("CHECK7\n");
+
+		// Set parameter_cascading_option = 0 to avoid useless re-computations in MixedFeRegression.apply()
+		regressionData.set_parameter_cascading_option(0);
+
+Rprintf("CHECK8\n");
+		// Reset the last lambdaS used in OptimizationData
+		optimizationData.set_last_lS_used(std::numeric_limits<Real>::infinity());
+
+Rprintf("CHECK9 %e\n", optimizationData.get_last_lS_used());
+		// Set initial lambdaS in OptimizationData (better initialization for future computations)
+		optimizationData.set_initial_lambda_S(lambda_opt);
 	}
+
+	Rprintf("CHECK10\n");
 
 	std::pair<MatrixXr, output_Data<1>> solution_bricks; // Prepare solution to be filled
 

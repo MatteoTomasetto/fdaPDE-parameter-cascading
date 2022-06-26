@@ -174,7 +174,8 @@ CPP_smooth.volume.FEM.PDE.basis<-function(locations, observations, FEMbasis, cov
   storage.mode(lambda.optimization.tolerance) <- "double"
 
   ## Call C++ function
-  bigsol <- .Call("regression_PDE", locations, bary.locations, data, FEMbasis$mesh, FEMbasis$order, mydim, ndim, PDE_parameters$K, PDE_parameters$b, PDE_parameters$c, PDE_parameters$parameter_cascading, covariates,
+  bigsol <- .Call("regression_PDE", locations, bary.locations, data, FEMbasis$mesh, FEMbasis$order, mydim, ndim, PDE_parameters$K, PDE_parameters$b, PDE_parameters$c, #PDE_parameters$parameter_cascading, 
+                  covariates,
                   BC$BC_indices, BC$BC_values, incidence_matrix, areal.data.avg, search,
                   optim, lambda, DOF.stochastic.realizations, DOF.stochastic.seed, DOF.matrix, GCV.inflation.factor, lambda.optimization.tolerance, PACKAGE = "fdaPDE")
 

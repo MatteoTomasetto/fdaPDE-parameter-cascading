@@ -74,6 +74,8 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_K(void)
 	Eigen::Vector2d lower_bound(0.0, 0.0);
 	Eigen::Vector2d upper_bound(EIGEN_PI, std::numeric_limits<Real>::max());
 	Parameter_Genetic_Algorithm<Eigen::Vector2d> param = {100, lower_bound, upper_bound};
+
+	UInt best_iter; // debugging purpose
 	
 	for (UInt iter = 0; iter < lambdas.size(); ++iter)
 	{
@@ -108,6 +110,8 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_K(void)
 			GCV_value = opt_sol_GCV.second;
 			angle = new_angle;
 			intensity = new_intensity;
+
+			best_iter = iter;
 		}
 
 		Rprintf("Optimal K for lambda = %e found\n", lambdas(iter));
@@ -123,6 +127,7 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_K(void)
 	Rprintf("Optimal angle and intensity: %f, %f\n", angle, intensity);
 
 	// DEBUGGING
+	Rprintf("best iter = %d\n", best_iter);
 	Rprintf("GCV: %f\n", GCV_value);
 	Rprintf("Optimal lambda for GCV: %e\n", lambda_opt);
 	
@@ -274,7 +279,7 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_c(void)
 
 
 template <UInt ORDER, UInt mydim, UInt ndim>
-void Parameter_Cascading<ORDER, mydim, ndim>::apply(void)
+Real Parameter_Cascading<ORDER, mydim, ndim>::apply(void)
 {
 	if(update_K)
 	{	
@@ -294,16 +299,7 @@ void Parameter_Cascading<ORDER, mydim, ndim>::apply(void)
 		step_c();
 	}
 
-	// Set parameter_cascading_option = 0 to avoid useless re-computations in MixedFeRegression.apply()
-	H.getModel().getRegressionData().set_parameter_cascading_option(0);
-
-	// Reset the last lambdaS used in OptimizationData
-	H.getModel().getOptimizationData().set_last_lS_used(std::numeric_limits<Real>::infinity());
-
-	// Set initial lambdaS in OptimizationData (better initialization for future computations)
-	H.getModel().getOptimizationData().set_initial_lambda_S(lambda_opt);
-
-	return;
+	return lambda_opt;
 }
 
 #endif
