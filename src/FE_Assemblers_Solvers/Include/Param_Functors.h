@@ -68,8 +68,15 @@ public:
 
     if(std::abs(K_ptr_[1]) < 1e-16)
       return EIGEN_PI / 2;
+
     else
-      return std::atan((K_ptr_[3] - std::sqrt(intensity)) / K_ptr_[1]);
+    {
+      Real angle = std::atan((K_ptr_[3] - std::sqrt(intensity)) / K_ptr_[1]);
+      
+      angle = (angle < 0.0) ? angle + EIGEN_PI : angle;
+
+      return angle;
+      }
   }
 
   // Compute diffusion intensity from K

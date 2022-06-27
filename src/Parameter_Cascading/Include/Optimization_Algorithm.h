@@ -52,7 +52,7 @@ class Genetic_Algorithm
 			 // DType = Vector case (e.g. std::vector<double>, Eigen::Vector2d,...)
 			 template <class SFINAE = DType>
 			 const typename std::enable_if< !std::is_floating_point<SFINAE>::value, DType>::type
-			 get_random_element(const DType& mean, Real& sigma)
+			 get_random_element(const DType& mean, const Real& sigma)
 			 {
 			 	std::default_random_engine generator(seed++);
 			 	
@@ -60,17 +60,17 @@ class Genetic_Algorithm
 			 	DType res;
 			 	res.resize(ElemSize);
 
-			 	sigma = static_cast<typename DType::value_type>(sigma);
+			 	typename DType::value_type sigma_converted = static_cast<typename DType::value_type>(sigma);
 
 			 	// Loop over each component of mean and res and generate random the components of res
 			 	for(unsigned int j = 0u; j < ElemSize; ++j)
 			 	{	
 			 		// Generate the j-th random component from a normal truncated wrt lower and upper bound in param_genetic_algorithm
 			 		std::uniform_real_distribution<Real>
-			 		unif_distr(normal_cdf(static_cast<Real>((param_genetic_algorithm.lower_bound[j] - mean[j])/sigma)),
-			 				   normal_cdf(static_cast<Real>((param_genetic_algorithm.upper_bound[j] - mean[j])/sigma)));
+			 		unif_distr(normal_cdf(static_cast<Real>((param_genetic_algorithm.lower_bound[j] - mean[j])/sigma_converted)),
+			 				   normal_cdf(static_cast<Real>((param_genetic_algorithm.upper_bound[j] - mean[j])/sigma_converted)));
 
-			 		res[j] = mean[j] + sigma * static_cast<typename DType::value_type>(probit(unif_distr(generator)));
+			 		res[j] = mean[j] + sigma_converted * static_cast<typename DType::value_type>(probit(unif_distr(generator)));
 			 	}
 	
 			 	return res;
@@ -78,18 +78,18 @@ class Genetic_Algorithm
 			 // DType = Scalar case
 			 template <class SFINAE = DType>
 			 const typename std::enable_if< std::is_floating_point<SFINAE>::value, DType>::type
-			 get_random_element(const DType& mean, Real& sigma)
+			 get_random_element(const DType& mean, const Real& sigma)
 			 {
 
-			 	sigma = static_cast<DType>(sigma);
+				DType sigma_converted = static_cast<DType>(sigma);
 		 	
 			 	// Generate the a number from a normal truncated in (a,b)
 			 	std::default_random_engine generator(seed++);
 			 	std::uniform_real_distribution<Real>
-			 	unif_distr(normal_cdf(static_cast<Real>((param_genetic_algorithm.lower_bound - mean)/sigma)),
-			 			   normal_cdf(static_cast<Real>((param_genetic_algorithm.upper_bound - mean)/sigma)));
+			 	unif_distr(normal_cdf(static_cast<Real>((param_genetic_algorithm.lower_bound - mean)/sigma_converted)),
+			 			   normal_cdf(static_cast<Real>((param_genetic_algorithm.upper_bound - mean)/sigma_converted)));
 		
-			 	return mean + sigma * static_cast<DType>(probit(unif_distr(generator)));
+			 	return mean + sigma_converted * static_cast<DType>(probit(unif_distr(generator)));
 			 }
 
 			 // Cumulative distribution function of a standard normal (phi function)

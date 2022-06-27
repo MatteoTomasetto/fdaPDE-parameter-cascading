@@ -104,9 +104,9 @@ void Genetic_Algorithm<DType, CType>::selection_and_variation(VectorXctype value
 
 	std::default_random_engine generator(seed++);
 
-	std::uniform_int_distribution<UInt> dice(0, static_cast<UInt>(alpha)); // higher probability to consider "best" below as alpha increases 
+	std::uniform_int_distribution<UInt> dice(0,  static_cast<UInt>(alpha)); // higher probability to consider "best" below as alpha increases 
 
-	Real adapt_sigma = 1.5/alpha; // smaller standard deviation iteration by iteration (as alpha increases)
+	Real adapt_sigma = 2 / std::log(alpha + 2.0); // smaller standard deviation iteration by iteration (as alpha increases)
 
 	for (unsigned int i = 0u; i < param_genetic_algorithm.N - 1; i += 2u)
 	{	
@@ -114,7 +114,7 @@ void Genetic_Algorithm<DType, CType>::selection_and_variation(VectorXctype value
 		unsigned int idx_winner = idx_loser == i ? i + 1 : i;
 		UInt choice = dice(generator);
 		
-		if(choice == 0)
+		if(choice == 0 || choice == 1)
 			population[idx_loser] = get_random_element(population[idx_winner], adapt_sigma);
 		else
 			population[idx_loser] = get_random_element(best, adapt_sigma);
@@ -139,8 +139,6 @@ void Genetic_Algorithm<DType, CType>::apply(void)
 
 	while(iter < max_iterations_genetic_algorithm && goOn)
 	{	
-		++iter;
-
 		// Genetic algorithm steps to modify the population (keep most promising candidate + generate new candidate solutions)
 		selection_and_variation(F_values, static_cast<Real>(iter));
 		
@@ -160,6 +158,8 @@ void Genetic_Algorithm<DType, CType>::apply(void)
 			++counter;
 		
 		goOn = counter < 3;
+
+		++iter;
 
 		Rprintf("Current min value reached: %f\n", min_value);
 		

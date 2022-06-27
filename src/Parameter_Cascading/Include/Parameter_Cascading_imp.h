@@ -72,7 +72,7 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_K(void)
 
 	// Parameters for optimization algorithm
 	Eigen::Vector2d lower_bound(0.0, 0.0);
-	Eigen::Vector2d upper_bound(EIGEN_PI, std::numeric_limits<Real>::max());
+	Eigen::Vector2d upper_bound(EIGEN_PI, 100.0);
 	Parameter_Genetic_Algorithm<Eigen::Vector2d> param = {100, lower_bound, upper_bound};
 
 	UInt best_iter; // debugging purpose
@@ -153,8 +153,8 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_b(void)
 	Real GCV_value = -1.0;
 
 	// Parameters for optimization algorithm
-	Eigen::Vector2d lower_bound(std::numeric_limits<Real>::min(), std::numeric_limits<Real>::min());
-	Eigen::Vector2d upper_bound(std::numeric_limits<Real>::max(), std::numeric_limits<Real>::max());
+	Eigen::Vector2d lower_bound(-100.0, 100.0);
+	Eigen::Vector2d upper_bound(-100.0, 100.0);
 	Parameter_Genetic_Algorithm<Eigen::Vector2d> param = {100, lower_bound, upper_bound};
 
 	for (UInt iter = 0; iter < lambdas.size(); ++iter)
@@ -229,8 +229,8 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_c(void)
 	Real GCV_value = -1.0;
 
 	// Parameters for optimization algorithm
-	Real lower_bound(std::numeric_limits<Real>::min());
-	Real upper_bound(std::numeric_limits<Real>::max());
+	Real lower_bound(-100.0);
+	Real upper_bound(100.0);
 	Parameter_Genetic_Algorithm<Real> param = {100, lower_bound, upper_bound};
 
 	for (UInt iter = 0; iter < lambdas.size(); ++iter)
