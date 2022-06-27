@@ -105,7 +105,7 @@ class Genetic_Algorithm
 			 VectorXctype evaluation(void) const;
 
 			 // Selection and Variation steps
-			 void selection_and_variation(VectorXctype values);
+			 void selection_and_variation(VectorXctype values, Real alpha);
 			 
 
 	public: // Constructors
@@ -121,7 +121,6 @@ class Genetic_Algorithm
 
 				seed = std::chrono::system_clock::now().time_since_epoch().count();
 
-				Rprintf("seed = %d\n", seed);
 			 };
 
 			Genetic_Algorithm(const std::function<CType (DType)>& F_, const DType& init, const Parameter_Genetic_Algorithm<DType>& param_genetic_algorithm_)

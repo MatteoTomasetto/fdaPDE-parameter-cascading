@@ -92,18 +92,21 @@ typename Genetic_Algorithm<DType, CType>::VectorXctype Genetic_Algorithm<DType, 
 
 
 template <class DType, class CType>
-void Genetic_Algorithm<DType, CType>::selection_and_variation(VectorXctype values)
+void Genetic_Algorithm<DType, CType>::selection_and_variation(VectorXctype values, Real alpha)
 {
 	// Binary tournament selection: for each couple in population we keep the best one (winner) in terms of loss function
-	// Then we replace the worst one in 3 different ways:
-	// 		a) winner + little gaussian noise
-	//		b) winner + larger gaussian noise
-	// 		c) best + little gaussian noise
-	std::default_random_engine generator(seed++);
-	std::uniform_int_distribution<UInt> dice(0, 3);
+	// Then we replace the worst one in 2 different ways:
+	// 		a) winner + gaussian noise
+	//		b) best + gaussian noise
+	// alpha is a parameter that increases iteration by iteration of the algorithm.
+	// The standard deviation of the gaussian noise decreases wrt alpha to concentrate more and more the candidate solutions near optimal values
+	// The probability of performing the option (b) increases as alpha increases (i.e. we focus more and more on "best")
 
-	Real sigma1 = 0.5;
-	Real sigma2 = 1.5;
+	std::default_random_engine generator(seed++);
+
+	std::uniform_int_distribution<UInt> dice(0, static_cast<UInt>(alpha)); // higher probability to consider "best" below as alpha increases 
+
+	Real adapt_sigma = 1.5/alpha; // smaller standard deviation iteration by iteration (as alpha increases)
 
 	for (unsigned int i = 0u; i < param_genetic_algorithm.N - 1; i += 2u)
 	{	
@@ -112,11 +115,9 @@ void Genetic_Algorithm<DType, CType>::selection_and_variation(VectorXctype value
 		UInt choice = dice(generator);
 		
 		if(choice == 0)
-			population[idx_loser] = get_random_element(population[idx_winner], sigma1);
-		else if(choice == 1)
-			population[idx_loser] = get_random_element(population[idx_winner], sigma2);
+			population[idx_loser] = get_random_element(population[idx_winner], adapt_sigma);
 		else
-			population[idx_loser] = get_random_element(best, sigma1);
+			population[idx_loser] = get_random_element(best, adapt_sigma);
 	}
 
 	return;
@@ -141,7 +142,7 @@ void Genetic_Algorithm<DType, CType>::apply(void)
 		++iter;
 
 		// Genetic algorithm steps to modify the population (keep most promising candidate + generate new candidate solutions)
-		selection_and_variation(F_values);
+		selection_and_variation(F_values, static_cast<Real>(iter));
 		
 		// Find the best solution of this iteration
 		F_values = evaluation();

@@ -49,8 +49,8 @@ class Parameter_Cascading
 			: H(H_) 
 			{
 				// Compute the lambdas for the parameter cascading algorithm from the rhos introduced in \cite{Bernardi}
-				VectorXr rhos;
-				rhos = VectorXr::LinSpaced(3, 0.01, 0.99); // TO FIX
+				VectorXr rhos(13,1);
+				rhos << 0.01,0.05,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,0.95,0.99;
 
 				unsigned int n = H.getModel().getRegressionData().getNumberofObservations();
 
@@ -67,7 +67,7 @@ class Parameter_Cascading
 				b1 = H.getModel().getRegressionData().getB().get_b1_coeff();
 				b2 = H.getModel().getRegressionData().getB().get_b2_coeff();
 				c = H.getModel().getRegressionData().getC().get_c_coeff();
-				Real lambda_opt = H.getModel().getOptimizationData().get_initial_lambda_S();
+				lambda_opt = H.getModel().getOptimizationData().get_initial_lambda_S();
 
 				// Set which parameters to update
 				update_K = false;

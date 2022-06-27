@@ -219,8 +219,6 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_b(void)
 template <UInt ORDER, UInt mydim, UInt ndim>
 void Parameter_Cascading<ORDER, mydim, ndim>::step_c(void)
 {
-	Rprintf("Finding optimal c for lambda = %e\n", lambdas(iter));
-
 	// Current solution in the loop and the previous solution for initialization
 	Real old_c = c;
 	Real new_c;
@@ -237,6 +235,7 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_c(void)
 
 	for (UInt iter = 0; iter < lambdas.size(); ++iter)
 	{
+	  Rprintf("Finding optimal c for lambda = %e\n", lambdas(iter));
 		// Function to optimize
 		auto F = [this, &iter](Real x){return this -> H.eval_c(x, this -> lambdas(iter));};
 		
@@ -293,6 +292,8 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_c(void)
 template <UInt ORDER, UInt mydim, UInt ndim>
 Real Parameter_Cascading<ORDER, mydim, ndim>::apply(void)
 {
+	Rprintf("Start Parameter_Cascading Algorithm\n");
+
 	if(update_K)
 	{	
 		Rprintf("Finding diffusion matrix K\n");		
