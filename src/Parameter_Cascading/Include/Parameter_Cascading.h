@@ -33,11 +33,12 @@ class Parameter_Cascading
 			 Real c;
 
 			 VectorXr lambdas; // lambdas used to search the optimal PDE parameters
+			 Real GCV;
 			 Real lambda_opt; // Optimal lambda for GCV
 			 
 			 // Function to compute the optimal lambda through GCV
 			 std::pair<Real, Real> compute_GCV(Carrier<RegressionDataElliptic>& carrier,
-			 								   GCV_Stochastic<Carrier<RegressionDataElliptic>, 1>& solver,
+			 								   GCV_Exact<Carrier<RegressionDataElliptic>, 1>& solver,
 			 								   Real lambda_init) const;
 			 
 			 void step_K(void); // Find and update diffusion parameters via optimization algorithm
@@ -81,7 +82,9 @@ class Parameter_Cascading
 			};
 			
 			// Function to apply the parameter cascading algorithm
-			Real apply(void);
+			void apply(void);
+
+			inline Real get_lambda_opt(void) const {return lambda_opt;};
 
 };
 

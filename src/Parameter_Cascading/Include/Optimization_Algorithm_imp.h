@@ -68,7 +68,7 @@ Real Genetic_Algorithm<DType, CType>::probit(const Real& u) const
 template <class DType, class CType>
 void Genetic_Algorithm<DType, CType>::initialization(void)
 {	
-	Real sigma = 2.0; // Not small standard deviation to explore enough a region near population[0]
+	Real sigma = 5.0; // Not small standard deviation to explore enough a region near population[0]
 
 	// Populate the candidate solutions in population
 	for(unsigned int i = 1u; i < param_genetic_algorithm.N; ++i){
@@ -106,7 +106,7 @@ void Genetic_Algorithm<DType, CType>::selection_and_variation(VectorXctype value
 
 	std::uniform_int_distribution<UInt> dice(0,  static_cast<UInt>(alpha)); // higher probability to consider "best" below as alpha increases 
 
-	Real adapt_sigma = 2 / std::log(alpha + 2.0); // smaller standard deviation iteration by iteration (as alpha increases)
+	Real adapt_sigma = 5.0 / std::log(alpha + 2.0); // smaller standard deviation iteration by iteration (as alpha increases)
 
 	for (unsigned int i = 0u; i < param_genetic_algorithm.N - 1; i += 2u)
 	{	

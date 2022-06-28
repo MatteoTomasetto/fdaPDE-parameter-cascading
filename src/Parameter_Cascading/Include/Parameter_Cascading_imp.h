@@ -14,16 +14,15 @@
 template <UInt ORDER, UInt mydim, UInt ndim>
 std::pair<Real, Real>
 Parameter_Cascading<ORDER, mydim, ndim>::compute_GCV(Carrier<RegressionDataElliptic>& carrier,
-													 GCV_Stochastic<Carrier<RegressionDataElliptic>, 1>& solver,
+													 GCV_Exact<Carrier<RegressionDataElliptic>, 1>& solver,
 													 Real lambda_init) const
 {	
 
-	Function_Wrapper<Real, Real, Real, Real, GCV_Stochastic<Carrier<RegressionDataElliptic>, 1>> Fun(solver);
+	Function_Wrapper<Real, Real, Real, Real, GCV_Exact<Carrier<RegressionDataElliptic>, 1>> Fun(solver);
 	const OptimizationData optr = H.getModel().getOptimizationData();
 
-	// Stochastic computation of the GCV will be used with Newton_fd to be faster
-	std::unique_ptr<Opt_methods<Real,Real,GCV_Stochastic<Carrier<RegressionDataElliptic>, 1>>>
-	optim_p = Opt_method_factory<Real, Real, GCV_Stochastic<Carrier<RegressionDataElliptic>, 1>>::create_Opt_method(optr.get_criterion(), Fun);
+	std::unique_ptr<Opt_methods<Real,Real,GCV_Exact<Carrier<RegressionDataElliptic>, 1>>>
+	optim_p = Opt_method_factory<Real, Real, GCV_Exact<Carrier<RegressionDataElliptic>, 1>>::create_Opt_method(optr.get_criterion(), Fun);
 
 	// Start from 6 lambda and find the minimum value of GCV to pick a good initialization for Newton method
 	std::vector<Real> lambda_grid = {5.000000e-05, 1.442700e-03, 4.162766e-02, 1.201124e+00, 3.465724e+01, 1.000000e+03};
@@ -67,8 +66,7 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_K(void)
 
 	Rprintf("Initial angle and intensity: %f , %f\n", old_angle, old_intensity);
 
-	// GCV value
-	Real GCV_value = -1.0;
+	GCV_value = -1.0;
 
 	// Parameters for optimization algorithm
 	Eigen::Vector2d lower_bound(0.0, 0.0);
@@ -99,7 +97,7 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_K(void)
 		H.set_K(new_angle, new_intensity);
 
 		Carrier<RegressionDataElliptic> carrier = CarrierBuilder<RegressionDataElliptic>::build_plain_carrier(H.getModel().getRegressionData(), H.getModel(), H.getModel().getOptimizationData());
-		GCV_Stochastic<Carrier<RegressionDataElliptic>, 1> solver(carrier, true);  // GCV_Stochastic is used to be faster with computations
+		GCV_Exact<Carrier<RegressionDataElliptic>, 1> solver(carrier);
 		
 		Rprintf("Computing GCV with the optimal K for lambda = %e\n", lambdas(iter));
 
@@ -108,7 +106,7 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_K(void)
 		old_angle = new_angle;
 		old_intensity = new_intensity;
 
-		if(iter == 0 || opt_sol_GCV.first <= GCV_value)
+		if(iter == 0 || opt_sol_GCV.second <= GCV_value)
 		{
 			lambda_opt = opt_sol_GCV.first;
 			GCV_value = opt_sol_GCV.second;
@@ -120,6 +118,9 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_K(void)
 
 		Rprintf("Optimal K for lambda = %e found\n", lambdas(iter));
 		Rprintf("Optimal angle and intensity: %f, %f\n", new_angle, new_intensity);
+		// DEBUGGING
+		Rprintf("GCV found: %f\n", opt_sol_GCV.second);
+		Rprintf("new GCV: %f\n", GCV_value);
 		
 		++iter;
 	}
@@ -150,7 +151,7 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_b(void)
 	Rprintf("Initial b: %f , %f\n", old_b1, old_b2);
 
 	// GCV value
-	Real GCV_value = -1.0;
+	GCV_value = -1.0;
 
 	// Parameters for optimization algorithm
 	Eigen::Vector2d lower_bound(-100.0, 100.0);
@@ -179,7 +180,7 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_b(void)
 		H.set_b(new_b1, new_b2);
 
 		Carrier<RegressionDataElliptic> carrier = CarrierBuilder<RegressionDataElliptic>::build_plain_carrier(H.getModel().getRegressionData(), H.getModel(), H.getModel().getOptimizationData());
-		GCV_Stochastic<Carrier<RegressionDataElliptic>, 1> solver(carrier, true);  // GCV_Stochastic is used to be faster with computations
+		GCV_Exact<Carrier<RegressionDataElliptic>, 1> solver(carrier);
 
 		Rprintf("Computing GCV with the optimal b for lambda = %e\n", lambdas(iter));
 
@@ -188,7 +189,7 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_b(void)
 		old_b1 = new_b1;
 		old_b2 = new_b2;
 
-		if(iter == 0 || opt_sol_GCV.first <= GCV_value)
+		if(iter == 0 || opt_sol_GCV.second <= GCV_value)
 		{
 			lambda_opt = opt_sol_GCV.first;
 			GCV_value = opt_sol_GCV.second;
@@ -226,7 +227,7 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_c(void)
 	Rprintf("Initial c: %f\n", old_c);
 
 	// GCV value
-	Real GCV_value = -1.0;
+	GCV_value = -1.0;
 
 	// Parameters for optimization algorithm
 	Real lower_bound(-100.0);
@@ -252,7 +253,7 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_c(void)
 		H.set_c(new_c);
 
 		Carrier<RegressionDataElliptic> carrier = CarrierBuilder<RegressionDataElliptic>::build_plain_carrier(H.getModel().getRegressionData(), H.getModel(), H.getModel().getOptimizationData());
-		GCV_Stochastic<Carrier<RegressionDataElliptic>, 1> solver(carrier, true);  // GCV_Stochastic is used to be faster with computations
+		GCV_Exact<Carrier<RegressionDataElliptic>, 1> solver(carrier);
 
 		Rprintf("Computing GCV with the optimal c for lambda = %e\n", lambdas(iter));
 
@@ -260,7 +261,7 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_c(void)
 		
 		old_c = new_c;
 
-		if(iter == 0 || opt_sol_GCV.first <= GCV_value)
+		if(iter == 0 || opt_sol_GCV.second <= GCV_value)
 		{
 			lambda_opt = opt_sol_GCV.first;
 			GCV_value = opt_sol_GCV.second;

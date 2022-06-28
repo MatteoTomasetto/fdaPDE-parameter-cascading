@@ -70,7 +70,7 @@ Real PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_K(const Real& angle, con
 {
 	// Check for proper values of angle and intensity
 	// Notice that we keep angle in [0.0, EIGEN_PI] exploiting the periodicity of the matrix K
-	if (angle < 1.e-10 || angle > EIGEN_PI - 1.e-10 || intensity <= 1.e-10)
+	if (angle < 0.0 || angle > EIGEN_PI || intensity <= 0.0)
 		return std::numeric_limits<Real>::max();
 	
 	else
@@ -79,6 +79,8 @@ Real PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_K(const Real& angle, con
 		set_K(angle, intensity);
 		
 		// Solve the regression problem
+		// Since this function will be called a lot of times in Parameter Cascading, GCV_stochastic is used (it's faster than GCV_Exact);
+		// moreover it is good since it computes directly z_hat
 		Carrier<RegressionDataElliptic> carrier = CarrierBuilder<RegressionDataElliptic>::build_plain_carrier(model.getRegressionData(), model, model.getOptimizationData());
 		GCV_Stochastic<Carrier<RegressionDataElliptic>, 1> solver(carrier, true);
 		
@@ -101,6 +103,8 @@ Real PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_b(const Real& b1, const 
 	set_b(b1, b2);
 	
 	// Solve the regression problem
+	// Since this function will be called a lot of times in Parameter Cascading, GCV_stochastic is used (it's faster than GCV_Exact);
+	// moreover it is good since it computes directly z_hat
 	Carrier<RegressionDataElliptic> carrier = CarrierBuilder<RegressionDataElliptic>::build_plain_carrier(model.getRegressionData(), model, model.getOptimizationData());
 	GCV_Stochastic<Carrier<RegressionDataElliptic>, 1> solver(carrier, true);
 		
@@ -120,6 +124,8 @@ Real PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_c(const Real& c, const l
 	set_c(c);
 	
 	// Solve the regression problem
+	// Since this function will be called a lot of times in Parameter Cascading, GCV_stochastic is used (it's faster than GCV_Exact);
+	// moreover it is good since it computes directly z_hat
 	Carrier<RegressionDataElliptic> carrier = CarrierBuilder<RegressionDataElliptic>::build_plain_carrier(model.getRegressionData(), model, model.getOptimizationData());
 	GCV_Stochastic<Carrier<RegressionDataElliptic>, 1> solver(carrier, true);
 		

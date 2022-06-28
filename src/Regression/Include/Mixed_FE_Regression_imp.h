@@ -795,7 +795,9 @@ void MixedFERegressionBase<InputHandler>::computeDegreesOfFreedomExact(UInt outp
 
     if (isRcomputed_ == false)
     {
-    	isRcomputed_ = true;
+    	// With Parameter Cascading algorithm, the matrix R can change in the procedure
+    	if(!regressionData_.ParameterCascadingOn())
+    		isRcomputed_ = true;
         
         //take R0 from the final matrix since it has already applied the dirichlet boundary conditions
         SpMat R0 = matrixNoCov_.bottomRightCorner(nnodes,nnodes)/lambdaS;
