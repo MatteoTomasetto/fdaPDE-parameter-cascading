@@ -22,6 +22,9 @@ class Parameter_Cascading
 			 bool update_K;
 			 bool update_b;
 			 bool update_c;
+
+			 // Optimization algorithm to use: 0 for Gradient Descent, 1 for Genetic algorithm
+			 UInt optimization_algorithm;
 			 
 			 // Diffusion parameters
 			 Real angle;
@@ -79,6 +82,8 @@ class Parameter_Cascading
 				if(parameter_cascading_option == 1)
 					update_K = true;
 				// Other cases not implemented yet
+
+				optimization_algorithm = H.getModel().getRegressionData().get_parameter_cascading_optimization_option();
 			};
 			
 			// Function to apply the parameter cascading algorithm

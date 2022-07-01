@@ -8,6 +8,8 @@
 #include <type_traits>
 #include <random>
 #include <chrono>
+#include <cmath>
+#include <algorithm>
 
 template <class DType>
 struct Parameter_Genetic_Algorithm
@@ -125,6 +127,155 @@ class Genetic_Algorithm
 
 			Genetic_Algorithm(const std::function<CType (DType)>& F_, const DType& init, const Parameter_Genetic_Algorithm<DType>& param_genetic_algorithm_)
 			: Genetic_Algorithm(F_, init, param_genetic_algorithm_, 50u) {};
+
+			// Function to apply the algorithm
+			void apply(void);
+
+			// Getters
+			inline DType get_solution(void) const {return best;};
+};
+
+
+template <class DType>
+struct Parameter_Gradient_Descent_fd
+{
+	DType lower_bound;	// Lower bound for input values
+	DType upper_bound;	// Upper bound for output values
+	DType periods;		// Periodicity for each input component (if periods[i] = 0.0 then no periodicity for i-th component)	
+};
+
+
+// DType = Domain variable type, CType = Codomain variable type;
+// DType can have one or more components, instead CType can be only a scalar type (1 component only)
+template <class DType, class CType>
+class Gradient_Descent_fd
+{
+	private: // Function to optimize
+			 std::function<CType (DType)> F;
+
+			 // Approx of the gradient
+			 std::function<DType (DType)> dF;
+
+			 // Minimizer of F and minimal value of F
+			 DType best;
+
+			 // Gradient Descent parameters
+			 Parameter_Gradient_Descent_fd<DType> param_gradient_descent_fd;
+
+			 // Boolean to keep looping with genetic algorithm;
+			 // It becomes "false" if  increment < tolerance 
+			 bool goOn = true;
+
+			 const unsigned int max_iterations_gradient_descent_fd;
+			 const Real tol_gradient_descent_fd;
+
+			 // DType vectorial case
+			 template <class SFINAE = DType>
+			 const typename std::enable_if< !std::is_floating_point<SFINAE>::value, Real>::type
+			 compute_increment(const DType& new_sol, const DType& old_sol)
+			 {	
+			 	Real res = 0.0;
+			 	for(unsigned int i = 0u; i < best.size(); ++i)
+			 	{
+			 		res += (new_sol[i] - old_sol[i]) * (new_sol[i] - old_sol[i]); 
+			 	}	
+			 	
+			 	return std::sqrt(res);
+			 }
+
+			 // DType = Scalar case
+			 template <class SFINAE = DType>
+			 const typename std::enable_if< std::is_floating_point<SFINAE>::value, Real>::type
+			 compute_increment(const DType& new_sol, const DType& old_sol)
+			 {
+
+			 	return std::sqrt((new_sol - old_sol) * (new_sol - old_sol));
+			 }
+
+			 // DType vectorial case
+			 // Function to upgrade the solution in the vectorial case
+			 template <class SFINAE = DType>
+			 typename std::enable_if< !std::is_floating_point<SFINAE>::value, void>::type
+			 upgrade_best(Real alpha)
+			 {	
+			 	DType new_best = best;
+
+			 	for(unsigned int i = 0u; i < best.size(); ++i)
+			 	{
+			 		new_best[i] -= alpha*dF(best)[i];
+
+			 		if(param_gradient_descent_fd.periods[i] != 0.0) // we can exploit periodicity
+			 		{
+						while(new_best[i] < param_gradient_descent_fd.lower_bound[i])
+							new_best[i] += param_gradient_descent_fd.periods[i];
+						while(new_best[i] > param_gradient_descent_fd.upper_bound[i])
+							new_best[i] -= param_gradient_descent_fd.periods[i];
+			 		}
+
+			 		else
+			 		{
+			 			while(new_best[i] < param_gradient_descent_fd.lower_bound[i] || new_best[i] > param_gradient_descent_fd.upper_bound[i])
+			 			{	
+			 				new_best[i] = best[i];			 				
+			 				alpha /= 5.0; // we re-upgrade best with a smaller alpha in order to remain inside the bounds
+			 				new_best[i] -= alpha*dF(best)[i];
+			 			}
+
+			 		}
+			 	}	
+					 				 	
+			 	best = new_best;
+
+			 	return;
+			 }
+
+
+			 // DType = Scalar case
+			 // Function to upgrade the solution in the scalar case
+			 template <class SFINAE = DType>
+			 typename std::enable_if< std::is_floating_point<SFINAE>::value, void>::type
+			 upgrade_best(Real alpha)
+			 {
+			 	DType new_best = best - alpha*dF(best);
+
+			 	if(param_gradient_descent_fd.periods != 0.0) // we can exploit periodicity
+			 	{
+					while(new_best < param_gradient_descent_fd.lower_bound)
+						new_best += param_gradient_descent_fd.periods;
+					while(new_best > param_gradient_descent_fd.upper_bound)
+						new_best -= param_gradient_descent_fd.periods;
+			 	}
+
+			 	else
+			 	{
+			 		while(new_best < param_gradient_descent_fd.lower_bound || new_best > param_gradient_descent_fd.upper_bound)
+			 		{	
+			 			alpha /= 5.0; // we re-upgrade best with a smaller alpha in order to remain inside the bounds
+			 			new_best = best - alpha*dF(best);
+			 		}
+			 	}
+			 					 	
+			 	best = new_best;
+
+			 	return;
+
+			 }
+			 
+	public: // Constructors
+			Gradient_Descent_fd(const std::function<CType (DType)>& F_, const std::function<DType (DType)>& dF_, 
+			const DType& init, const Parameter_Gradient_Descent_fd<DType>& param_gradient_descent_fd_,
+			const unsigned int& max_iterations_gradient_descent_fd_,
+			const Real tol_gradient_descent_fd_)
+			: F(F_), dF(dF_), best(init), param_gradient_descent_fd(param_gradient_descent_fd_),
+			max_iterations_gradient_descent_fd(max_iterations_gradient_descent_fd_),
+			tol_gradient_descent_fd(tol_gradient_descent_fd_)
+			 {
+			 	best = init;
+			 };
+
+			Gradient_Descent_fd(const std::function<CType (DType)>& F_, const std::function<DType (DType)>& dF_, const DType& init,
+				const Parameter_Gradient_Descent_fd<DType>& param_gradient_descent_fd_)
+			: Gradient_Descent_fd(F_, dF_, init, param_gradient_descent_fd_, 100u, 1e-3) {};
 
 			// Function to apply the algorithm
 			void apply(void);

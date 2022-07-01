@@ -44,11 +44,14 @@
 #' For 2.5D and 3D, only the Laplacian is available (\code{PDE_parameters=NULL}).
 #' In addition, with a further not mandatory input in PDE_parameters called 'parameter_cascading', it is possible to estimate
 #' the PDE_parameters via Parameter Cascading algorithm optimizing the mean squared error (for 2D case only).
-#' The following possibilities are allowed for this further option: NULL (default option), 'K';
+#' The first component of this input have the following possibilities: NULL (default option), 'K'.
 #' If NULL is selected, the parameter cascading algorithm is not enabled.
 #' If 'K' is selected, the diffusion matrix K will be estimated via Parameter Cascading algorithm.
 #' Notice that, if also the parameters K, b or c are provided in PDE_parameters, Parameter Cascading algorithm uses them as initialization.
 #' Otherwise, the parameters that are not provided will be automatically initialized (K = Identity matrix, b = zero vector, c = zero). 
+#' The second component of this input have the following possibilities: 'genetic', 'gradient'(default option).
+#' If 'genetic' is selected, the Genetic Algortihm is used for optimization step in Parameter Cascading.
+#' If 'gradient' is selected, the Gradient Descent is used for optimization step in Parameter Cascading.
 #' @param BC A list with two vectors:
 #'  \code{BC_indices}, a vector with the indices in \code{nodes} of boundary nodes where a Dirichlet Boundary Condition should be applied;
 #'  \code{BC_values}, a vector with the values that the spatial field must take at the nodes indicated in \code{BC_indices}.
@@ -499,14 +502,26 @@ smooth.FEM<-function(locations = NULL, observations, FEMbasis,
   # Set a convention for parameter cascading options
   if(!is.null(PDE_parameters) & is.null(PDE_parameters$u))
   {
-  	# Set a convention for parameter cascading options
-    if(is.null(PDE_parameters$parameter_cascading)){
+  	# Set which parameter to estimate with Parameter Cascading algorithm
+    if(is.null(PDE_parameters$parameter_cascading) || is.null(PDE_parameters$parameter_cascading[1])){
       PDE_parameters$parameter_cascading = 0
-    }else if(PDE_parameters$parameter_cascading == 'K'){
-      PDE_parameters$parameter_cascading = 1
+    }else if(PDE_parameters$parameter_cascading[1] == 'K'){
+    	PDE_parameters$parameter_cascading = 1
     }else{
-      stop("Invalid input for Parameter Cascading algorithm in PDE_parameters")
+      	stop("Invalid input for Parameter Cascading algorithm in PDE_parameters")
     }
+  
+  	if(PDE_parameters$parameter_cascading != 0){
+  		# Set a convention for optimization algorithm used in parameter cascading
+  		if(PDE_parameters$parameter_cascading[2] == "gradient"){
+      		PDE_parameters$parameter_cascading = c(PDE_parameters$parameter_cascading,0)
+    	}else if(PDE_parameters$parameter_cascading[2] == "genetic"){
+      		PDE_parameters$parameter_cascading = c(PDE_parameters$parameter_cascading,1)
+  		}else{
+  			stop("Invalid input for Parameter Cascading algorithm in PDE_parameters")
+  		}
+  	}
+
 
     # Set initial values for the PDE_parameters if user does not pass them
     if(PDE_parameters$parameter_cascading != 0)

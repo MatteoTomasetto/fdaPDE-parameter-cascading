@@ -184,7 +184,8 @@ class  RegressionDataElliptic:public RegressionData
 		Advection<PDEParameterOptions::Constant> b_;
 		Reaction<PDEParameterOptions::Constant> c_;
 
-		UInt parameter_cascading_ = 0;	// Option for parameter cascading algortihm
+		UInt parameter_cascading_ = 0;	// Option for the parameters to estimate in Parameter Cascading algortihm
+		UInt parameter_cascading_opt_ = 0; // Option for the optimization algorithm to use in Parameter Cascading algorithm
 
 	public:
 		//! A complete version of the constructor.
@@ -226,6 +227,7 @@ class  RegressionDataElliptic:public RegressionData
 		const Reaction<PDEParameterOptions::Constant> & getC() const {return c_;}
 
 		const UInt get_parameter_cascading_option() const {return parameter_cascading_;}
+		const UInt get_parameter_cascading_optimization_option() const {return parameter_cascading_opt_;}
 		void set_parameter_cascading_option(UInt new_option) {parameter_cascading_ = new_option;}
 
 		bool ParameterCascadingOn(void) const { return parameter_cascading_ != 0;} // return true if Parameter Cascading algorithm has to be done

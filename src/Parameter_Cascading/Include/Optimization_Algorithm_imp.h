@@ -172,4 +172,37 @@ Rprintf("End genetic algorithm\n");
 	return;
 }
 
+
+template <class DType, class CType>
+void Gradient_Descent_fd<DType, CType>::apply(void)
+{	
+	Rprintf("Start gradient descent algorithm\n");
+
+	unsigned int iter = 0u;
+	DType old_sol = best;
+	Real increment = 0.0;
+	Real alpha = 5.0;
+
+	while(iter < max_iterations_gradient_descent_fd && goOn)
+	{	
+		++iter;
+
+		alpha /= std::log(static_cast<Real>(iter) + 1.0);
+
+		upgrade_best(alpha);
+
+		increment = compute_increment(best, old_sol);
+		
+		old_sol = best;
+
+		goOn = (increment < tol_gradient_descent_fd) ? false : true;
+
+	}
+
+	Rprintf("End gradient descent algorithm\n");
+
+	return;
+}
+
+
 #endif

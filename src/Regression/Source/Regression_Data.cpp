@@ -82,14 +82,14 @@ RegressionData::RegressionData(SEXP Rlocations, SEXP RbaryLocations, SEXP Rtime_
 	SEXP RincidenceMatrix, SEXP RarealDataAvg, SEXP Rsearch):
 	RegressionData(Rlocations, RbaryLocations, Robservations, Rorder, Rcovariates, 
 		RBCIndices, RBCValues, RincidenceMatrix, RarealDataAvg, Rsearch),
-			K_(RK), b_(Rb), c_(Rc), parameter_cascading_(INTEGER(Rparameter_cascading)[0]) {}
+			K_(RK), b_(Rb), c_(Rc), parameter_cascading_(INTEGER(Rparameter_cascading)[0]), parameter_cascading_opt_(INTEGER(Rparameter_cascading)[1]) {}
 */
 
 RegressionDataElliptic::RegressionDataElliptic(SEXP Rlocations, SEXP RbaryLocations, SEXP Robservations, SEXP Rorder,
 	SEXP RK, SEXP Rb, SEXP Rc, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues, SEXP RincidenceMatrix, SEXP RarealDataAvg, SEXP Rsearch):
 	RegressionData(Rlocations, RbaryLocations, Robservations, Rorder, Rcovariates,
 		RBCIndices, RBCValues, RincidenceMatrix, RarealDataAvg, Rsearch),
-			K_(RK), b_(Rb), c_(Rc), parameter_cascading_(1) {} // TO DELETE the last entry
+			K_(RK), b_(Rb), c_(Rc), parameter_cascading_(1), parameter_cascading_opt_(1) {} // TO DELETE the last 2 enties
 
 RegressionDataElliptic::RegressionDataElliptic(SEXP Rlocations, SEXP RbaryLocations, SEXP Rtime_locations, SEXP Robservations, SEXP Rorder,
 	SEXP RK, SEXP Rb, SEXP Rc, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues,

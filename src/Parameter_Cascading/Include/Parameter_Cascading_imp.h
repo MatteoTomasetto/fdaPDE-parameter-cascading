@@ -66,12 +66,12 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_K(void)
 
 	Rprintf("Initial angle and intensity: %f , %f\n", old_angle, old_intensity);
 
-	GCV_value = -1.0;
+	GCV = -1.0;
 
 	// Parameters for optimization algorithm
 	Eigen::Vector2d lower_bound(0.0, 0.0);
-	Eigen::Vector2d upper_bound(EIGEN_PI, 100.0);
-	Parameter_Genetic_Algorithm<Eigen::Vector2d> param = {100, lower_bound, upper_bound};
+	Eigen::Vector2d upper_bound(EIGEN_PI, 1000.0);
+	Eigen::Vector2d periods(EIGEN_PI, 0.0);
 
 	UInt best_iter; // debugging purpose
 	
@@ -84,12 +84,25 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_K(void)
 
 		// Optimization step
 		Eigen::Vector2d init(old_angle, old_intensity); // Initialization done with previous solution as presented in \cite{Bernardi}
+		Eigen::Vector2d opt_sol;
 
-		Genetic_Algorithm<Eigen::Vector2d, Real> opt(F, init, param);
-		opt.apply();
-		
+		if(optimization_algorithm == 0)
+		{
+			Parameter_Gradient_Descent_fd<Eigen::Vector2d> param = {lower_bound, upper_bound, periods};
+			auto dF = [this, &iter](Eigen::Vector2d x){return this -> H.eval_grad_K(x(0),x(1), this -> lambdas(iter));};
+			Gradient_Descent_fd<Eigen::Vector2d, Real> opt(F, dF, init, param);
+			opt.apply();
+			opt_sol = opt.get_solution();
+		}
+		else if(optimization_algorithm == 1)
+		{
+			Parameter_Genetic_Algorithm<Eigen::Vector2d> param = {100, lower_bound, upper_bound};
+			Genetic_Algorithm<Eigen::Vector2d, Real> opt(F, init, param);
+			opt.apply();
+			opt_sol = opt.get_solution();
+		}
+
 		// Store the optimal solution
-		Eigen::Vector2d opt_sol = opt.get_solution();
 		new_angle = opt_sol(0);
 		new_intensity = opt_sol(1);
 
@@ -106,10 +119,10 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_K(void)
 		old_angle = new_angle;
 		old_intensity = new_intensity;
 
-		if(iter == 0 || opt_sol_GCV.second <= GCV_value)
+		if(iter == 0 || opt_sol_GCV.second <= GCV)
 		{
 			lambda_opt = opt_sol_GCV.first;
-			GCV_value = opt_sol_GCV.second;
+			GCV = opt_sol_GCV.second;
 			angle = new_angle;
 			intensity = new_intensity;
 
@@ -120,7 +133,7 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_K(void)
 		Rprintf("Optimal angle and intensity: %f, %f\n", new_angle, new_intensity);
 		// DEBUGGING
 		Rprintf("GCV found: %f\n", opt_sol_GCV.second);
-		Rprintf("new GCV: %f\n", GCV_value);
+		Rprintf("new GCV: %f\n", GCV);
 		
 		++iter;
 	}
@@ -133,7 +146,7 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_K(void)
 
 	// DEBUGGING
 	Rprintf("best iter = %d\n", best_iter);
-	Rprintf("Final GCV: %f\n", GCV_value);
+	Rprintf("Final GCV: %f\n", GCV);
 	Rprintf("Final optimal lambda for GCV: %e\n", lambda_opt);
 	
 	return;
@@ -151,13 +164,13 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_b(void)
 	Rprintf("Initial b: %f , %f\n", old_b1, old_b2);
 
 	// GCV value
-	GCV_value = -1.0;
+	GCV = -1.0;
 
 	// Parameters for optimization algorithm
-	Eigen::Vector2d lower_bound(-100.0, 100.0);
-	Eigen::Vector2d upper_bound(-100.0, 100.0);
-	Parameter_Genetic_Algorithm<Eigen::Vector2d> param = {100, lower_bound, upper_bound};
-
+	Eigen::Vector2d lower_bound(-1000.0, 1000.0);
+	Eigen::Vector2d upper_bound(-1000.0, 1000.0);
+	Eigen::Vector2d periods(0.0, 0.0);
+	
 	for (UInt iter = 0; iter < lambdas.size(); ++iter)
 	{
 		Rprintf("Finding optimal b for lambda = %e\n", lambdas(iter));
@@ -167,12 +180,25 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_b(void)
 		
 		// Optimization step
 		Eigen::Vector2d init(old_b1, old_b2); // Initialization done with previous solution as presented in \cite{Bernardi}
+		Eigen::Vector2d opt_sol;
 
-		Genetic_Algorithm<Eigen::Vector2d, Real> opt(F, init, param);
-		opt.apply();
+		if(optimization_algorithm == 0)
+		{
+			Parameter_Gradient_Descent_fd<Eigen::Vector2d> param = {lower_bound, upper_bound, periods};
+			auto dF = [this, &iter](Eigen::Vector2d x){return this -> H.eval_grad_b(x(0),x(1), this -> lambdas(iter));};
+			Gradient_Descent_fd<Eigen::Vector2d, Real> opt(F, dF, init, param);
+			opt.apply();
+			opt_sol = opt.get_solution();
+		}
+		else if(optimization_algorithm == 1)
+		{
+			Parameter_Genetic_Algorithm<Eigen::Vector2d> param = {100, lower_bound, upper_bound};
+			Genetic_Algorithm<Eigen::Vector2d, Real> opt(F, init, param);
+			opt.apply();
+			opt_sol = opt.get_solution();
+		}
 		
 		// Store the optimal solution
-		Eigen::Vector2d opt_sol = opt.get_solution();
 		new_b1 = opt_sol(0);
 		new_b2 = opt_sol(1);
 		
@@ -189,10 +215,10 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_b(void)
 		old_b1 = new_b1;
 		old_b2 = new_b2;
 
-		if(iter == 0 || opt_sol_GCV.second <= GCV_value)
+		if(iter == 0 || opt_sol_GCV.second <= GCV)
 		{
 			lambda_opt = opt_sol_GCV.first;
-			GCV_value = opt_sol_GCV.second;
+			GCV = opt_sol_GCV.second;
 			b1= new_b1;
 			b2 = new_b2;
 		}
@@ -210,7 +236,7 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_b(void)
 	Rprintf("Final optimal b: %f, %f\n", b1, b2);
 
 	// DEBUGGING
-	Rprintf("Final GCV: %f\n", GCV_value);
+	Rprintf("Final GCV: %f\n", GCV);
 	Rprintf("Final optimal lambda for GCV: %e\n", lambda_opt);
 	
 	
@@ -227,12 +253,12 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_c(void)
 	Rprintf("Initial c: %f\n", old_c);
 
 	// GCV value
-	GCV_value = -1.0;
+	GCV = -1.0;
 
 	// Parameters for optimization algorithm
-	Real lower_bound(-100.0);
-	Real upper_bound(100.0);
-	Parameter_Genetic_Algorithm<Real> param = {100, lower_bound, upper_bound};
+	Real lower_bound(-1000.0);
+	Real upper_bound(1000.0);
+	Real periods{0.0};
 
 	for (UInt iter = 0; iter < lambdas.size(); ++iter)
 	{
@@ -242,13 +268,23 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_c(void)
 		
 		// Optimization step
 		Real init{old_c}; // Initialization done with previous solution as presented in \cite{Bernardi}
-
-		Genetic_Algorithm<Real, Real> opt(F, init, param);
-		opt.apply();
-
-		// Store the optimal solution
-		Real new_c = opt.get_solution();
-				
+		
+		if(optimization_algorithm == 0)
+		{
+			Parameter_Gradient_Descent_fd<Real> param = {lower_bound, upper_bound, periods};
+			auto dF = [this, &iter](Real x){return this -> H.eval_grad_c(x, this -> lambdas(iter));};
+			Gradient_Descent_fd<Real, Real> opt(F, dF, init, param);
+			opt.apply();
+			new_c = opt.get_solution();
+		}
+		else if(optimization_algorithm == 1)
+		{
+			Parameter_Genetic_Algorithm<Real> param = {100, lower_bound, upper_bound};
+			Genetic_Algorithm<Real, Real> opt(F, init, param);
+			opt.apply();
+			new_c = opt.get_solution();
+		}
+		
 		// Compute GCV with the new parameters
 		H.set_c(new_c);
 
@@ -261,10 +297,10 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_c(void)
 		
 		old_c = new_c;
 
-		if(iter == 0 || opt_sol_GCV.second <= GCV_value)
+		if(iter == 0 || opt_sol_GCV.second <= GCV)
 		{
 			lambda_opt = opt_sol_GCV.first;
-			GCV_value = opt_sol_GCV.second;
+			GCV = opt_sol_GCV.second;
 			c = new_c;
 		}
 		
@@ -282,7 +318,7 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_c(void)
 	Rprintf("Final optimal c: %f\n", c);
 
 	// DEBUGGING
-	Rprintf("Final GCV: %f\n", GCV_value);
+	Rprintf("Final GCV: %f\n", GCV);
 	Rprintf("Final optimal lambda for GCV: %e\n", lambda_opt);
 
 	return;
@@ -291,7 +327,7 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_c(void)
 
 
 template <UInt ORDER, UInt mydim, UInt ndim>
-Real Parameter_Cascading<ORDER, mydim, ndim>::apply(void)
+void Parameter_Cascading<ORDER, mydim, ndim>::apply(void)
 {
 	Rprintf("Start Parameter_Cascading Algorithm\n");
 
@@ -313,7 +349,7 @@ Real Parameter_Cascading<ORDER, mydim, ndim>::apply(void)
 		step_c();
 	}
 
-	return lambda_opt;
+	return;
 }
 
 #endif
