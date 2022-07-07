@@ -152,6 +152,187 @@ void Parameter_Cascading<ORDER, mydim, ndim>::step_K(void)
 	return;
 }
 
+
+template <UInt ORDER, UInt mydim, UInt ndim>
+void Parameter_Cascading<ORDER, mydim, ndim>::step_angle(void)
+{
+	// Current solution and the previous solution for initialization
+	Real old_angle = angle;
+	Real new_angle;
+	
+	Rprintf("Initial angle: %f\n", old_angle);
+
+	GCV = -1.0;
+
+	// Parameters for optimization algorithm
+	Real lower_bound{0.0};
+	Real upper_bound{EIGEN_PI};
+	Real periods{EIGEN_PI};
+
+	UInt best_iter; // debugging purpose
+	
+	for (UInt iter = 0; iter < lambdas.size(); ++iter)
+	{
+		Rprintf("Finding optimal diffusiona angle for lambda = %e\n", lambdas(iter));
+
+		// Function to optimize
+		auto F = [this, &iter](Real x){return this -> H.eval_K(x, this -> intensity, this -> lambdas(iter));};
+
+		// Optimization step
+		Real init = old_angle; // Initialization done with previous solution as presented in \cite{Bernardi}
+
+		if(optimization_algorithm == 0)
+		{
+			Parameter_Gradient_Descent_fd<Real> param = {lower_bound, upper_bound, periods};
+			auto dF = [this, &iter](Real x){return (this -> H).eval_grad_angle(x, this -> intensity, this -> lambdas(iter));};
+			Gradient_Descent_fd<Real, Real> opt(F, dF, init, param);
+			opt.apply();
+			new_angle = opt.get_solution();
+		}
+		else if(optimization_algorithm == 1)
+		{
+			Parameter_Genetic_Algorithm<Real> param = {100, lower_bound, upper_bound};
+			Genetic_Algorithm<Real, Real> opt(F, init, param);
+			opt.apply();
+			new_angle = opt.get_solution();
+		}
+
+	
+		// Compute GCV with the new parameters
+		H.set_K(new_angle, intensity);
+
+		Carrier<RegressionDataElliptic> carrier = CarrierBuilder<RegressionDataElliptic>::build_plain_carrier(H.getModel().getRegressionData(), H.getModel(), H.getModel().getOptimizationData());
+		GCV_Exact<Carrier<RegressionDataElliptic>, 1> solver(carrier);
+		
+		Rprintf("Computing GCV with the optimal diffusion angle for lambda = %e\n", lambdas(iter));
+
+		std::pair<Real, Real> opt_sol_GCV = compute_GCV(carrier, solver, lambda_opt); // Use the last optimal lambda found as initial lambda computing GCV
+		
+		old_angle = new_angle;
+
+		if(iter == 0 || opt_sol_GCV.second <= GCV)
+		{
+			lambda_opt = opt_sol_GCV.first;
+			GCV = opt_sol_GCV.second;
+			angle = new_angle;
+			
+			best_iter = iter;
+		}
+
+		Rprintf("Optimal diffusion angle for lambda = %e found\n", lambdas(iter));
+		Rprintf("Optimal angle: %f\n", new_angle);
+		// DEBUGGING
+		Rprintf("GCV found: %f\n", opt_sol_GCV.second);
+		Rprintf("new GCV: %f\n", GCV);
+		
+		++iter;
+	}
+
+	// Set the new parameter in RegressionData
+	H.set_K(angle, intensity);
+
+	Rprintf("Final optimal diffusion angle found\n");
+	Rprintf("Final optimal angle: %f\n", angle);
+
+	// DEBUGGING
+	Rprintf("best iter = %d\n", best_iter);
+	Rprintf("Final GCV: %f\n", GCV);
+	Rprintf("Final optimal lambda for GCV: %e\n", lambda_opt);
+	
+	return;
+}
+
+
+template <UInt ORDER, UInt mydim, UInt ndim>
+void Parameter_Cascading<ORDER, mydim, ndim>::step_intensity(void)
+{
+	// Current solution and the previous solution for initialization
+	Real old_intensity = intensity;
+	Real new_intensity;
+
+	Rprintf("Initial intensity: %f\n", old_intensity);
+
+	GCV = -1.0;
+
+	// Parameters for optimization algorithm
+	Real lower_bound{0.0};
+	Real upper_bound{1000.0};
+	Real periods{0.0};
+
+	UInt best_iter; // debugging purpose
+	
+	for (UInt iter = 0; iter < lambdas.size(); ++iter)
+	{
+		Rprintf("Finding optimal diffusion intensity for lambda = %e\n", lambdas(iter));
+
+		// Function to optimize
+		auto F = [this, &iter](Real x){return this -> H.eval_K(this -> angle, x, this -> lambdas(iter));};
+
+		// Optimization step
+		Real init = old_intensity; // Initialization done with previous solution as presented in \cite{Bernardi}
+
+		if(optimization_algorithm == 0)
+		{
+			Parameter_Gradient_Descent_fd<Real> param = {lower_bound, upper_bound, periods};
+			auto dF = [this, &iter](Real x){return this -> H.eval_grad_intensity(this -> angle, x, this -> lambdas(iter));};
+			Gradient_Descent_fd<Real, Real> opt(F, dF, init, param);
+			opt.apply();
+			new_intensity = opt.get_solution();
+		}
+		else if(optimization_algorithm == 1)
+		{
+			Parameter_Genetic_Algorithm<Real> param = {100, lower_bound, upper_bound};
+			Genetic_Algorithm<Real, Real> opt(F, init, param);
+			opt.apply();
+			new_intensity = opt.get_solution();
+		}
+
+		// Compute GCV with the new parameters
+		H.set_K(angle, new_intensity);
+
+		Carrier<RegressionDataElliptic> carrier = CarrierBuilder<RegressionDataElliptic>::build_plain_carrier(H.getModel().getRegressionData(), H.getModel(), H.getModel().getOptimizationData());
+		GCV_Exact<Carrier<RegressionDataElliptic>, 1> solver(carrier);
+		
+		Rprintf("Computing GCV with the optimal diffusion intensity for lambda = %e\n", lambdas(iter));
+
+		std::pair<Real, Real> opt_sol_GCV = compute_GCV(carrier, solver, lambda_opt); // Use the last optimal lambda found as initial lambda computing GCV
+		
+		old_intensity = new_intensity;
+
+		if(iter == 0 || opt_sol_GCV.second <= GCV)
+		{
+			lambda_opt = opt_sol_GCV.first;
+			GCV = opt_sol_GCV.second;
+			intensity = new_intensity;
+
+			best_iter = iter;
+		}
+
+		Rprintf("Optimal diffusion intensity for lambda = %e found\n", lambdas(iter));
+		Rprintf("Optimal intensity: %f\n", new_intensity);
+		// DEBUGGING
+		Rprintf("GCV found: %f\n", opt_sol_GCV.second);
+		Rprintf("new GCV: %f\n", GCV);
+		
+		++iter;
+	}
+
+	// Set the new parameter in RegressionData
+	H.set_K(angle, intensity);
+
+	Rprintf("Final optimal diffusion intensity found\n");
+	Rprintf("Final optimal intensity: %f\n", intensity);
+
+	// DEBUGGING
+	Rprintf("best iter = %d\n", best_iter);
+	Rprintf("Final GCV: %f\n", GCV);
+	Rprintf("Final optimal lambda for GCV: %e\n", lambda_opt);
+	
+	return;
+}
+
+
+
 template <UInt ORDER, UInt mydim, UInt ndim>
 void Parameter_Cascading<ORDER, mydim, ndim>::step_b(void)
 {
@@ -336,6 +517,19 @@ void Parameter_Cascading<ORDER, mydim, ndim>::apply(void)
 		Rprintf("Finding diffusion matrix K\n");		
 		step_K();
 	}
+
+	if(update_alpha)
+	{	
+		Rprintf("Finding diffusion angle\n");		
+		step_angle();
+	}	
+
+	if(update_intensity)
+	{	
+		Rprintf("Finding diffusion intensity\n");		
+		step_intensity();
+	}	
+	
 	
 	if(update_b)
 	{

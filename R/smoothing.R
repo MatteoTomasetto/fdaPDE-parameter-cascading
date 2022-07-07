@@ -44,9 +44,11 @@
 #' For 2.5D and 3D, only the Laplacian is available (\code{PDE_parameters=NULL}).
 #' In addition, with a further not mandatory input in PDE_parameters called 'parameter_cascading', it is possible to estimate
 #' the PDE_parameters via Parameter Cascading algorithm optimizing the mean squared error (for 2D case only).
-#' The first component of this input have the following possibilities: NULL (default option), 'K'.
+#' The first component of this input have the following possibilities: NULL (default option), 'K', 'angle', 'intensity'.
 #' If NULL is selected, the parameter cascading algorithm is not enabled.
 #' If 'K' is selected, the diffusion matrix K will be estimated via Parameter Cascading algorithm.
+#' If 'alpha' is selected, the diffusion matrix anlge will be estimated via Parameter Cascading algorithm.
+#' If 'intensity' is selected, the diffusion matrix intensity will be estimated via Parameter Cascading algorithm.
 #' Notice that, if also the parameters K, b or c are provided in PDE_parameters, Parameter Cascading algorithm uses them as initialization.
 #' Otherwise, the parameters that are not provided will be automatically initialized (K = Identity matrix, b = zero vector, c = zero). 
 #' The second component of this input have the following possibilities: 'genetic', 'gradient'(default option).
@@ -500,23 +502,27 @@ smooth.FEM<-function(locations = NULL, observations, FEMbasis,
     DOF.matrix = as.matrix(DOF.matrix)
 
   # Set a convention for parameter cascading options
-  if(!is.null(PDE_parameters) & is.null(PDE_parameters$u))
+  if(!is.null(PDE_parameters) & is.null(PDE_parameters$u) & ndim == 2)
   {
   	# Set which parameter to estimate with Parameter Cascading algorithm
     if(is.null(PDE_parameters$parameter_cascading) || is.null(PDE_parameters$parameter_cascading[1])){
-      PDE_parameters$parameter_cascading = 0
+      parameter_cascading_option = 0
     }else if(PDE_parameters$parameter_cascading[1] == 'K'){
-    	PDE_parameters$parameter_cascading = 1
+    	parameter_cascading_option = 1
+    }else if(PDE_parameters$parameter_cascading[1] == 'angle'){
+    	parameter_cascading_option = 2
+    }else if(PDE_parameters$parameter_cascading[1] == 'intensity'){
+    	parameter_cascading_option = 3
     }else{
       	stop("Invalid input for Parameter Cascading algorithm in PDE_parameters")
     }
   
-  	if(PDE_parameters$parameter_cascading != 0){
+  	if(parameter_cascading_option != 0){
   		# Set a convention for optimization algorithm used in parameter cascading
   		if(PDE_parameters$parameter_cascading[2] == "gradient"){
-      		PDE_parameters$parameter_cascading = c(PDE_parameters$parameter_cascading,0)
+      		parameter_cascading_option= c(parameter_cascading_option, 0)
     	}else if(PDE_parameters$parameter_cascading[2] == "genetic"){
-      		PDE_parameters$parameter_cascading = c(PDE_parameters$parameter_cascading,1)
+      		parameter_cascading_option = c(parameter_cascading_option, 1)
   		}else{
   			stop("Invalid input for Parameter Cascading algorithm in PDE_parameters")
   		}
@@ -524,15 +530,26 @@ smooth.FEM<-function(locations = NULL, observations, FEMbasis,
 
 
     # Set initial values for the PDE_parameters if user does not pass them
-    if(PDE_parameters$parameter_cascading != 0)
+    if(parameter_cascading_option != 0)
     {
-  	  if(is.null(PDE_parameters$K))
+  	  if(is.null(PDE_parameters$K)){
   		PDE_parameters$K <- cbind(c(1, 0), c(0, 1))
-  	  if(is.null(PDE_parameters$b))
+  	  }else{
+  	  	warning("K in PDE_parameters used as initialization for Parameter Cascading Algorithm")
+  	  }
+  	  if(is.null(PDE_parameters$b)){
   		PDE_parameters$b <- c(0, 0)
-  	  if(is.null(PDE_parameters$c))
+  	  }else{
+  	  	warning("b in PDE_parameters used as initialization for Parameter Cascading Algorithm")
+  	  }
+  	  if(is.null(PDE_parameters$c)){
   		PDE_parameters$c <- 0
+  	  }else{
+  	  	warning("c in PDE_parameters used as initialization for Parameter Cascading Algorithm")
+  	  }
     }
+  }else{
+  	parameter_cascading_option = c(0, 0)
   }
   
 
@@ -606,7 +623,7 @@ smooth.FEM<-function(locations = NULL, observations, FEMbasis,
     {
       bigsol = NULL
       bigsol = CPP_smooth.FEM.PDE.basis(locations = locations, observations = observations, FEMbasis = FEMbasis,
-        covariates = covariates, PDE_parameters = PDE_parameters, ndim = ndim, mydim = mydim, BC = BC,
+        covariates = covariates, PDE_parameters = PDE_parameters, parameter_cascading_option = parameter_cascading_option, ndim = ndim, mydim = mydim, BC = BC,
         incidence_matrix = incidence_matrix, areal.data.avg = areal.data.avg,
         search = search, bary.locations = bary.locations,
         optim = optim, lambda = lambda, DOF.stochastic.realizations = DOF.stochastic.realizations, DOF.stochastic.seed = DOF.stochastic.seed, 
@@ -616,7 +633,7 @@ smooth.FEM<-function(locations = NULL, observations, FEMbasis,
     {
       bigsol = NULL
       bigsol = CPP_smooth.FEM.PDE.sv.basis(locations = locations, observations = observations, FEMbasis = FEMbasis,
-        covariates=covariates, PDE_parameters = PDE_parameters, ndim = ndim, mydim = mydim, BC=BC,
+        covariates=covariates, PDE_parameters = PDE_parameters, parameter_cascading_option = parameter_cascading_option, ndim = ndim, mydim = mydim, BC=BC,
         incidence_matrix=incidence_matrix, areal.data.avg = areal.data.avg,
         search=search, bary.locations = bary.locations,
         optim = optim, lambda = lambda, DOF.stochastic.realizations = DOF.stochastic.realizations, DOF.stochastic.seed = DOF.stochastic.seed,
@@ -648,7 +665,7 @@ smooth.FEM<-function(locations = NULL, observations, FEMbasis,
     {
   	  bigsol = NULL
       bigsol = CPP_smooth.volume.FEM.PDE.basis(locations = locations, observations = observations, FEMbasis = FEMbasis,
-        covariates = covariates, PDE_parameters=PDE_parameters, ndim = ndim, mydim = mydim, BC = BC,
+        covariates = covariates, PDE_parameters=PDE_parameters, parameter_cascading_option = parameter_cascading_option, ndim = ndim, mydim = mydim, BC = BC,
         incidence_matrix = incidence_matrix, areal.data.avg = areal.data.avg,
         search = search, bary.locations = bary.locations,
         optim = optim, lambda = lambda, DOF.stochastic.realizations = DOF.stochastic.realizations, DOF.stochastic.seed = DOF.stochastic.seed,
@@ -658,7 +675,7 @@ smooth.FEM<-function(locations = NULL, observations, FEMbasis,
   	{
       bigsol = NULL
       bigsol = CPP_smooth.volume.FEM.PDE.sv.basis(locations = locations, observations = observations, FEMbasis = FEMbasis,
-        covariates = covariates, PDE_parameters=PDE_parameters, ndim = ndim, mydim = mydim, BC = BC,
+        covariates = covariates, PDE_parameters=PDE_parameters, parameter_cascading_option = parameter_cascading_option, ndim = ndim, mydim = mydim, BC = BC,
         incidence_matrix = incidence_matrix, areal.data.avg = areal.data.avg,
         search = search, bary.locations = bary.locations,
         optim = optim, lambda = lambda, DOF.stochastic.realizations = DOF.stochastic.realizations, DOF.stochastic.seed = DOF.stochastic.seed,

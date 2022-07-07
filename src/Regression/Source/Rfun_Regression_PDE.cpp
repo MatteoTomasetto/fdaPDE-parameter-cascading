@@ -26,7 +26,7 @@ extern "C"
                 \param RK an R-matrix representing the diffusivity matrix of the model
                 \param Rb an R-vector representing the advection term of the model
                 \param Rc an R-double representing the reaction term of the model
-                \param Rparameter_cascading an R-integer representing the option for parameter cascading algorithm
+                \param RparameterCascading an R-integer representing the option for parameter cascading algorithm
                 \param Rcovariates an R-matrix of covariates for the regression model
                 \param RBCIndices an R-integer containing the indexes of the nodes the user want to apply a Dirichlet Condition,
                                 the other are automatically considered in Neumann Condition.
@@ -44,10 +44,10 @@ extern "C"
                 \return R-vectors containg the coefficients of the solution, prediction of the values, optimization data and much more
         */
         SEXP regression_PDE(SEXP Rlocations, SEXP RbaryLocations, SEXP Robservations, SEXP Rmesh, SEXP Rorder, SEXP Rmydim, SEXP Rndim,
-                SEXP RK, SEXP Rb, SEXP Rc, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues, SEXP RincidenceMatrix, SEXP RarealDataAvg, SEXP Rsearch,
+                SEXP RK, SEXP Rb, SEXP Rc, SEXP RparameterCascading, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues, SEXP RincidenceMatrix, SEXP RarealDataAvg, SEXP Rsearch,
                 SEXP Roptim, SEXP Rlambda, SEXP Rnrealizations, SEXP Rseed, SEXP RDOF_matrix, SEXP Rtune, SEXP Rsct)
         {	
-        	RegressionDataElliptic regressionData(Rlocations, RbaryLocations, Robservations, Rorder, RK, Rb, Rc,
+        	RegressionDataElliptic regressionData(Rlocations, RbaryLocations, Robservations, Rorder, RK, Rb, Rc, RparameterCascading,
         		Rcovariates, RBCIndices, RBCValues, RincidenceMatrix, RarealDataAvg, Rsearch);
                 OptimizationData optimizationData(Roptim, Rlambda, Rnrealizations, Rseed, RDOF_matrix, Rtune, Rsct);
 
@@ -88,6 +88,7 @@ extern "C"
                 \param RK an R-matrix representing the diffusivity matrix of the model
                 \param Rb an R-vector representing the advection term of the model
                 \param Rc an R-double representing the reaction term of the model
+                \param RparameterCascading an R-integer representing the option for parameter cascading algorithm
 		\param Rcovariates an R-matrix of covariates for the regression model
 		\param RBCIndices an R-integer containing the indexes of the nodes the user want to apply a Dirichlet Condition,
 				the other are automatically considered in Neumann Condition.
@@ -112,10 +113,10 @@ extern "C"
 		\return R-vectors containg the coefficients of the solution, prediction of the values, optimization data and much more
 	*/
         SEXP regression_PDE_time(SEXP Rlocations, SEXP RbaryLocations, SEXP Rtime_locations, SEXP Robservations, SEXP Rmesh, SEXP Rmesh_time, SEXP Rorder, SEXP Rmydim, SEXP Rndim,
-		SEXP RK, SEXP Rb, SEXP Rc, SEXP Rcovariates,	SEXP RBCIndices, SEXP RBCValues,  SEXP RincidenceMatrix, SEXP RarealDataAvg,
+		SEXP RK, SEXP Rb, SEXP Rc, SEXP RparameterCascading, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues,  SEXP RincidenceMatrix, SEXP RarealDataAvg,
                 SEXP Rflag_mass, SEXP Rflag_parabolic,SEXP Rflag_iterative, SEXP Rmax_num_iteration, SEXP Rtreshold, SEXP Ric, SEXP Rsearch, SEXP Roptim, SEXP Rlambda_S, SEXP Rlambda_T, SEXP Rnrealizations, SEXP Rseed, SEXP RDOF_matrix, SEXP Rtune, SEXP Rsct)
         {
-        	RegressionDataElliptic regressionData(Rlocations, RbaryLocations, Rtime_locations, Robservations, Rorder, RK, Rb, Rc,
+        	RegressionDataElliptic regressionData(Rlocations, RbaryLocations, Rtime_locations, Robservations, Rorder, RK, Rb, Rc, RparameterCascading,
                         Rcovariates, RBCIndices, RBCValues, RincidenceMatrix, RarealDataAvg, Rflag_mass, Rflag_parabolic,Rflag_iterative, Rmax_num_iteration, Rtreshold, Ric, Rsearch);
                 OptimizationData optimizationData(Roptim, Rlambda_S, Rlambda_T, Rflag_parabolic,Rnrealizations, Rseed, RDOF_matrix, Rtune, Rsct);
 

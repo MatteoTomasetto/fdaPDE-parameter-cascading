@@ -143,9 +143,18 @@ Eigen::Vector2d PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_grad_K(const 
 {
 	Eigen::Vector2d res;
 
-	// Check if angle and intensity remain in a proper range after finite difference schemes
-	Real angle_lower, angle_upper, intensity_lower;
-	Real h_angle_upper, h_angle_lower, h_intensity;
+	res << eval_grad_angle(angle, intensity, lambda, h), eval_grad_intensity(angle, intensity, lambda, h);
+	
+	return res;
+}
+
+
+template <UInt ORDER, UInt mydim, UInt ndim>
+Real PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_grad_angle(const Real& angle, const Real& intensity, const lambda::type<1>& lambda, const Real& h) const
+{
+	// Check if angle remain in a proper range after finite difference schemes
+	Real angle_lower, angle_upper;
+	Real h_angle_upper, h_angle_lower;
 	
 	if(angle - h < 0.0)
 	{
@@ -169,6 +178,17 @@ Eigen::Vector2d PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_grad_K(const 
 		h_angle_upper = 2. * h;
 	}
 	
+	return (eval_K(angle_upper, intensity, lambda) - eval_K(angle_lower, intensity, lambda))/ std::min(h_angle_upper, h_angle_lower);
+}
+
+
+template <UInt ORDER, UInt mydim, UInt ndim>
+Real PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_grad_intensity(const Real& angle, const Real& intensity, const lambda::type<1>& lambda, const Real& h) const
+{
+	// Check if intensity remain in a proper range after finite difference schemes
+	Real intensity_lower;
+	Real h_intensity;
+	
 	if(intensity - h <= 0.0)
 	{
 		intensity_lower = intensity;
@@ -179,10 +199,9 @@ Eigen::Vector2d PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_grad_K(const 
 		intensity_lower = intensity - h;
 		h_intensity = 2. * h;
 	}
-	res << (eval_K(angle_upper, intensity, lambda) - eval_K(angle_lower, intensity, lambda)) / std::min(h_angle_upper, h_angle_lower),
-		   (eval_K(angle, intensity + h, lambda) - eval_K(angle, intensity_lower, lambda)) / h_intensity;
+
+	return (eval_K(angle, intensity + h, lambda) - eval_K(angle, intensity_lower, lambda)) / h_intensity;
 	
-	return res;
 }
 
 

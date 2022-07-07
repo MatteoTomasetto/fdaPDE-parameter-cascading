@@ -198,7 +198,7 @@ class  RegressionDataElliptic:public RegressionData
 			\param RK an R-double 2X2 matrix containing the coefficients for a anisotropic DIFFUSION term.
 			\param Rb an R-double 2-dim vector that contains the coefficients for the TRANSPORT coefficients.
 			\param Rc an R-double that contains the coefficient of the REACTION term
-			\param Rparameter_cascading an R-integer that contain the option for Parameter Cascading algorithm
+			\param RparameterCascading an R-integer that contain the option for Parameter Cascading algorithm
 			\param Rcovariates an R-matrix storing the covariates of the regression
 			\param RincidenceMatrix an R-matrix containing the incidence matrix defining the regions in the model with areal data
 			\param RBCIndices an R-integer containing the indexes of the nodes the user want to apply a Dirichlet Condition,
@@ -210,16 +210,20 @@ class  RegressionDataElliptic:public RegressionData
 		        \param Rsearch an R-integer to decide the search algorithm type (tree or naive or walking search algorithm).
 		*/
 		// Constructor that allows to set the option parameter_cascading_
-		/*explicit RegressionDataElliptic(SEXP Rlocations, SEXP RbaryLocations, SEXP Robservations, SEXP Rorder,
-			 SEXP RK, SEXP Rb, SEXP Rc, SEXP Rparameter_cascading, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues,
-			 SEXP RincidenceMatrix, SEXP RarealDataAvg, SEXP Rsearch);
-		*/
 		explicit RegressionDataElliptic(SEXP Rlocations, SEXP RbaryLocations, SEXP Robservations, SEXP Rorder,
 			 SEXP RK, SEXP Rb, SEXP Rc, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues,
+			 SEXP RincidenceMatrix, SEXP RarealDataAvg, SEXP Rsearch);
+		
+		explicit RegressionDataElliptic(SEXP Rlocations, SEXP RbaryLocations, SEXP Robservations, SEXP Rorder,
+			 SEXP RK, SEXP Rb, SEXP Rc, SEXP RparameterCascading, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues,
 			 SEXP RincidenceMatrix, SEXP RarealDataAvg, SEXP Rsearch);
 
 		explicit RegressionDataElliptic(SEXP Rlocations, SEXP RbaryLocations, SEXP Rtime_locations, SEXP Robservations, SEXP Rorder,
 			SEXP RK, SEXP Rb, SEXP Rc, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues,
+			SEXP RincidenceMatrix, SEXP RarealDataAvg, SEXP Rflag_mass, SEXP Rflag_parabolic, SEXP Rflag_iterative, SEXP Rmax_num_iteration, SEXP Rthreshold, SEXP Ric, SEXP Rsearch);
+
+		explicit RegressionDataElliptic(SEXP Rlocations, SEXP RbaryLocations, SEXP Rtime_locations, SEXP Robservations, SEXP Rorder,
+			SEXP RK, SEXP Rb, SEXP Rc, SEXP RparameterCascading, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues,
 			SEXP RincidenceMatrix, SEXP RarealDataAvg, SEXP Rflag_mass, SEXP Rflag_parabolic, SEXP Rflag_iterative, SEXP Rmax_num_iteration, SEXP Rthreshold, SEXP Ric, SEXP Rsearch);
 
 		const Diffusion<PDEParameterOptions::Constant> & getK() const {return K_;}
@@ -242,6 +246,9 @@ class RegressionDataEllipticSpaceVarying:public RegressionData
 		Reaction<PDEParameterOptions::SpaceVarying> c_;
 		ForcingTerm u_;
 
+		UInt parameter_cascading_ = 0;	// Option for the parameters to estimate in Parameter Cascading algortihm
+		UInt parameter_cascading_opt_ = 0; // Option for the optimization algorithm to use in Parameter Cascading algorithm
+
 	public:
 
 		//! A complete version of the constructor.
@@ -254,7 +261,8 @@ class RegressionDataEllipticSpaceVarying:public RegressionData
 			\param RK an R-double 2X2 matrix containing the coefficients for a anisotropic DIFFUSION term.
 			\param Rb an R-double 2-dim vector that contains the coefficients for the TRANSPORT coefficients.
 			\param Rc an R-double that contains the coefficient of the REACTION term
-			\param  Ru an R-double vector of length #triangles that contaiins the forcing term integrals.
+			\param Ru an R-double vector of length #triangles that contaiins the forcing term integrals.
+			\param RparameterCascading an R-integer that contain the option for Parameter Cascading algorithm
 			\param Rcovariates an R-matrix storing the covariates of the regression
 			\param RincidenceMatrix an R-matrix containing the incidence matrix defining the regions in the model with areal data
 			\param RBCIndices an R-integer containing the indexes of the nodes the user want to apply a Dirichlet Condition,
@@ -269,14 +277,29 @@ class RegressionDataEllipticSpaceVarying:public RegressionData
 			SEXP RK, SEXP Rb, SEXP Rc, SEXP Ru, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues,
 			SEXP RincidenceMatrix, SEXP RarealDataAvg, SEXP Rsearch);
 
+		explicit RegressionDataEllipticSpaceVarying(SEXP Rlocations, SEXP RbaryLocations, SEXP Robservations, SEXP Rorder,
+			SEXP RK, SEXP Rb, SEXP Rc, SEXP Ru, SEXP RparameterCascading, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues,
+			SEXP RincidenceMatrix, SEXP RarealDataAvg, SEXP Rsearch);
+
 		explicit RegressionDataEllipticSpaceVarying(SEXP Rlocations, SEXP RbaryLocations, SEXP Rtime_locations, SEXP Robservations, SEXP Rorder,
 			SEXP RK, SEXP Rb, SEXP Rc, SEXP Ru, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues, SEXP RincidenceMatrix, SEXP RarealDataAvg,
+			SEXP Rflag_mass, SEXP Rflag_parabolic, SEXP Rflag_iterative, SEXP Rmax_num_iteration, SEXP Rthreshold, SEXP Ric, SEXP Rsearch);
+
+		explicit RegressionDataEllipticSpaceVarying(SEXP Rlocations, SEXP RbaryLocations, SEXP Rtime_locations, SEXP Robservations, SEXP Rorder,
+			SEXP RK, SEXP Rb, SEXP Rc, SEXP Ru, SEXP RparameterCascading, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues, SEXP RincidenceMatrix, SEXP RarealDataAvg,
 			SEXP Rflag_mass, SEXP Rflag_parabolic, SEXP Rflag_iterative, SEXP Rmax_num_iteration, SEXP Rthreshold, SEXP Ric, SEXP Rsearch);
 
 		const Diffusion<PDEParameterOptions::SpaceVarying> & getK() const {return K_;}
 		const Advection<PDEParameterOptions::SpaceVarying> & getB() const {return b_;}
 		const Reaction<PDEParameterOptions::SpaceVarying> & getC() const {return c_;}
 		const ForcingTerm & getU() const {return u_;}
+
+		const UInt get_parameter_cascading_option() const {return parameter_cascading_;}
+		const UInt get_parameter_cascading_optimization_option() const {return parameter_cascading_opt_;}
+		void set_parameter_cascading_option(UInt new_option) {parameter_cascading_ = new_option;}
+
+		bool ParameterCascadingOn(void) const { return parameter_cascading_ != 0;} // return true if Parameter Cascading algorithm has to be done
+
 
 };
 

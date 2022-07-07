@@ -20,6 +20,8 @@ class Parameter_Cascading
 
 			 // Booleans to keep track of the wanted parameters to optimize
 			 bool update_K;
+			 bool update_alpha;
+			 bool update_intensity;
 			 bool update_b;
 			 bool update_c;
 
@@ -45,6 +47,8 @@ class Parameter_Cascading
 			 								   Real lambda_init) const;
 			 
 			 void step_K(void); // Find and update diffusion parameters via optimization algorithm
+			 void step_angle(void); 	// Find and update diffusion angle via optimization algorithm
+			 void step_intensity(void); // Find and update diffusion intensity via optimization algorithm
 			 void step_b(void); // Find and update advection components via optimization algorithm
 			 void step_c(void); // Find and update reaction parameter via optimization algorithm
 			 
@@ -75,12 +79,24 @@ class Parameter_Cascading
 
 				// Set which parameters to update
 				update_K = false;
+				update_alpha = false;
+				update_intensity = false;
 				update_b = false;
 				update_c = false;
 				UInt parameter_cascading_option = H.getModel().getRegressionData().get_parameter_cascading_option();
 
-				if(parameter_cascading_option == 1)
+				if(parameter_cascading_option == 1){
 					update_K = true;
+				}
+				
+				if(parameter_cascading_option == 2){
+					update_alpha = true;
+				}
+				
+				if(parameter_cascading_option == 3){
+					update_intensity = true;
+				}
+
 				// Other cases not implemented yet
 
 				optimization_algorithm = H.getModel().getRegressionData().get_parameter_cascading_optimization_option();

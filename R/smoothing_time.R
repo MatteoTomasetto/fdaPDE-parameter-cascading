@@ -319,6 +319,8 @@ smooth.FEM.time<-function(locations = NULL, time_locations = NULL, observations,
     PDE_parameters$c = as.matrix(PDE_parameters$c)
   }
 
+  # Set parameter cascading option (it is set to zero since it is not available for time dependent case)
+  parameter_cascading_option = 0
 
   checkSmoothingParametersSize_time(locations = locations, time_locations = time_locations, observations = observations, FEMbasis = FEMbasis, time_mesh = time_mesh,
     covariates = covariates, PDE_parameters = PDE_parameters, incidence_matrix = incidence_matrix,
@@ -391,7 +393,7 @@ smooth.FEM.time<-function(locations = NULL, time_locations = NULL, observations,
   {
     bigsol = NULL
     bigsol = CPP_smooth.FEM.PDE.time(locations = locations, time_locations = time_locations, observations = observations, FEMbasis = FEMbasis, time_mesh=time_mesh,
-       covariates = covariates, PDE_parameters=PDE_parameters, ndim = ndim, mydim = mydim, BC = BC,
+       covariates = covariates, PDE_parameters=PDE_parameters, parameter_cascading_option = parameter_cascading_option, ndim = ndim, mydim = mydim, BC = BC,
        incidence_matrix = incidence_matrix, areal.data.avg = areal.data.avg,
        FLAG_MASS = FLAG_MASS, FLAG_PARABOLIC = FLAG_PARABOLIC,FLAG_ITERATIVE=FLAG_ITERATIVE, threshold = threshold, max.steps = max.steps, IC = IC,
        search = search, bary.locations = bary.locations,
@@ -401,7 +403,7 @@ smooth.FEM.time<-function(locations = NULL, time_locations = NULL, observations,
   {
     bigsol = NULL
     bigsol = CPP_smooth.FEM.PDE.sv.time(locations = locations, time_locations = time_locations, observations = observations, FEMbasis = FEMbasis, time_mesh=time_mesh,
-      covariates = covariates, PDE_parameters=PDE_parameters, ndim = ndim, mydim = mydim, BC = BC,
+      covariates = covariates, PDE_parameters=PDE_parameters, parameter_cascading_option = parameter_cascading_option, ndim = ndim, mydim = mydim, BC = BC,
       incidence_matrix = incidence_matrix, areal.data.avg = areal.data.avg,
       FLAG_MASS = FLAG_MASS, FLAG_PARABOLIC = FLAG_PARABOLIC,FLAG_ITERATIVE=FLAG_ITERATIVE, threshold = threshold, max.steps = max.steps, IC = IC,
       search = search, bary.locations = bary.locations,
@@ -428,7 +430,7 @@ smooth.FEM.time<-function(locations = NULL, time_locations = NULL, observations,
   {
     bigsol = NULL
     bigsol = CPP_smooth.volume.FEM.PDE.time(locations = locations, time_locations = time_locations, observations = observations, FEMbasis = FEMbasis, time_mesh=time_mesh,
-       covariates = covariates, PDE_parameters=PDE_parameters, ndim = ndim, mydim = mydim, BC = BC,
+       covariates = covariates, PDE_parameters=PDE_parameters, parameter_cascading_option = parameter_cascading_option, ndim = ndim, mydim = mydim, BC = BC,
        incidence_matrix = incidence_matrix, areal.data.avg = areal.data.avg,
        FLAG_MASS = FLAG_MASS, FLAG_PARABOLIC = FLAG_PARABOLIC,FLAG_ITERATIVE=FLAG_ITERATIVE, threshold = threshold, max.steps = max.steps, IC = IC,
        search = search, bary.locations = bary.locations,
@@ -438,7 +440,7 @@ smooth.FEM.time<-function(locations = NULL, time_locations = NULL, observations,
   {
     bigsol = NULL
     bigsol = CPP_smooth.volume.FEM.PDE.sv.time(locations = locations, time_locations = time_locations, observations = observations, FEMbasis = FEMbasis, time_mesh=time_mesh,
-      covariates = covariates, PDE_parameters=PDE_parameters, ndim = ndim, mydim = mydim, BC = BC,
+      covariates = covariates, PDE_parameters=PDE_parameters, parameter_cascading_option = parameter_cascading_option, ndim = ndim, mydim = mydim, BC = BC,
       incidence_matrix = incidence_matrix, areal.data.avg = areal.data.avg,
       FLAG_MASS = FLAG_MASS, FLAG_PARABOLIC = FLAG_PARABOLIC,FLAG_ITERATIVE=FLAG_ITERATIVE, threshold = threshold, max.steps = max.steps, IC = IC,
       search = search, bary.locations = bary.locations,
