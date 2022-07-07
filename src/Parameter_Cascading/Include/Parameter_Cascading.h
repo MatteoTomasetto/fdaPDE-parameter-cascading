@@ -46,11 +46,28 @@ class Parameter_Cascading
 			 								   GCV_Exact<Carrier<RegressionDataElliptic>, 1>& solver,
 			 								   Real lambda_init) const;
 			 
-			 void step_K(void); // Find and update diffusion parameters via optimization algorithm
-			 void step_angle(void); 	// Find and update diffusion angle via optimization algorithm
-			 void step_intensity(void); // Find and update diffusion intensity via optimization algorithm
-			 void step_b(void); // Find and update advection components via optimization algorithm
-			 void step_c(void); // Find and update reaction parameter via optimization algorithm
+			 template<typename ParameterType>  // Find and update parameters via optimization algorithm
+			 ParameterType step(const ParameterType& init, const ParameterType& lower_bound, const ParameterType& upper_bound, const ParameterType& periods,
+			 					const std::function<Real (ParameterType, Real)>& F, const std::function<ParameterType (ParameterType, Real)>& dF, 
+			 					const std::function<void (ParameterType)>& set_param); 
+
+			 template<typename ParameterType>
+			 typename std::enable_if< !std::is_floating_point<ParameterType>::value, void>::type
+			 printer(ParameterType input) const
+			 {
+				for(unsigned int i = 0u; i < input.size(); ++i)
+					Rprintf("%f ", input[i]);
+				Rprintf("\n");
+			 };
+
+			 template<typename ParameterType>
+			 typename std::enable_if< std::is_floating_point<ParameterType>::value, void>::type
+			 printer(ParameterType input) const
+			 {
+				Rprintf("%f\n", input);
+			 };
+
+
 			 
 	public: // Constructor that computes the vector of lambdas from the vector of rhos presented in \cite{Bernardi}
 			Parameter_Cascading(PDE_Parameter_Functional<ORDER, mydim, ndim>& H_)

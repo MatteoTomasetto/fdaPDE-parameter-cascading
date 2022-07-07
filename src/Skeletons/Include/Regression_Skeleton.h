@@ -84,7 +84,7 @@ regression_skeleton(InputHandler & regressionData, OptimizationData & optimizati
 	regression.preapply(mesh); // preliminary apply (preapply) to store all problem matrices
 
 	// Parameter cascading algorithm to estimate the PDE_parameters optimally
-	if(regressionData.ParameterCascadingOn() && optimizationData.get_loss_function() == "GCV" && optimizationData.get_DOF_evaluation() == "exact") // LEAVE ONLY THE FIRST CONDITION AT THE END
+	if(regressionData.ParameterCascadingOn())
 	{
 		// Functional to optimize in the algorithm
 		PDE_Parameter_Functional<ORDER, mydim, ndim> H(regression, mesh);

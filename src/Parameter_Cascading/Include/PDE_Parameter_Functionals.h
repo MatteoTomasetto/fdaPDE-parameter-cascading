@@ -45,7 +45,7 @@ class PDE_Parameter_Functional
 			Real eval_grad_angle(const Real& angle, const Real& intensity, const lambda::type<1>& lambda, const Real& h = 1e-3) const;
 			Real eval_grad_intensity(const Real& angle, const Real& intensity, const lambda::type<1>& lambda, const Real& h = 1e-3) const;
 			Eigen::Vector2d eval_grad_b(const Real& b1, const Real& b2, const lambda::type<1>& lambda, const Real& h = 1e-3) const;
-			Real	 eval_grad_c(const Real& c, const lambda::type<1>& lambda, const Real& h = 1e-3) const;
+			Real eval_grad_c(const Real& c, const lambda::type<1>& lambda, const Real& h = 1e-3) const;
 			
 			// GETTERS
 			inline MixedFERegression<RegressionDataElliptic> & getModel(void) const { return model; };
