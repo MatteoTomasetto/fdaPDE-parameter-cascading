@@ -8,8 +8,6 @@
 #include "../../Regression/Include/Regression_Data.h"
 #include "../../Lambda_Optimization/Include/Carrier.h"
 #include "../../Lambda_Optimization/Include/Lambda_Optimizer.h"
-#include "../../Lambda_Optimization/Include/Solution_Builders.h"
-
 
 template <UInt ORDER, UInt mydim, UInt ndim>
 MatrixXr PDE_Parameter_Functional<ORDER, mydim, ndim>::compute_K(const Real& angle, const Real& intensity) const
