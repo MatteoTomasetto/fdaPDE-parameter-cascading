@@ -172,14 +172,14 @@ ParameterType Parameter_Cascading<ORDER, mydim, ndim>::step(const ParameterType&
 
 
 template <UInt ORDER, UInt mydim, UInt ndim>
-void Parameter_Cascading<ORDER, mydim, ndim>::apply(void)
+Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim>::apply(void)
 {
 	Rprintf("Start Parameter_Cascading Algorithm\n");
 
 	if(update_K)
 	{	
 		Rprintf("Finding diffusion matrix K\n");
-		Eigen::Vector2d init(angle, intensity);
+		Eigen::Vector2d init(diffusion(0), diffusion(1));
 		Eigen::Vector2d lower_bound(0.0, 0.0);
 		Eigen::Vector2d upper_bound(EIGEN_PI, 1000.0);
 		Eigen::Vector2d periods(EIGEN_PI, 0.0);
@@ -187,45 +187,42 @@ void Parameter_Cascading<ORDER, mydim, ndim>::apply(void)
 		std::function<Eigen::Vector2d (Eigen::Vector2d, Real)> dF = [this](Eigen::Vector2d x, Real lambda){return this -> H.eval_grad_K(x(0),x(1), lambda);};
 		std::function<void (Eigen::Vector2d)> set_param = [this](Eigen::Vector2d x){this -> H.set_K(x(0), x(1));};
 
-		Eigen::VectorXd sol = step<Eigen::Vector2d>(init, lower_bound, upper_bound, periods, F, dF, set_param);
-		
-		angle = sol(0);
-		intensity = sol(1);
+		diffusion = step<Eigen::Vector2d>(init, lower_bound, upper_bound, periods, F, dF, set_param);
 	}
 
 	if(update_alpha)
 	{	
 		Rprintf("Finding diffusion angle\n");
-		Real init(angle);
+		Real init(diffusion(0));
 		Real lower_bound(0.0);
 		Real upper_bound(EIGEN_PI);
 		Real periods(EIGEN_PI);
-		std::function<Real (Real, Real)> F = [this](Real x, Real lambda){return this -> H.eval_K(x, this -> intensity, lambda);};
-		std::function<Real (Real, Real)> dF = [this](Real x, Real lambda){return this -> H.eval_grad_angle(x, this -> intensity, lambda);};
-		std::function<void (Real)> set_param = [this](Real x){this -> H.set_K(x, this -> intensity);};
+		std::function<Real (Real, Real)> F = [this](Real x, Real lambda){return this -> H.eval_K(x, this -> diffusion(1), lambda);};
+		std::function<Real (Real, Real)> dF = [this](Real x, Real lambda){return this -> H.eval_grad_angle(x, this -> diffusion(1), lambda);};
+		std::function<void (Real)> set_param = [this](Real x){this -> H.set_K(x, this -> diffusion(1));};
 
-		angle = step<Real>(init, lower_bound, upper_bound, periods, F, dF, set_param);
+		diffusion(0) = step<Real>(init, lower_bound, upper_bound, periods, F, dF, set_param);
 	}	
 
 	if(update_intensity)
 	{	
 		Rprintf("Finding diffusion intensity\n");
-		Real init(intensity);
+		Real init(diffusion(1));
 		Real lower_bound(0.0);
 		Real upper_bound(1000.0);
 		Real periods(0.0);
-		std::function<Real (Real, Real)> F = [this](Real x, Real lambda){return this -> H.eval_K(this -> angle, x, lambda);};
-		std::function<Real (Real, Real)> dF = [this](Real x, Real lambda){return this -> H.eval_grad_intensity(this -> angle, x, lambda);};
-		std::function<void (Real)> set_param = [this](Real x){this -> H.set_K(this -> angle, x);};
+		std::function<Real (Real, Real)> F = [this](Real x, Real lambda){return this -> H.eval_K(this -> diffusion(0), x, lambda);};
+		std::function<Real (Real, Real)> dF = [this](Real x, Real lambda){return this -> H.eval_grad_intensity(this -> diffusion(0), x, lambda);};
+		std::function<void (Real)> set_param = [this](Real x){this -> H.set_K(this -> diffusion(0), x);};
 
-		intensity = step<Real>(init, lower_bound, upper_bound, periods, F, dF, set_param);
+		diffusion(1) = step<Real>(init, lower_bound, upper_bound, periods, F, dF, set_param);
 	}	
 	
 	
 	if(update_b)
 	{
 		Rprintf("Finding advection vector b\n");
-		Eigen::Vector2d init(b1, b2);
+		Eigen::Vector2d init(b(0), b(1));
 		Eigen::Vector2d lower_bound(-1000.0, -1000.0);
 		Eigen::Vector2d upper_bound(1000.0, 1000.0);
 		Eigen::Vector2d periods(0.0, 0.0);
@@ -233,10 +230,7 @@ void Parameter_Cascading<ORDER, mydim, ndim>::apply(void)
 		std::function<Eigen::Vector2d (Eigen::Vector2d, Real)> dF = [this](Eigen::Vector2d x, Real lambda){return this -> H.eval_grad_b(x(0),x(1), lambda);};
 		std::function<void (Eigen::Vector2d)> set_param = [this](Eigen::Vector2d x){this -> H.set_b(x(0), x(1));};
 
-		Eigen::VectorXd sol = step<Eigen::Vector2d>(init, lower_bound, upper_bound, periods, F, dF, set_param);
-		
-		b1 = sol(0);
-		b2 = sol(1);
+		b = step<Eigen::Vector2d>(init, lower_bound, upper_bound, periods, F, dF, set_param);
 	}
 			
 	if(update_c)
@@ -253,7 +247,9 @@ void Parameter_Cascading<ORDER, mydim, ndim>::apply(void)
 		c = step<Real>(init, lower_bound, upper_bound, periods, F, dF, set_param);
 	}
 
-	return;
+	Eigen::Matrix2d K = H.compute_K(diffusion(0), diffusion(1));
+
+	return {diffusion, K, b, c, lambda_opt};
 }
 
 #endif

@@ -202,6 +202,59 @@ SEXP Solution_Builders::build_solution_plain_regression(const MatrixXr & solutio
 
 
 template<typename InputHandler, UInt ORDER, UInt mydim, UInt ndim>
+typename std::enable_if<std::is_same<InputHandler, RegressionDataElliptic>::value, SEXP>::type
+Solution_Builders::build_solution_plain_regression(const MatrixXr & solution, const output_Data<1> & output, const MeshHandler<ORDER, mydim, ndim> & mesh , const InputHandler & regressionData, const MixedFERegression<InputHandler>& regression,
+    const Output_Parameter_Cascading& parameter_cascading_result){
+
+        // ---- Copy results in R memory ----
+        SEXP result = NILSXP;  // Define emty term --> never pass to R empty or is "R session aborted"
+
+        result = PROTECT(Rf_allocVector(VECSXP, 27)); // 27 elements to be allocated
+
+        result = build_solution_plain_regression(solution, output, mesh, regressionData, regression); // 22 elements from the function above
+
+        PROTECT(result);
+
+        // Add optimal diffusion angle in position 22
+        SET_VECTOR_ELT(result, 22, Rf_allocVector(REALSXP, 1));
+        Real *rans= REAL(VECTOR_ELT(result, 22));
+        rans[0] = parameter_cascading_result.diffusion_opt(0);
+
+        // Add optimal diffusion intensity in position 23
+        SET_VECTOR_ELT(result, 23, Rf_allocVector(REALSXP, 1));
+        rans= REAL(VECTOR_ELT(result, 23));
+        rans[0] = parameter_cascading_result.diffusion_opt(1);
+
+        // Add optimal diffusion matrix in position 24
+        SET_VECTOR_ELT(result, 24, Rf_allocMatrix(REALSXP, parameter_cascading_result.K_opt.rows(), parameter_cascading_result.K_opt.cols()));
+        rans = REAL(VECTOR_ELT(result, 24));
+        for(UInt j = 0; j < parameter_cascading_result.K_opt.cols(); j++)
+        {
+            for(UInt i = 0; i < parameter_cascading_result.K_opt.rows(); i++)
+                rans[i + parameter_cascading_result.K_opt.rows()*j] = parameter_cascading_result.K_opt(i,j);
+        }
+
+       
+        // Add optimal advection vector in position 25
+        SET_VECTOR_ELT(result, 25, Rf_allocVector(REALSXP, parameter_cascading_result.b_opt.size()));
+        rans = REAL(VECTOR_ELT(result, 25));
+        for(UInt j = 0; j < parameter_cascading_result.b_opt.size(); j++)
+        {
+            rans[j] = parameter_cascading_result.b_opt(j);
+        }
+
+         // Add optimal diffusion intensity in position 23
+        SET_VECTOR_ELT(result, 26, Rf_allocVector(REALSXP, 1));
+        rans= REAL(VECTOR_ELT(result, 26));
+        rans[0] = parameter_cascading_result.c_opt;
+
+        UNPROTECT(1);
+
+        return(result);
+}
+
+
+template<typename InputHandler, UInt ORDER, UInt mydim, UInt ndim>
 static SEXP Solution_Builders::build_solution_temporal_regression(const MatrixXr & solution, const output_Data<2> & output, const MeshHandler<ORDER, mydim, ndim> & mesh, const InputHandler & regressionData, const MixedFERegression<InputHandler>& regression)
 {
     std::vector<Real> const & dof = output.dof;

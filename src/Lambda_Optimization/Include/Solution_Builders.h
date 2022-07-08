@@ -10,6 +10,16 @@
 #include "../../Regression/Include/Regression_Data.h"
 #include "../../Global_Utilities/Include/Lambda.h"
 
+//! Output struct to be used to return results of parameter cascading in R
+struct Output_Parameter_Cascading
+{
+        Eigen::Vector2d diffusion_opt;
+        Eigen::Matrix2d K_opt;
+        Eigen::Vector2d b_opt;
+        Real c_opt;
+        Real lambda_opt;
+};
+
 //! Output struct to be used to return values in R
 template<UInt num_params>
 struct output_Data
@@ -51,6 +61,12 @@ namespace Solution_Builders
         template<typename InputHandler, UInt ORDER, UInt mydim, UInt ndim>
         static SEXP build_solution_plain_regression(const MatrixXr & solution, const output_Data<1> & output, const MeshHandler<ORDER, mydim, ndim> & mesh, const InputHandler & regressionData, const MixedFERegression<InputHandler>& regression);
         
+        // Specialization for paramter cascading parameters (enabled for RegressionDataElliptic only so far)
+        template<typename InputHandler, UInt ORDER, UInt mydim, UInt ndim>
+        static typename std::enable_if<std::is_same<InputHandler, RegressionDataElliptic>::value, SEXP>::type
+        build_solution_plain_regression(const MatrixXr & solution, const output_Data<1> & output, const MeshHandler<ORDER, mydim, ndim> & mesh , const InputHandler & regressionData, const MixedFERegression<InputHandler>& regression, const Output_Parameter_Cascading& parameter_cascading_result);
+
+
         template<typename InputHandler, UInt ORDER, UInt mydim, UInt ndim>
         static SEXP build_solution_temporal_regression(const MatrixXr & solution, const output_Data<2> & output, const MeshHandler<ORDER, mydim, ndim> & mesh, const InputHandler & regressionData, const MixedFERegression<InputHandler>& regression);
 };

@@ -502,58 +502,52 @@ smooth.FEM<-function(locations = NULL, observations, FEMbasis,
     DOF.matrix = as.matrix(DOF.matrix)
 
   # Set a convention for parameter cascading options
+  parameter_cascading_option = c(0, 0)
   if(!is.null(PDE_parameters) & is.null(PDE_parameters$u) & ndim == 2)
   {
   	# Set which parameter to estimate with Parameter Cascading algorithm
     if(is.null(PDE_parameters$parameter_cascading) || is.null(PDE_parameters$parameter_cascading[1])){
-      parameter_cascading_option = 0
+      parameter_cascading_option[1] = 0
     }else if(PDE_parameters$parameter_cascading[1] == 'K'){
-    	parameter_cascading_option = 1
+    	parameter_cascading_option[1] = 1
     }else if(PDE_parameters$parameter_cascading[1] == 'angle'){
-    	parameter_cascading_option = 2
+    	parameter_cascading_option[1] = 2
     }else if(PDE_parameters$parameter_cascading[1] == 'intensity'){
-    	parameter_cascading_option = 3
+    	parameter_cascading_option[1] = 3
     }else{
       	stop("Invalid input for Parameter Cascading algorithm in PDE_parameters")
     }
   
-  	if(parameter_cascading_option != 0){
+  	if(parameter_cascading_option[1] != 0){
   		# Set a convention for optimization algorithm used in parameter cascading
   		if(PDE_parameters$parameter_cascading[2] == "gradient"){
-      		parameter_cascading_option= c(parameter_cascading_option, 0)
+      		parameter_cascading_option[2] = 0
     	}else if(PDE_parameters$parameter_cascading[2] == "genetic"){
-      		parameter_cascading_option = c(parameter_cascading_option, 1)
+      		parameter_cascading_option[2] = 1
   		}else{
   			stop("Invalid input for Parameter Cascading algorithm in PDE_parameters")
   		}
-  	}
 
-
-    # Set initial values for the PDE_parameters if user does not pass them
-    if(parameter_cascading_option != 0)
-    {
-  	  if(is.null(PDE_parameters$K)){
-  		PDE_parameters$K <- cbind(c(1, 0), c(0, 1))
-  	  }else{
-  	  	warning("K in PDE_parameters used as initialization for Parameter Cascading Algorithm")
-  	  }
-  	  if(is.null(PDE_parameters$b)){
-  		PDE_parameters$b <- c(0, 0)
-  	  }else{
-  	  	warning("b in PDE_parameters used as initialization for Parameter Cascading Algorithm")
-  	  }
-  	  if(is.null(PDE_parameters$c)){
-  		PDE_parameters$c <- 0
-  	  }else{
-  	  	warning("c in PDE_parameters used as initialization for Parameter Cascading Algorithm")
-  	  }
+  		# Set initial values for the PDE_parameters if user does not pass them    
+  	    if(is.null(PDE_parameters$K)){
+  		  PDE_parameters$K <- cbind(c(1, 0), c(0, 1))
+  	    }else{
+  	  	  warning("K in PDE_parameters used as initialization for Parameter Cascading Algorithm")
+  	    }
+  	    if(is.null(PDE_parameters$b)){
+  		  PDE_parameters$b <- c(0, 0)
+  	    }else{
+  	  	  warning("b in PDE_parameters used as initialization for Parameter Cascading Algorithm")
+  	    }
+  	    if(is.null(PDE_parameters$c)){
+  		  PDE_parameters$c <- 0
+  	    }else{
+  	  	  warning("c in PDE_parameters used as initialization for Parameter Cascading Algorithm")
+  	    }
     }
-  }else{
-  	parameter_cascading_option = c(0, 0)
   }
-  
 
- space_varying = checkSmoothingParameters(locations = locations, observations = observations, FEMbasis = FEMbasis,
+    space_varying = checkSmoothingParameters(locations = locations, observations = observations, FEMbasis = FEMbasis,
     covariates = covariates, PDE_parameters = PDE_parameters, BC = BC,
     incidence_matrix = incidence_matrix, areal.data.avg = areal.data.avg,
     search = search, bary.locations = bary.locations,
@@ -997,6 +991,21 @@ smooth.FEM<-function(locations = NULL, observations, FEMbasis,
 
     reslist = list(fit.FEM = fit.FEM, PDEmisfit.FEM = PDEmisfit.FEM, solution = solution,
                 optimization  = optimization, time = time, bary.locations = bary.locations)
+
+    # save information of parameter cascading
+    if(parameter_cascading_option != 0)
+    {
+    	parameter_cascading = list(
+    		diffusion_angle = bigsol[[23]],
+    		diffusion_intensity = bigsol[[24]],
+    		K = bigsol[[25]],
+    		b = bigsol[[26]],
+    		c = bigsol[[27]]
+    	)
+
+    	reslist = list(reslist, parameter_cascading = parameter_cascading)
+    }
+
     return(reslist)
   }
 }

@@ -164,7 +164,7 @@ CPP_smooth.FEM.PDE.basis<-function(locations, observations, FEMbasis, covariates
   areal.data.avg <- as.integer(areal.data.avg)
   storage.mode(areal.data.avg) <-"integer"
   storage.mode(search) <- "integer"
-  storage.mode(optim) <- "integer"  
+  storage.mode(optim) <- "integer"
   storage.mode(lambda) <- "double"
   DOF.matrix <- as.matrix(DOF.matrix)
   storage.mode(DOF.matrix) <- "double"

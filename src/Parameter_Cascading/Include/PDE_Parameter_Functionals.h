@@ -29,7 +29,8 @@ class PDE_Parameter_Functional
 									 const MeshHandler<ORDER, mydim, ndim> & mesh_)
 			: model(model_), mesh(mesh_) {};
 
-			// Functions to build PDE parameters, set them in RegressionData and recompute R1 matrix 
+			// Functions to build PDE parameters, set them in RegressionData and recompute R1 matrix
+			MatrixXr compute_K(const Real& angle, const Real& intensity) const;
 			void set_K(const Real& angle, const Real& intensity) const;
 			void set_b(const Real& b1, const Real& b2) const;
 			void set_c(const Real& c) const;

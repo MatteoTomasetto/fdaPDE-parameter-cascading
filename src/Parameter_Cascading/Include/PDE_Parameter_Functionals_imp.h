@@ -10,8 +10,9 @@
 #include "../../Lambda_Optimization/Include/Lambda_Optimizer.h"
 #include "../../Lambda_Optimization/Include/Solution_Builders.h"
 
+
 template <UInt ORDER, UInt mydim, UInt ndim>
-void PDE_Parameter_Functional<ORDER, mydim, ndim>::set_K(const Real& angle, const Real& intensity) const
+MatrixXr PDE_Parameter_Functional<ORDER, mydim, ndim>::compute_K(const Real& angle, const Real& intensity) const
 {
 	// Build the diffusion matrix from angle and intensity
 	MatrixXr Q(2,2);
@@ -24,6 +25,15 @@ void PDE_Parameter_Functional<ORDER, mydim, ndim>::set_K(const Real& angle, cons
 
 	MatrixXr K_matrix(2,2);
 	K_matrix = Q * Sigma * Q.inverse();
+
+	return K_matrix;
+}
+
+template <UInt ORDER, UInt mydim, UInt ndim>
+void PDE_Parameter_Functional<ORDER, mydim, ndim>::set_K(const Real& angle, const Real& intensity) const
+{
+	// Build the diffusion matrix from angle and intensity
+	MatrixXr K_matrix = compute_K(angle, intensity);
 
 	// Set the diffusion in RegressionData
 	model.getRegressionData().getK().setDiffusion(K_matrix);

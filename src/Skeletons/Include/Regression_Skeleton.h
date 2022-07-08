@@ -84,6 +84,7 @@ regression_skeleton(InputHandler & regressionData, OptimizationData & optimizati
 	regression.preapply(mesh); // preliminary apply (preapply) to store all problem matrices
 
 	// Parameter cascading algorithm to estimate the PDE_parameters optimally
+	Output_Parameter_Cascading parameter_cascading_result;
 	if(regressionData.ParameterCascadingOn())
 	{
 		// Functional to optimize in the algorithm
@@ -93,16 +94,16 @@ regression_skeleton(InputHandler & regressionData, OptimizationData & optimizati
 		Parameter_Cascading<ORDER, mydim, ndim> ParameterCascadingEngine(H);
 
 		Rprintf("Parameter_Cascading Algorithm\n");
-		ParameterCascadingEngine.apply(); // Parameter cascading algorithm applied
+		parameter_cascading_result = ParameterCascadingEngine.apply(); // Parameter cascading algorithm applied
 
 		// Set parameter_cascading_option = 0 to avoid useless re-computations in MixedFeRegression.apply()
-		regressionData.set_parameter_cascading_option(0);
+		//regressionData.set_parameter_cascading_option(0);
 
 		// Reset the last lambdaS used in OptimizationData
 		optimizationData.set_last_lS_used(std::numeric_limits<Real>::infinity());
 
 		// Set initial lambdaS in OptimizationData (better initialization for future computations)
-		optimizationData.set_initial_lambda_S(ParameterCascadingEngine.get_lambda_opt());
+		optimizationData.set_initial_lambda_S(parameter_cascading_result.lambda_opt);
 	}
 
 	std::pair<MatrixXr, output_Data<1>> solution_bricks; // Prepare solution to be filled
@@ -142,6 +143,9 @@ regression_skeleton(InputHandler & regressionData, OptimizationData & optimizati
 			solution_bricks = optimizer_method_selection<Carrier<InputHandler>>(carrier);
 		}
 	}
+
+	if(regressionData.ParameterCascadingOn())
+		return Solution_Builders::build_solution_plain_regression<InputHandler, ORDER, mydim, ndim>(solution_bricks.first, solution_bricks.second, mesh, regressionData, regression, parameter_cascading_result);
 
  	return Solution_Builders::build_solution_plain_regression<InputHandler, ORDER, mydim, ndim>(solution_bricks.first, solution_bricks.second, mesh, regressionData, regression);
 }

@@ -3,6 +3,7 @@
 
 #include "../../FdaPDE.h"
 #include "PDE_Parameter_Functionals.h"
+#include "../../Lambda_Optimization/Include/Solution_Builders.h"
 
 /* *** Parameter_Cascading ***
  *
@@ -28,12 +29,12 @@ class Parameter_Cascading
 			 // Optimization algorithm to use: 0 for Gradient Descent, 1 for Genetic algorithm
 			 UInt optimization_algorithm;
 			 
-			 // Diffusion parameters
-			 Real angle;
-			 Real intensity;
-			 // Advection components
-			 Real b1;
-			 Real b2;
+			 // Diffusion parameters (angle and intensity)
+			 Eigen::Vector2d diffusion;
+			 
+			 // Advection parameter
+			 Eigen::Vector2d b;
+			 
 			 // Reaction coefficient
 			 Real c;
 
@@ -87,10 +88,10 @@ class Parameter_Cascading
 				lambdas = rhos.array() / (1 - rhos.array()) * n / area;
 
 				// Initialize the parameters with the values in RegressionData and OptimizationData
-				angle = H.getModel().getRegressionData().getK().getAngle();
-				intensity = H.getModel().getRegressionData().getK().getIntensity();
-				b1 = H.getModel().getRegressionData().getB().get_b1_coeff();
-				b2 = H.getModel().getRegressionData().getB().get_b2_coeff();
+				diffusion(0) = H.getModel().getRegressionData().getK().getAngle();
+				diffusion(1) = H.getModel().getRegressionData().getK().getIntensity();
+				b(0) = H.getModel().getRegressionData().getB().get_b1_coeff();
+				b(1) = H.getModel().getRegressionData().getB().get_b2_coeff();
 				c = H.getModel().getRegressionData().getC().get_c_coeff();
 				lambda_opt = H.getModel().getOptimizationData().get_initial_lambda_S();
 
@@ -120,10 +121,7 @@ class Parameter_Cascading
 			};
 			
 			// Function to apply the parameter cascading algorithm
-			void apply(void);
-
-			inline Real get_lambda_opt(void) const {return lambda_opt;};
-
+			Output_Parameter_Cascading apply(void);
 };
 
 #include "Parameter_Cascading_imp.h"
