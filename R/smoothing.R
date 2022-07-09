@@ -993,7 +993,7 @@ smooth.FEM<-function(locations = NULL, observations, FEMbasis,
                 optimization  = optimization, time = time, bary.locations = bary.locations)
 
     # save information of parameter cascading
-    if(parameter_cascading_option != 0)
+    if(parameter_cascading_option[1] != 0)
     {
     	parameter_cascading = list(
     		diffusion_angle = bigsol[[23]],
@@ -1003,7 +1003,7 @@ smooth.FEM<-function(locations = NULL, observations, FEMbasis,
     		c = bigsol[[27]]
     	)
 
-    	reslist = list(reslist, parameter_cascading = parameter_cascading)
+    	reslist$parameter_cascading = parameter_cascading
     }
 
     return(reslist)
