@@ -54,6 +54,11 @@
 #' The second component of this input have the following possibilities: 'genetic', 'gradient'(default option).
 #' If 'genetic' is selected, the Genetic Algortihm is used for optimization step in Parameter Cascading.
 #' If 'gradient' is selected, the Gradient Descent is used for optimization step in Parameter Cascading.
+#' EXAMPLE: kappa <- cbind(c(1,0), c(0,1))
+#'			b = array(0, c(2, nrow(points)))
+#'			c = 0
+#'			parameter_cascading = c('K','genetic')
+#'			PDE_parameters <- list(K = kappa, b = b, c = c, parameter_cascading = parameter_cascading)
 #' @param BC A list with two vectors:
 #'  \code{BC_indices}, a vector with the indices in \code{nodes} of boundary nodes where a Dirichlet Boundary Condition should be applied;
 #'  \code{BC_values}, a vector with the values that the spatial field must take at the nodes indicated in \code{BC_indices}.
