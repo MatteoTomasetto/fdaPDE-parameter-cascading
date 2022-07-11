@@ -147,10 +147,9 @@ ParameterType Parameter_Cascading<ORDER, mydim, ndim>::step(const ParameterType&
 				if(counter_GCV_increasing == 3)
 				{
 					Rprintf("Increasing GCV, restart Parameter Cascading algortihm with finer grid of lambdas\n");
-					lambdas.resize(iter * 3, 1);
 					lambdas = VectorXr::LinSpaced(iter * 3, lambdas(0), lambdas(best_iter + 1));
+					lambdas.resize(iter * 3, 1);
 					iter = -1;
-					counter_GCV_increasing = 0;
 					old_sol = best_sol;
 					finer_grid = true;
 				}
