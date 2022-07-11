@@ -75,7 +75,7 @@ ParameterType Parameter_Cascading<ORDER, mydim, ndim>::step(const ParameterType&
 	// Initialize GCV and variables to check if GCV is increasing
 	GCV = -1.0;
 	UInt counter_GCV_increasing = 0; // Variable to count how many iterations present an increasing GCV
-	bool finer_grid = false;		 // finer grid to activate when GCV is increasing
+	bool finer_grid = false;		 // Finer grid to activate when GCV is increasing
 	Real old_GCV = std::numeric_limits<Real>::max();
 
 	for (UInt iter = 0; iter < lambdas.size(); ++iter)
@@ -115,9 +115,6 @@ ParameterType Parameter_Cascading<ORDER, mydim, ndim>::step(const ParameterType&
 
 		std::pair<Real, Real> opt_sol_GCV = compute_GCV(carrier, solver, lambda_opt); // Use the last optimal lambda found as initial lambda computing GCV
 		
-		old_sol = opt_sol;
-		old_GCV = opt_sol_GCV.second;
-		
 		if(iter == 0 || opt_sol_GCV.second <= GCV)
 		{
 			lambda_opt = opt_sol_GCV.first;
@@ -125,6 +122,9 @@ ParameterType Parameter_Cascading<ORDER, mydim, ndim>::step(const ParameterType&
 			best_sol = opt_sol;
 			best_iter = iter;
 		}
+
+		if(iter == 0)
+			old_GCV = GCV;
 		
 		Rprintf("Optimal sol for lambda = %e found\n", lambdas(iter));
 		Rprintf("Optimal sol: ");
@@ -134,24 +134,31 @@ ParameterType Parameter_Cascading<ORDER, mydim, ndim>::step(const ParameterType&
 		Rprintf("GCV found: %f\n", opt_sol_GCV.second);
 		Rprintf("Best GCV: %f\n", GCV);
 
-		++iter;
-
+		old_sol = opt_sol;
+		
 		// Check increasing GCV
-		if(!finer_grid && old_GCV < opt_sol_GCV.second)
+		if(!finer_grid)
 		{
-			counter_GCV_increasing++;
-
-			// Build a finer grid of lambdas if GCV is increasing for 3 iterations in a row
-			if(counter_GCV_increasing == 3)
+			if(old_GCV < opt_sol_GCV.second)
 			{
-			Rprintf("Increasing GCV, restart Parameter Cascading algortihm with finer grid of lambdas\n");
-			lambdas = VectorXr::LinSpaced(iter * 3, lambdas(0), lambdas(best_iter + 1));
-			iter = 0;
-			counter_GCV_increasing = 0;
-			old_sol = best_sol;
-			finer_grid = true;
+				counter_GCV_increasing++;
+
+				// Build a finer grid of lambdas if GCV is increasing for 3 iterations in a row
+				if(counter_GCV_increasing == 3)
+				{
+					Rprintf("Increasing GCV, restart Parameter Cascading algortihm with finer grid of lambdas\n");
+					lambdas.resize(iter * 3, 1);
+					lambdas = VectorXr::LinSpaced(iter * 3, lambdas(0), lambdas(best_iter + 1));
+					iter = -1;
+					counter_GCV_increasing = 0;
+					old_sol = best_sol;
+					finer_grid = true;
+				}
 			}
+			else
+				counter_GCV_increasing = 0;
 		}
+		old_GCV = opt_sol_GCV.second;
 
 	}
 

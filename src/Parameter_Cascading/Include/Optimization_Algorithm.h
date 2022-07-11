@@ -122,7 +122,6 @@ class Genetic_Algorithm
 				min_value = F(init);
 
 				seed = std::chrono::system_clock::now().time_since_epoch().count();
-
 			 };
 
 			Genetic_Algorithm(const std::function<CType (DType)>& F_, const DType& init, const Parameter_Genetic_Algorithm<DType>& param_genetic_algorithm_)
@@ -204,7 +203,7 @@ class Gradient_Descent_fd
 			 	{
 			 		new_best[i] -= alpha*dF(best)[i];
 
-			 		if(param_gradient_descent_fd.periods[i] != 0.0) // we can exploit periodicity
+			 		if(param_gradient_descent_fd.periods[i] != 0.0) // Exploit periodicity if present
 			 		{
 						while(new_best[i] < param_gradient_descent_fd.lower_bound[i])
 							new_best[i] += param_gradient_descent_fd.periods[i];
@@ -217,7 +216,7 @@ class Gradient_Descent_fd
 			 			while(new_best[i] < param_gradient_descent_fd.lower_bound[i] || new_best[i] > param_gradient_descent_fd.upper_bound[i])
 			 			{	
 			 				new_best[i] = best[i];			 				
-			 				alpha /= 5.0; // we re-upgrade best with a smaller alpha in order to remain inside the bounds
+			 				alpha /= 2.0; // Re-upgrade best with a smaller alpha in order to remain inside the bounds
 			 				new_best[i] -= alpha*dF(best)[i];
 			 			}
 
@@ -238,7 +237,7 @@ class Gradient_Descent_fd
 			 {
 			 	DType new_best = best - alpha*dF(best);
 
-			 	if(param_gradient_descent_fd.periods != 0.0) // we can exploit periodicity
+			 	if(param_gradient_descent_fd.periods != 0.0) // Exploit periodicity if present
 			 	{
 					while(new_best < param_gradient_descent_fd.lower_bound)
 						new_best += param_gradient_descent_fd.periods;
@@ -250,7 +249,7 @@ class Gradient_Descent_fd
 			 	{
 			 		while(new_best < param_gradient_descent_fd.lower_bound || new_best > param_gradient_descent_fd.upper_bound)
 			 		{	
-			 			alpha /= 5.0; // we re-upgrade best with a smaller alpha in order to remain inside the bounds
+			 			alpha /= 2.0; // Re-upgrade best with a smaller alpha in order to remain inside the bounds
 			 			new_best = best - alpha*dF(best);
 			 		}
 			 	}
@@ -275,7 +274,7 @@ class Gradient_Descent_fd
 
 			Gradient_Descent_fd(const std::function<CType (DType)>& F_, const std::function<DType (DType)>& dF_, const DType& init,
 				const Parameter_Gradient_Descent_fd<DType>& param_gradient_descent_fd_)
-			: Gradient_Descent_fd(F_, dF_, init, param_gradient_descent_fd_, 100u, 1e-3) {};
+			: Gradient_Descent_fd(F_, dF_, init, param_gradient_descent_fd_, 100u, 1e-4) {};
 
 			// Function to apply the algorithm
 			void apply(void);
