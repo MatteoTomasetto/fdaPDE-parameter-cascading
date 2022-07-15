@@ -10,6 +10,7 @@
 #include <chrono>
 #include <cmath>
 #include <algorithm>
+#include <numeric>
 
 template <class DType>
 struct Parameter_Genetic_Algorithm
@@ -173,12 +174,11 @@ class Gradient_Descent_fd
 			 const typename std::enable_if< !std::is_floating_point<SFINAE>::value, Real>::type
 			 compute_increment(const DType& new_sol, const DType& old_sol)
 			 {	
-			 	Real res = 0.0;
-			 	for(unsigned int i = 0u; i < best.size(); ++i)
-			 	{
-			 		res += (new_sol[i] - old_sol[i]) * (new_sol[i] - old_sol[i]); 
-			 	}	
-			 	
+			 	DType diff_sol(new_sol.size());
+				std::transform(new_sol.data(), new_sol.data() + new_sol.size(), old_sol.data(), diff_sol.data(), std::minus<Real>()); // Compute (new_sol - old_sol) in diff_sol
+
+			 	Real res = std::inner_product(diff_sol.data(), diff_sol.data() + diff_sol.size(), diff_sol.data(), 0.0);
+		
 			 	return std::sqrt(res);
 			 }
 
@@ -195,15 +195,25 @@ class Gradient_Descent_fd
 			 // Function to upgrade the solution in the vectorial case
 			 template <class SFINAE = DType>
 			 typename std::enable_if< !std::is_floating_point<SFINAE>::value, void>::type
-			 upgrade_best(Real alpha)
+			 upgrade_best()
 			 {	
 			 	DType new_best = best;
 
+			 	// Set some useful parameters
+			 	Real alpha = 1.0;
+			 	Real beta = 0.5;
+				CType f = F(best);
+				DType df = dF(best);
+				Real df_norm = std::inner_product(df.data(), df.data() + df.size(), df.data(), 0.0);
+
+				// Update best
+				std::transform(best.data(),best.data() + best.size(),df.data(),new_best.data(),[alpha](Real x,Real y){return x - alpha * y;});
+			 	
+			 	// Check bounds
 			 	for(unsigned int i = 0u; i < best.size(); ++i)
 			 	{
-			 		new_best[i] -= alpha*dF(best)[i];
-
-			 		if(param_gradient_descent_fd.periods[i] != 0.0) // Exploit periodicity if present
+			 		// Exploit periodicity if present
+			 		if(param_gradient_descent_fd.periods[i] != 0.0)
 			 		{
 						while(new_best[i] < param_gradient_descent_fd.lower_bound[i])
 							new_best[i] += param_gradient_descent_fd.periods[i];
@@ -212,17 +222,24 @@ class Gradient_Descent_fd
 			 		}
 
 			 		else
-			 		{
+			 		{	
+			 			// Check upper and lower bounds
 			 			while(new_best[i] < param_gradient_descent_fd.lower_bound[i] || new_best[i] > param_gradient_descent_fd.upper_bound[i])
 			 			{	
 			 				new_best[i] = best[i];			 				
-			 				alpha /= 2.0; // Re-upgrade best with a smaller alpha in order to remain inside the bounds
-			 				new_best[i] -= alpha*dF(best)[i];
+			 				alpha *= beta; // Re-upgrade best with a smaller alpha in order to remain inside the bounds
+			 				new_best[i] -= alpha*df[i];
 			 			}
 
 			 		}
-			 	}	
-					 				 	
+			 	}
+
+			 	// Backtracking line search to set the step size
+			 	while(F(new_best) > f - alpha * df_norm / 2.0){
+			 		alpha *= beta;
+			 		std::transform(best.data(),best.data() + best.size(),df.data(),new_best.data(),[alpha](Real x,Real y){return x - alpha * y;});
+			 	}
+				
 			 	best = new_best;
 
 			 	return;
@@ -233,11 +250,22 @@ class Gradient_Descent_fd
 			 // Function to upgrade the solution in the scalar case
 			 template <class SFINAE = DType>
 			 typename std::enable_if< std::is_floating_point<SFINAE>::value, void>::type
-			 upgrade_best(Real alpha)
+			 upgrade_best()
 			 {
-			 	DType new_best = best - alpha*dF(best);
 
-			 	if(param_gradient_descent_fd.periods != 0.0) // Exploit periodicity if present
+			 	// Set some useful parameters
+			 	Real alpha = 1.0;
+			 	Real beta = 0.5;
+				CType f = F(best);
+				DType df = dF(best);
+				Real df_norm = df*df;
+				
+				// Upgrade best
+			 	DType new_best = best - alpha*df;
+
+			 	// Check bounds
+			 	// Exploit periodicity if present
+			 	if(param_gradient_descent_fd.periods != 0.0)
 			 	{
 					while(new_best < param_gradient_descent_fd.lower_bound)
 						new_best += param_gradient_descent_fd.periods;
@@ -247,13 +275,20 @@ class Gradient_Descent_fd
 
 			 	else
 			 	{
+			 		// Check lower and upper bounds
 			 		while(new_best < param_gradient_descent_fd.lower_bound || new_best > param_gradient_descent_fd.upper_bound)
 			 		{	
-			 			alpha /= 2.0; // Re-upgrade best with a smaller alpha in order to remain inside the bounds
-			 			new_best = best - alpha*dF(best);
+			 			alpha *= beta; // Re-upgrade best with a smaller alpha in order to remain inside the bounds
+			 			new_best = best - alpha*df;
 			 		}
 			 	}
-			 					 	
+			 	
+			 	// Backtracking line search to set the step size
+			 	while(F(new_best) > f - alpha * df_norm / 2.0){
+			 		alpha *= beta;
+			 		new_best = best - alpha * df;
+			 	}
+
 			 	best = new_best;
 
 			 	return;
@@ -274,7 +309,7 @@ class Gradient_Descent_fd
 
 			Gradient_Descent_fd(const std::function<CType (DType)>& F_, const std::function<DType (DType)>& dF_, const DType& init,
 				const Parameter_Gradient_Descent_fd<DType>& param_gradient_descent_fd_)
-			: Gradient_Descent_fd(F_, dF_, init, param_gradient_descent_fd_, 100u, 1e-4) {};
+			: Gradient_Descent_fd(F_, dF_, init, param_gradient_descent_fd_, 50u, 1e-3) {};
 
 			// Function to apply the algorithm
 			void apply(void);

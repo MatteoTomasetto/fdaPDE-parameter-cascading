@@ -181,15 +181,12 @@ void Gradient_Descent_fd<DType, CType>::apply(void)
 	unsigned int iter = 0u;
 	DType old_sol = best;
 	Real increment = 0.0;
-	Real alpha = 4.0;
 
 	while(iter < max_iterations_gradient_descent_fd && goOn)
 	{	
 		++iter;
 
-		alpha /= std::log(static_cast<Real>(iter) + 1.0);
-
-		upgrade_best(alpha);
+		upgrade_best();
 
 		increment = compute_increment(best, old_sol);
 		
