@@ -202,4 +202,33 @@ void Gradient_Descent_fd<DType, CType>::apply(void)
 }
 
 
+
+template <class DType, class CType>
+void LBFGS<DType, CType>::apply(void)
+{	
+	Rprintf("Start LBFGS algorithm\n");
+
+	UInt iter = 0;
+	DType old_sol = best;
+	Real increment = 0.0;
+
+	while(iter < max_iterations_lbfgs && goOn)
+	{	
+		upgrade_best(iter);
+
+		increment = compute_increment(best, old_sol);
+		
+		old_sol = best;
+
+		goOn = (increment < tol_lbfgs) ? false : true;
+
+		++iter;
+
+	}
+
+	Rprintf("End LBFGS algorithm\n");
+	
+	return;
+}
+
 #endif

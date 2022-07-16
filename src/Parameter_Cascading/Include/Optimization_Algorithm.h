@@ -5,6 +5,7 @@
 #include "PDE_Parameter_Functionals.h"
 #include <functional>
 #include <vector>
+#include <deque>
 #include <type_traits>
 #include <random>
 #include <chrono>
@@ -317,6 +318,232 @@ class Gradient_Descent_fd
 			// Getters
 			inline DType get_solution(void) const {return best;};
 };
+
+
+template <class DType>
+struct Parameter_LBFGS
+{
+	DType lower_bound;	// Lower bound for input values
+	DType upper_bound;	// Upper bound for output values
+	DType periods;		// Periodicity for each input component (if periods[i] = 0.0 then no periodicity for i-th component)	
+};
+
+
+// DType = Domain variable type, CType = Codomain variable type;
+// DType can have one or more components, instead CType can be only a scalar type (1 component only)
+template <class DType, class CType>
+class LBFGS
+{
+	private: // Function to optimize
+			 std::function<CType (DType)> F;
+
+			 // Approx of the gradient
+			 std::function<DType (DType)> dF;
+
+			 // Minimizer of F and minimal value of F
+			 DType best;
+
+			 // Variables to store useful parameters of previous updates of LBFGS
+			 std::deque<DType> s;
+			 std::deque<DType> y;
+			 std::deque<Real> rho;
+
+			 // Gradient Descent parameters
+			 Parameter_LBFGS<DType> param_lbfgs;
+
+			 // Boolean to keep looping with genetic algorithm;
+			 // It becomes "false" if  increment < tolerance 
+			 bool goOn = true;
+
+			 const UInt max_iterations_lbfgs;
+			 const Real tol_lbfgs;
+
+			 // DType vectorial case
+			 template <class SFINAE = DType>
+			 const typename std::enable_if< !std::is_floating_point<SFINAE>::value, Real>::type
+			 compute_increment(const DType& new_sol, const DType& old_sol)
+			 {	
+			 	DType diff_sol(new_sol.size());
+				std::transform(new_sol.data(), new_sol.data() + new_sol.size(), old_sol.data(), diff_sol.data(), std::minus<Real>()); // Compute (new_sol - old_sol) in diff_sol
+
+			 	return std::sqrt(dot_prod(diff_sol, diff_sol));
+			 }
+
+			 // DType = Scalar case
+			 template <class SFINAE = DType>
+			 const typename std::enable_if< std::is_floating_point<SFINAE>::value, Real>::type
+			 compute_increment(const DType& new_sol, const DType& old_sol)
+			 {
+
+			 	return std::sqrt((new_sol - old_sol) * (new_sol - old_sol));
+			 }
+
+			 // DType vectorial case
+			 template <class SFINAE = DType>
+			 const typename std::enable_if< !std::is_floating_point<SFINAE>::value, Real>::type
+			 dot_prod(const DType& v1, const DType& v2)
+			 {	
+			 	return std::inner_product(v1.data(), v1.data() + v1.size(), v2.data(), 0.0);
+			 }
+
+			 // DType vectorial case
+			 // Function to upgrade the solution in the vectorial case
+			 template <class SFINAE = DType>
+			 typename std::enable_if< !std::is_floating_point<SFINAE>::value, void>::type
+			 upgrade_best(UInt iter)
+			 {	
+			 	DType new_best = best;
+
+			 	// Set some useful parameters
+			 	Real alpha = 1.0;
+			 	Real beta = 0.5;
+				CType f = F(best);
+				DType df = dF(best);
+				DType q = df;
+
+				UInt m = s.size();
+
+				std::vector<Real> a(m);
+
+				for(UInt i = 0u; i < m; ++i)
+				{
+					a[i] = dot_prod(s[i], q) * rho[i];
+					q -= a[i] * y[i]; 
+				}
+
+				Real gamma = (m == 0) ? 1.0 : (dot_prod(s[0], y[0])) / dot_prod(y[0],y[0]);
+				
+				Eigen::MatrixXd H = Eigen::MatrixXd::Identity(best.size(), best.size()) * gamma;
+				
+				q = H*q; // KO con std::vector
+
+				for(UInt i = m - 1; i >= 0; --i)
+				{	
+					q += (a[i] - rho[i] * dot_prod(y[i], q)) * s[i]; // KO con std::vector
+				}
+
+				// Update best
+				std::transform(best.data(),best.data() + best.size(),q.data(),new_best.data(),[alpha](Real x,Real y){return x - alpha * y;});
+			 	
+			 	// Check bounds
+			 	for(unsigned int i = 0u; i < best.size(); ++i)
+			 	{
+			 		// Exploit periodicity if present
+			 		if(param_lbfgs.periods[i] != 0.0)
+			 		{
+						while(new_best[i] < param_lbfgs.lower_bound[i])
+							new_best[i] += param_lbfgs.periods[i];
+						while(new_best[i] > param_lbfgs.upper_bound[i])
+							new_best[i] -= param_lbfgs.periods[i];
+			 		}
+
+			 		else
+			 		{	
+			 			// Check upper and lower bounds
+			 			while(new_best[i] < param_lbfgs.lower_bound[i] || new_best[i] > param_lbfgs.upper_bound[i])
+			 			{	
+			 				new_best[i] = best[i];			 				
+			 				alpha *= beta; // Re-upgrade best with a smaller alpha in order to remain inside the bounds
+			 				new_best[i] -= alpha*q[i];
+			 			}
+
+			 		}
+			 	}
+
+				s.push_front(new_best - best); // KO con std::vector (differences not allowed)
+				y.push_front(dF(new_best) - df); // KO con std::vector
+				rho.push_front(1.0 / dot_prod(y[0], s[0]));
+
+			 	best = new_best;
+
+			 	if(m == 5)
+			 	{
+			 		s.pop_back();
+			 		y.pop_back();
+			 		rho.pop_back();
+			 	}
+
+			 	return;
+			 }
+
+			 // DType scalar case
+			 // Function to upgrade the solution in the vectorial case
+			 template <class SFINAE = DType>
+			 typename std::enable_if< std::is_floating_point<SFINAE>::value, void>::type
+			 upgrade_best(UInt iter)
+			 {	
+			 	// Set some useful parameters
+			 	Real alpha = 1.0;
+			 	Real beta = 0.5;
+				DType df = dF(best);
+				DType q = df;
+
+				UInt m = s.size();
+
+				Real gamma = (m == 0) ? 1.0 : s[0] / y[0];
+				
+				q *= gamma;
+
+				// Update best
+				DType new_best = best - alpha * q;
+			 	
+			 	// Check bounds
+			 	// Exploit periodicity if present
+			 	if(param_lbfgs.periods != 0.0)
+			 	{
+					while(new_best < param_lbfgs.lower_bound)
+						new_best += param_lbfgs.periods;
+					while(new_best > param_lbfgs.upper_bound)
+						new_best -= param_lbfgs.periods;
+			 	}
+
+			 	else
+			 	{
+			 		// Check lower and upper bounds
+			 		while(new_best < param_lbfgs.lower_bound || new_best > param_lbfgs.upper_bound)
+			 		{	
+			 			alpha *= beta; // Re-upgrade best with a smaller alpha in order to remain inside the bounds
+			 			new_best = best - alpha * q;
+			 		}
+			 	}
+			 	
+			 	s.push_front(new_best - best); // KO con std::vector (differences not allowed)
+				y.push_front(dF(new_best) - df); // KO con std::vector
+
+			 	best = new_best;
+
+			 	if(m != 0)
+			 	{
+			 		s.pop_back();
+				 	y.pop_back();
+			 	}
+
+			 	return;
+			 }
+
+	public: // Constructors
+			LBFGS(const std::function<CType (DType)>& F_, const std::function<DType (DType)>& dF_, 
+			const DType& init, const Parameter_LBFGS<DType>& param_lbfgs_,
+			const UInt& max_iterations_lbfgs_,
+			const Real tol_lbfgs_)
+			: F(F_), dF(dF_), best(init), param_lbfgs(param_lbfgs_),
+			max_iterations_lbfgs(max_iterations_lbfgs_),
+			tol_lbfgs(tol_lbfgs_)
+			 {
+			 	best = init;
+			 };
+
+			LBFGS(const std::function<CType (DType)>& F_, const std::function<DType (DType)>& dF_, const DType& init,
+				const Parameter_LBFGS<DType>& param_lbfgs_)
+			: LBFGS(F_, dF_, init, param_lbfgs_, 50, 1e-3) {};
+
+			// Function to apply the algorithm
+			void apply(void);
+
+			// Getters
+			inline DType get_solution(void) const {return best;};
+};
+
 
 
 #include "Optimization_Algorithm_imp.h"
