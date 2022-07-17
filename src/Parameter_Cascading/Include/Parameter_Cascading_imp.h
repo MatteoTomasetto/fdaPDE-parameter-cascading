@@ -104,6 +104,14 @@ ParameterType Parameter_Cascading<ORDER, mydim, ndim>::step(const ParameterType&
 			opt.apply();
 			opt_sol = opt.get_solution();
 		}
+		else if(optimization_algorithm == 2)
+		{
+			Parameter_LBFGS<ParameterType> param = {lower_bound, upper_bound, periods};
+			std::function<ParameterType (ParameterType)> dF_ = [&dF, lambda](ParameterType x){return dF(x, lambda);}; // Fix lambda in dF
+			LBFGS<ParameterType, Real> opt(F_, dF_, init, param);
+			opt.apply();
+			opt_sol = opt.get_solution();
+		}
 
 		// Compute GCV with the new parameters
 		set_param(opt_sol);
@@ -197,29 +205,29 @@ Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim>::apply(void)
 		diffusion = step<Eigen::Vector2d>(init, lower_bound, upper_bound, periods, F, dF, set_param);
 	}
 
-	if(update_alpha)
+	if(update_K_main_direction)
 	{	
-		Rprintf("Finding diffusion angle\n");
+		Rprintf("Finding K main direction\n");
 		Real init(diffusion(0));
 		Real lower_bound(0.0);
 		Real upper_bound(EIGEN_PI);
 		Real periods(EIGEN_PI);
 		std::function<Real (Real, Real)> F = [this](Real x, Real lambda){return this -> H.eval_K(x, this -> diffusion(1), lambda);};
-		std::function<Real (Real, Real)> dF = [this](Real x, Real lambda){return this -> H.eval_grad_angle(x, this -> diffusion(1), lambda);};
+		std::function<Real (Real, Real)> dF = [this](Real x, Real lambda){return this -> H.eval_grad_K_main_direction(x, this -> diffusion(1), lambda);};
 		std::function<void (Real)> set_param = [this](Real x){this -> H.set_K(x, this -> diffusion(1));};
 
 		diffusion(0) = step<Real>(init, lower_bound, upper_bound, periods, F, dF, set_param);
 	}	
 
-	if(update_intensity)
+	if(update_K_eigenval_ratio)
 	{	
-		Rprintf("Finding diffusion intensity\n");
+		Rprintf("Finding K eigenval ratio\n");
 		Real init(diffusion(1));
 		Real lower_bound(0.0);
 		Real upper_bound(1000.0);
 		Real periods(0.0);
 		std::function<Real (Real, Real)> F = [this](Real x, Real lambda){return this -> H.eval_K(this -> diffusion(0), x, lambda);};
-		std::function<Real (Real, Real)> dF = [this](Real x, Real lambda){return this -> H.eval_grad_intensity(this -> diffusion(0), x, lambda);};
+		std::function<Real (Real, Real)> dF = [this](Real x, Real lambda){return this -> H.eval_grad_K_eigenval_ratio(this -> diffusion(0), x, lambda);};
 		std::function<void (Real)> set_param = [this](Real x){this -> H.set_K(this -> diffusion(0), x);};
 
 		diffusion(1) = step<Real>(init, lower_bound, upper_bound, periods, F, dF, set_param);

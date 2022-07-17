@@ -93,11 +93,9 @@ regression_skeleton(InputHandler & regressionData, OptimizationData & optimizati
 		// Object to perform the algorithm
 		Parameter_Cascading<ORDER, mydim, ndim> ParameterCascadingEngine(H);
 
-		Rprintf("Parameter_Cascading Algorithm\n");
+		Rprintf("Start Parameter Cascading Algorithm\n");
 		parameter_cascading_result = ParameterCascadingEngine.apply(); // Parameter cascading algorithm applied
-
-		// Set parameter_cascading_option = 0 to avoid useless re-computations in MixedFeRegression.apply()
-		//regressionData.set_parameter_cascading_option(0);
+		Rprintf("End Parameter Cascading Algorithm\n");
 
 		// Reset the last lambdaS used in OptimizationData
 		optimizationData.set_last_lS_used(std::numeric_limits<Real>::infinity());

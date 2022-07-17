@@ -21,15 +21,15 @@ class Parameter_Cascading
 
 			 // Booleans to keep track of the wanted parameters to optimize
 			 bool update_K;
-			 bool update_alpha;
-			 bool update_intensity;
+			 bool update_K_main_direction;
+			 bool update_K_eigenval_ratio;
 			 bool update_b;
 			 bool update_c;
 
 			 // Optimization algorithm to use: 0 for Gradient Descent, 1 for Genetic algorithm
 			 UInt optimization_algorithm;
 			 
-			 // Diffusion parameters (angle and intensity)
+			 // Diffusion parameters (angle/main_direction and intensity/eigenval_ratio)
 			 Eigen::Vector2d diffusion;
 			 
 			 // Advection parameter
@@ -97,8 +97,8 @@ class Parameter_Cascading
 
 				// Set which parameters to update
 				update_K = false;
-				update_alpha = false;
-				update_intensity = false;
+				update_K_main_direction = false;
+				update_K_eigenval_ratio = false;
 				update_b = false;
 				update_c = false;
 				UInt parameter_cascading_option = H.getModel().getRegressionData().get_parameter_cascading_option();
@@ -108,11 +108,11 @@ class Parameter_Cascading
 				}
 				
 				if(parameter_cascading_option == 2){
-					update_alpha = true;
+					update_K_main_direction = true;
 				}
 				
 				if(parameter_cascading_option == 3){
-					update_intensity = true;
+					update_K_eigenval_ratio = true;
 				}
 
 				// Other cases not implemented yet

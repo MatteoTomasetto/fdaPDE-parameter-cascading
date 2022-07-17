@@ -398,12 +398,12 @@ Solution_Builders::build_solution_plain_regression(const MatrixXr & solution, co
         }
 
 
-        // Add optimal diffusion angle in position 22
+        // Add optimal K main direction in position 22
         SET_VECTOR_ELT(result, 22, Rf_allocVector(REALSXP, 1));
         rans= REAL(VECTOR_ELT(result, 22));
         rans[0] = parameter_cascading_result.diffusion_opt(0);
 
-        // Add optimal diffusion intensity in position 23
+        // Add optimal K eigenval ratio in position 23
         SET_VECTOR_ELT(result, 23, Rf_allocVector(REALSXP, 1));
         rans= REAL(VECTOR_ELT(result, 23));
         rans[0] = parameter_cascading_result.diffusion_opt(1);
@@ -426,7 +426,7 @@ Solution_Builders::build_solution_plain_regression(const MatrixXr & solution, co
             rans[j] = parameter_cascading_result.b_opt(j);
         }
 
-         // Add optimal diffusion intensity in position 23
+         // Add optimal reaction coefficient in position 26
         SET_VECTOR_ELT(result, 26, Rf_allocVector(REALSXP, 1));
         rans= REAL(VECTOR_ELT(result, 26));
         rans[0] = parameter_cascading_result.c_opt;
