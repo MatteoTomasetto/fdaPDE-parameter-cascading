@@ -5,11 +5,13 @@
 #include "../../Lambda_Optimization/Include/Function_Variadic.h"
 #include "../../Lambda_Optimization/Include/Newton.h"
 #include "../../Lambda_Optimization/Include/Optimization_Methods_Factory.h"
-#include "Optimization_Algorithm.h"
+#include "Optimization_Parameter_Cascading.h"
+#include "LBFGSB.h" 
 
 #include <memory>
 #include <functional>
 #include <limits>
+#include <iostream> 
 
 template <UInt ORDER, UInt mydim, UInt ndim>
 std::pair<Real, Real>
@@ -54,23 +56,23 @@ Parameter_Cascading<ORDER, mydim, ndim>::compute_GCV(Carrier<RegressionDataEllip
 	return {lambda_couple.first, GCV_values[GCV_values.size()-1]};
 }
 
-
 template <UInt ORDER, UInt mydim, UInt ndim>
-template <typename ParameterType>
-ParameterType Parameter_Cascading<ORDER, mydim, ndim>::step(const ParameterType& init, const ParameterType& lower_bound, const ParameterType& upper_bound, 
-	const ParameterType& periods, const std::function<Real (ParameterType, Real)>& F, const std::function<ParameterType (ParameterType, Real)>& dF, 
-	const std::function<void (ParameterType)>& set_param)
+VectorXr Parameter_Cascading<ORDER, mydim, ndim>::step(VectorXr init, const VectorXr& lower_bound, const VectorXr& upper_bound, 
+	const VectorXr& periods, const std::function<Real (VectorXr, Real)>& F, const std::function<VectorXr (VectorXr, Real)>& dF, 
+	const std::function<void (VectorXr)>& set_param)
 {
-	// Current solution and the previous solution for initialization
-	ParameterType old_sol = init;
-	ParameterType best_sol;
+	// Current optimal solution and best solution
+	VectorXr opt_sol = init;
+	VectorXr best_sol(init.size());
 
 	// Variable to store the best iteration
 	UInt best_iter;
 
 	// Print initial solution
 	Rprintf("Initial sol: ");
-	printer<ParameterType>(old_sol);
+	for(unsigned int i = 0u; i < init.size(); ++i)
+		Rprintf("%f ", init[i]);
+	Rprintf("\n");
 
 	// Initialize GCV and variables to check if GCV is increasing
 	GCV = -1.0;
@@ -82,36 +84,51 @@ ParameterType Parameter_Cascading<ORDER, mydim, ndim>::step(const ParameterType&
 	{
 		Rprintf("Finding optimal sol for lambda = %e\n", lambdas(iter));
 
-		// Optimization step
-		ParameterType init(old_sol); // Initialization done with previous solution as presented in \cite{Bernardi}
-		ParameterType opt_sol;
-
 		Real lambda = lambdas(iter);
-		std::function<Real (ParameterType)> F_ = [&F, lambda](ParameterType x){return F(x, lambda);}; // Fix lambda in F
+
+		std::function<Real (VectorXr)> F_ = [&F, lambda](VectorXr x){return F(x, lambda);}; // Fix lambda in F
 		
-		if(optimization_algorithm == 0)
+		if(optimization_algorithm == 0) // L-BFGS-B
 		{
-			Parameter_Gradient_Descent_fd<ParameterType> param = {lower_bound, upper_bound, periods};
-			std::function<ParameterType (ParameterType)> dF_ = [&dF, lambda](ParameterType x){return dF(x, lambda);}; // Fix lambda in dF
-			Gradient_Descent_fd<ParameterType, Real> opt(F_, dF_, init, param);
-			opt.apply();
-			opt_sol = opt.get_solution();
+			LBFGSBParam<Real> param;
+			LBFGSBSolver<Real> solver(param);
+			std::function<VectorXr (VectorXr)> dF_ = [&dF, lambda](VectorXr x){return dF(x, lambda);}; // Fix lambda in dF
+			Real fx; // f(x) value
+
+	   		UInt niter = solver.minimize(F_, dF_, opt_sol, fx, lower_bound, upper_bound); // opt_sol and fx will be directly modified
+       		
+       		// DEBUGGING
+       		Rprintf("number of iter: %d\n", niter);
+       		Rprintf("f(x): %f\n", fx);
+       		
 		}
-		else if(optimization_algorithm == 1)
+		else if(optimization_algorithm == 1) // gradient
 		{
-			Parameter_Genetic_Algorithm<ParameterType> param = {100, lower_bound, upper_bound};
-			Genetic_Algorithm<ParameterType, Real> opt(F_, init, param);
+			Parameter_Gradient_Descent_fd param = {lower_bound, upper_bound, periods};
+			std::function<VectorXr (VectorXr)> dF_ = [&dF, lambda](VectorXr x){return dF(x, lambda);}; // Fix lambda in dF
+			
+			Gradient_Descent_fd opt(F_, dF_, init, param);
 			opt.apply();
+			
 			opt_sol = opt.get_solution();
+			init = opt_sol; // init modified to initialize the next iteration with the actual optimal solution
 		}
-		else if(optimization_algorithm == 2)
+		else if(optimization_algorithm == 2) // genetic
 		{
-			Parameter_LBFGS<ParameterType> param = {lower_bound, upper_bound, periods};
-			std::function<ParameterType (ParameterType)> dF_ = [&dF, lambda](ParameterType x){return dF(x, lambda);}; // Fix lambda in dF
-			LBFGS<ParameterType, Real> opt(F_, dF_, init, param);
+			Parameter_Genetic_Algorithm param = {100, lower_bound, upper_bound};
+			
+			Genetic_Algorithm opt(F_, init, param);
 			opt.apply();
+			
 			opt_sol = opt.get_solution();
+			init = opt_sol; // init modified to initialize the next iteration with the actual optimal solution
 		}
+		
+		Rprintf("Optimal sol for lambda = %e found\n", lambdas(iter));
+		Rprintf("Optimal sol: ");
+		for(unsigned int i = 0u; i < opt_sol.size(); ++i)
+			Rprintf("%f ", opt_sol[i]);
+		Rprintf("\n");
 
 		// Compute GCV with the new parameters
 		set_param(opt_sol);
@@ -133,16 +150,10 @@ ParameterType Parameter_Cascading<ORDER, mydim, ndim>::step(const ParameterType&
 
 		if(iter == 0)
 			old_GCV = GCV;
-		
-		Rprintf("Optimal sol for lambda = %e found\n", lambdas(iter));
-		Rprintf("Optimal sol: ");
-		printer<ParameterType>(opt_sol);
 
 		// DEBUGGING
 		Rprintf("GCV found: %f\n", opt_sol_GCV.second);
 		Rprintf("Best GCV: %f\n", GCV);
-
-		old_sol = opt_sol;
 		
 		// Check increasing GCV
 		if(!finer_grid)
@@ -159,7 +170,7 @@ ParameterType Parameter_Cascading<ORDER, mydim, ndim>::step(const ParameterType&
 					lambdas = VectorXr::LinSpaced(6, lambdas(start_finer_grid), lambdas(best_iter + 1));
 					lambdas.resize(6, 1);
 					iter = 0;
-					old_sol = best_sol;
+					init = best_sol;
 					finer_grid = true;
 				}
 			}
@@ -175,7 +186,9 @@ ParameterType Parameter_Cascading<ORDER, mydim, ndim>::step(const ParameterType&
 
 	Rprintf("Final optimal sol found\n");
 	Rprintf("Optimal sol: ");
-	printer<ParameterType>(best_sol);
+	for(unsigned int i = 0u; i < best_sol.size(); ++i)
+		Rprintf("%f ", best_sol[i]);
+	Rprintf("\n");
 
 	// DEBUGGING
 	Rprintf("best iter = %d\n", best_iter);
@@ -194,75 +207,95 @@ Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim>::apply(void)
 	if(update_K)
 	{	
 		Rprintf("Finding diffusion matrix K\n");
-		Eigen::Vector2d init(diffusion(0), diffusion(1));
-		Eigen::Vector2d lower_bound(0.0, 0.0);
-		Eigen::Vector2d upper_bound(EIGEN_PI, 1000.0);
-		Eigen::Vector2d periods(EIGEN_PI, 0.0);
-		std::function<Real (Eigen::Vector2d, Real)> F = [this](Eigen::Vector2d x, Real lambda){return this -> H.eval_K(x(0), x(1), lambda);};
-		std::function<Eigen::Vector2d (Eigen::Vector2d, Real)> dF = [this](Eigen::Vector2d x, Real lambda){return this -> H.eval_grad_K(x(0),x(1), lambda);};
-		std::function<void (Eigen::Vector2d)> set_param = [this](Eigen::Vector2d x){this -> H.set_K(x(0), x(1));};
+		VectorXr init(2);
+		init << diffusion(0), diffusion(1);
+		VectorXr lower_bound(2);
+		lower_bound << 0.0, 0.0;
+		VectorXr upper_bound(2);
+		upper_bound << EIGEN_PI, 1000.0;
+		VectorXr periods(2);
+		periods << EIGEN_PI, 0.0;
+		std::function<Real (VectorXr, Real)> F = [this](VectorXr x, Real lambda){return this -> H.eval_K(x(0), x(1), lambda);};
+		std::function<VectorXr (VectorXr, Real)> dF = [this](VectorXr x, Real lambda){return this -> H.eval_grad_K(x(0),x(1), lambda);};
+		std::function<void (VectorXr)> set_param = [this](VectorXr x){this -> H.set_K(x(0), x(1));};
 
-		diffusion = step<Eigen::Vector2d>(init, lower_bound, upper_bound, periods, F, dF, set_param);
+		diffusion = step(init, lower_bound, upper_bound, periods, F, dF, set_param);
 	}
 
 	if(update_K_main_direction)
 	{	
 		Rprintf("Finding K main direction\n");
-		Real init(diffusion(0));
-		Real lower_bound(0.0);
-		Real upper_bound(EIGEN_PI);
-		Real periods(EIGEN_PI);
-		std::function<Real (Real, Real)> F = [this](Real x, Real lambda){return this -> H.eval_K(x, this -> diffusion(1), lambda);};
-		std::function<Real (Real, Real)> dF = [this](Real x, Real lambda){return this -> H.eval_grad_K_main_direction(x, this -> diffusion(1), lambda);};
-		std::function<void (Real)> set_param = [this](Real x){this -> H.set_K(x, this -> diffusion(1));};
+		VectorXr init(1);
+		init << diffusion(0);
+		VectorXr lower_bound(1);
+		lower_bound << 0.0;
+		VectorXr upper_bound(1);
+		upper_bound << EIGEN_PI;
+		VectorXr periods(1);
+		periods << EIGEN_PI;
+		std::function<Real (VectorXr, Real)> F = [this](VectorXr x, Real lambda){return this -> H.eval_K(x(0), this -> diffusion(1), lambda);};
+		std::function<VectorXr (VectorXr, Real)> dF = [this](VectorXr x, Real lambda){return this -> H.eval_grad_K_main_direction(x(0), this -> diffusion(1), lambda);};
+		std::function<void (VectorXr)> set_param = [this](VectorXr x){this -> H.set_K(x(0), this -> diffusion(1));};
 
-		diffusion(0) = step<Real>(init, lower_bound, upper_bound, periods, F, dF, set_param);
+		diffusion(0) = step(init, lower_bound, upper_bound, periods, F, dF, set_param)(0);
 	}	
 
 	if(update_K_eigenval_ratio)
 	{	
 		Rprintf("Finding K eigenval ratio\n");
-		Real init(diffusion(1));
-		Real lower_bound(0.0);
-		Real upper_bound(1000.0);
-		Real periods(0.0);
-		std::function<Real (Real, Real)> F = [this](Real x, Real lambda){return this -> H.eval_K(this -> diffusion(0), x, lambda);};
-		std::function<Real (Real, Real)> dF = [this](Real x, Real lambda){return this -> H.eval_grad_K_eigenval_ratio(this -> diffusion(0), x, lambda);};
-		std::function<void (Real)> set_param = [this](Real x){this -> H.set_K(this -> diffusion(0), x);};
+		VectorXr init(1);
+		init << diffusion(1);
+		VectorXr lower_bound(1);
+		lower_bound << 0.0;
+		VectorXr upper_bound(1);
+		upper_bound << 1000.0;
+		VectorXr periods(1);
+		periods << 0.0;
+		std::function<Real (VectorXr, Real)> F = [this](VectorXr x, Real lambda){return this -> H.eval_K(this -> diffusion(0), x(0), lambda);};
+		std::function<VectorXr (VectorXr, Real)> dF = [this](VectorXr x, Real lambda){return this -> H.eval_grad_K_eigenval_ratio(this -> diffusion(0), x(0), lambda);};
+		std::function<void (VectorXr)> set_param = [this](VectorXr x){this -> H.set_K(this -> diffusion(0), x(0));};
 
-		diffusion(1) = step<Real>(init, lower_bound, upper_bound, periods, F, dF, set_param);
+		diffusion(1) = step(init, lower_bound, upper_bound, periods, F, dF, set_param)(0);
 	}	
 	
 	
 	if(update_b)
 	{
 		Rprintf("Finding advection vector b\n");
-		Eigen::Vector2d init(b(0), b(1));
-		Eigen::Vector2d lower_bound(-1000.0, -1000.0);
-		Eigen::Vector2d upper_bound(1000.0, 1000.0);
-		Eigen::Vector2d periods(0.0, 0.0);
-		std::function<Real (Eigen::Vector2d, Real)> F = [this](Eigen::Vector2d x, Real lambda){return this -> H.eval_b(x(0), x(1), lambda);};
-		std::function<Eigen::Vector2d (Eigen::Vector2d, Real)> dF = [this](Eigen::Vector2d x, Real lambda){return this -> H.eval_grad_b(x(0),x(1), lambda);};
-		std::function<void (Eigen::Vector2d)> set_param = [this](Eigen::Vector2d x){this -> H.set_b(x(0), x(1));};
+		VectorXr init(2);
+		init << b(0), b(1);
+		VectorXr lower_bound(2);
+		lower_bound << -1000.0, -1000.0;
+		VectorXr upper_bound(2);
+		upper_bound << 1000.0, 1000.0;
+		VectorXr periods(2);
+		periods << 0.0, 0.0;
+		std::function<Real (VectorXr, Real)> F = [this](VectorXr x, Real lambda){return this -> H.eval_b(x(0), x(1), lambda);};
+		std::function<VectorXr (VectorXr, Real)> dF = [this](VectorXr x, Real lambda){return this -> H.eval_grad_b(x(0),x(1), lambda);};
+		std::function<void (VectorXr)> set_param = [this](VectorXr x){this -> H.set_b(x(0), x(1));};
 
-		b = step<Eigen::Vector2d>(init, lower_bound, upper_bound, periods, F, dF, set_param);
+		b = step(init, lower_bound, upper_bound, periods, F, dF, set_param);
 	}
 			
 	if(update_c)
 	{
 		Rprintf("Finding reaction coefficient c\n");
-		Real init(c);
-		Real lower_bound(-1000.0);
-		Real upper_bound(1000.0);
-		Real periods(0.0);
-		std::function<Real (Real, Real)> F = [this](Real x, Real lambda){return this -> H.eval_c(x, lambda);};
-		std::function<Real (Real, Real)> dF = [this](Real x, Real lambda){return this -> H.eval_grad_c(x, lambda);};
-		std::function<void (Real)> set_param = [this](Real x){this -> H.set_c(x);};
+		VectorXr init(1);
+		init << c;
+		VectorXr lower_bound(1);
+		lower_bound << -1000.0;
+		VectorXr upper_bound(1);
+		upper_bound << 1000.0;
+		VectorXr periods(1);
+		periods << 0.0;
+		std::function<Real (VectorXr, Real)> F = [this](VectorXr x, Real lambda){return this -> H.eval_c(x(0), lambda);};
+		std::function<VectorXr (VectorXr, Real)> dF = [this](VectorXr x, Real lambda){return this -> H.eval_grad_c(x(0), lambda);};
+		std::function<void (VectorXr)> set_param = [this](VectorXr x){this -> H.set_c(x(0));};
 
-		c = step<Real>(init, lower_bound, upper_bound, periods, F, dF, set_param);
+		c = step(init, lower_bound, upper_bound, periods, F, dF, set_param)(0);
 	}
 
-	Eigen::Matrix2d K = H.compute_K(diffusion(0), diffusion(1));
+	MatrixXr K = H.compute_K(diffusion(0), diffusion(1));
 
 	return {diffusion, K, b, c, lambda_opt};
 }

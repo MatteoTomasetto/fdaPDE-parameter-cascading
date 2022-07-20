@@ -1,21 +1,41 @@
-#ifndef __OPTIMIZATION_ALGORITHM_IMP_H__
-#define __OPTIMIZATION_ALGORTIHM_IMP_H__
-
+#include "../Include/Optimization_Parameter_Cascading.h"
 #include <array>
 #include <algorithm>
 #include <type_traits>
 
+// Generate a random VectorXr element from a truncated normal centered in "mean" 
+// with standard deviation sigma
+VectorXr Genetic_Algorithm::get_random_element(const VectorXr& mean, const Real& sigma)
+{
+	std::default_random_engine generator(seed++);
+
+ 	unsigned int ElemSize = mean.size();
+ 	VectorXr res(ElemSize);
+ 	
+ 	// Loop over each component of mean and res and generate random the components of res
+	for(unsigned int j = 0u; j < ElemSize; ++j)
+ 	{	
+ 		// Generate the j-th random component from a normal truncated wrt lower and upper bound in param_genetic_algorithm
+ 		std::uniform_real_distribution<Real>
+ 		unif_distr(normal_cdf((param_genetic_algorithm.lower_bound[j] - mean[j])/sigma),
+ 				   normal_cdf((param_genetic_algorithm.upper_bound[j] - mean[j])/sigma));
+
+ 		res[j] = mean[j] + sigma * probit(unif_distr(generator));
+ 	}
+	
+ 	return res;
+}
+			 
+
 // Cumulative distribution function of a standard normal (phi function)
-template <class DType, class CType>
-Real Genetic_Algorithm<DType, CType>::normal_cdf(const Real& x) const
+Real Genetic_Algorithm::normal_cdf(const Real& x) const
 {
 	return 0.5 + 0.5 * std::erf(x * M_SQRT1_2);
 }
 
 // Inverse cumulative distribution function of a standard normal (probit function)
 // approximated via Beasley-Springer-Moro algorithm.
-template <class DType, class CType>
-Real Genetic_Algorithm<DType, CType>::probit(const Real& u) const
+Real Genetic_Algorithm::probit(const Real& u) const
 {
 	std::array<Real, 4> a = {2.50662823884, -18.61500062529, 41.39119773534, -25.44106049637};
 
@@ -65,8 +85,7 @@ Real Genetic_Algorithm<DType, CType>::probit(const Real& u) const
 
 }
 
-template <class DType, class CType>
-void Genetic_Algorithm<DType, CType>::initialization(void)
+void Genetic_Algorithm::initialization(void)
 {	
 	Real sigma = 2.5; // Not small standard deviation to explore enough a region near population[0]
 
@@ -79,10 +98,9 @@ void Genetic_Algorithm<DType, CType>::initialization(void)
 }
 
 
-template <class DType, class CType>
-typename Genetic_Algorithm<DType, CType>::VectorXctype Genetic_Algorithm<DType, CType>::evaluation(void) const
+typename Genetic_Algorithm::evalType Genetic_Algorithm::evaluation(void) const
 {
-	VectorXctype res(param_genetic_algorithm.N);
+	evalType res(param_genetic_algorithm.N);
 
 	for(unsigned int i = 0u; i < param_genetic_algorithm.N; ++i)
 		res[i] = F(population[i]); // Evaluate F in each candidate solution in population
@@ -91,8 +109,7 @@ typename Genetic_Algorithm<DType, CType>::VectorXctype Genetic_Algorithm<DType, 
 }
 
 
-template <class DType, class CType>
-void Genetic_Algorithm<DType, CType>::selection_and_variation(VectorXctype values, Real alpha)
+void Genetic_Algorithm::selection_and_variation(evalType values, Real alpha)
 {
 	// Binary tournament selection: for each couple in population we keep the best one (winner) in terms of loss function
 	// Then we replace the worst one in 2 different ways:
@@ -123,15 +140,14 @@ void Genetic_Algorithm<DType, CType>::selection_and_variation(VectorXctype value
 	return;
 }
 
-template <class DType, class CType>
-void Genetic_Algorithm<DType, CType>::apply(void)
+void Genetic_Algorithm::apply(void)
 {	
 	Rprintf("Start genetic algorithm\n");
 
 	initialization();
 	
 	// Evaluate the loss function for population elements: this is needed for selection process
-	VectorXctype F_values(param_genetic_algorithm.N);
+	evalType F_values(param_genetic_algorithm.N);
 	F_values = evaluation();
 	
 	unsigned int iter = 0u;
@@ -172,14 +188,62 @@ Rprintf("End genetic algorithm\n");
 	return;
 }
 
+void Gradient_Descent_fd::upgrade_best(void)
+{	
+ 	VectorXr new_best = best;
 
-template <class DType, class CType>
-void Gradient_Descent_fd<DType, CType>::apply(void)
+	// Set some useful parameters
+	Real alpha = 1.0;
+	Real beta = 0.5;
+	Real f = F(best);
+	VectorXr df = dF(best);
+	Real df_norm = df.squaredNorm();
+
+	// Update best
+	new_best = best - alpha * df;
+
+ 	// Check bounds
+ 	for(unsigned int i = 0u; i < best.size(); ++i)
+ 	{
+ 		// Exploit periodicity if present
+ 		if(param_gradient_descent_fd.periods[i] != 0.0)
+ 		{
+			while(new_best[i] < param_gradient_descent_fd.lower_bound[i])
+					new_best[i] += param_gradient_descent_fd.periods[i];
+			while(new_best[i] > param_gradient_descent_fd.upper_bound[i])
+					new_best[i] -= param_gradient_descent_fd.periods[i];
+ 		}
+
+ 		else
+ 		{	
+			// Check upper and lower bounds
+ 			while(new_best[i] < param_gradient_descent_fd.lower_bound[i] || new_best[i] > param_gradient_descent_fd.upper_bound[i])
+ 			{	
+ 				new_best[i] = best[i];			 				
+ 				alpha *= beta; // Re-upgrade best with a smaller alpha in order to remain inside the bounds
+ 				new_best[i] -= alpha*df[i];
+ 			}
+ 		}
+	}
+
+	// Backtracking line search to set the step size
+	while(F(new_best) > f - alpha * df_norm / 2.0)
+	{
+		alpha *= beta;
+		new_best = best - alpha * df;
+	}
+
+	best = new_best;
+
+ 	return;
+}
+
+void Gradient_Descent_fd::apply(void)
 {	
 	Rprintf("Start gradient descent algorithm\n");
 
 	unsigned int iter = 0u;
-	DType old_sol = best;
+	VectorXr old_sol = best;
 	Real increment = 0.0;
 
 	while(iter < max_iterations_gradient_descent_fd && goOn)
@@ -188,7 +252,7 @@ void Gradient_Descent_fd<DType, CType>::apply(void)
 
 		upgrade_best();
 
-		increment = compute_increment(best, old_sol);
+		increment = (best - old_sol).norm();
 		
 		old_sol = best;
 
@@ -200,35 +264,3 @@ void Gradient_Descent_fd<DType, CType>::apply(void)
 
 	return;
 }
-
-
-
-template <class DType, class CType>
-void LBFGS<DType, CType>::apply(void)
-{	
-	Rprintf("Start LBFGS algorithm\n");
-
-	UInt iter = 0;
-	DType old_sol = best;
-	Real increment = 0.0;
-
-	while(iter < max_iterations_lbfgs && goOn)
-	{	
-		upgrade_best(iter);
-
-		increment = compute_increment(best, old_sol);
-		
-		old_sol = best;
-
-		goOn = (increment < tol_lbfgs) ? false : true;
-
-		++iter;
-
-	}
-
-	Rprintf("End LBFGS algorithm\n");
-	
-	return;
-}
-
-#endif

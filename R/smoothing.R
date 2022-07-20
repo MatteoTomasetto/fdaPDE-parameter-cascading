@@ -51,10 +51,10 @@
 #' If 'K_eigenval_ratio' is selected, the diffusion matrix intensity will be estimated via Parameter Cascading algorithm.
 #' Notice that, if also the parameters K, b or c are provided in PDE_parameters, Parameter Cascading algorithm uses them as initialization.
 #' Otherwise, the parameters that are not provided will be automatically initialized (K = Identity matrix, b = zero vector, c = zero). 
-#' The second component is called 'optimization_method'; it has the following possibilities: 'gradient'(default option), 'genetic', 'LBFGS'.
+#' The second component is called 'optimization_method'; it has the following possibilities: 'L-BFGS-B' (default option), 'gradient', 'genetic'.
+#' If 'L-BFGS-B' is selected, the L-BFGS-B Algorithm is used for optimization step in Parameter Cascading.
 #' If 'gradient' is selected, the Gradient Descent is used for optimization step in Parameter Cascading.
 #' If 'genetic' is selected, the Genetic Algortihm is used for optimization step in Parameter Cascading.
-#' If 'LBFGS' is selected, the L-BFGS Algorithm is used for optimization step in Parameter Cascading.
 #' EXAMPLE: kappa <- cbind(c(1,0), c(0,1))
 #'			b = array(0, c(2, nrow(points)))
 #'			c = 0
@@ -526,11 +526,11 @@ smooth.FEM<-function(locations = NULL, observations, FEMbasis,
   
   	if(parameter_cascading_option[1] != 0){
   		# Set a convention for optimization algorithm used in parameter cascading
-  		if(PDE_parameters$parameter_cascading$optimization_method == "gradient"){
+  		if(PDE_parameters$parameter_cascading$optimization_method == "L-BFGS-B"){
       		parameter_cascading_option[2] = 0
-    	}else if(PDE_parameters$parameter_cascading$optimization_method == "genetic"){
+    	}else if(PDE_parameters$parameter_cascading$optimization_method == "gradient"){
       		parameter_cascading_option[2] = 1
-      	}else if(PDE_parameters$parameter_cascading$optimization_method == "LBFGS"){
+      	}else if(PDE_parameters$parameter_cascading$optimization_method == "genetic"){
       		parameter_cascading_option[2] = 2
   		}else{
   			stop("Invalid input for Parameter Cascading algorithm in PDE_parameters")

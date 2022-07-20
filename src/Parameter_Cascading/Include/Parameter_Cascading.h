@@ -30,10 +30,10 @@ class Parameter_Cascading
 			 UInt optimization_algorithm;
 			 
 			 // Diffusion parameters (angle/main_direction and intensity/eigenval_ratio)
-			 Eigen::Vector2d diffusion;
+			 VectorXr diffusion;
 			 
 			 // Advection parameter
-			 Eigen::Vector2d b;
+			 VectorXr b;
 			 
 			 // Reaction coefficient
 			 Real c;
@@ -47,29 +47,10 @@ class Parameter_Cascading
 			 								   GCV_Exact<Carrier<RegressionDataElliptic>, 1>& solver,
 			 								   Real lambda_init) const;
 			 
-			 template<typename ParameterType>  // Find and update parameters via optimization algorithm
-			 ParameterType step(const ParameterType& init, const ParameterType& lower_bound, const ParameterType& upper_bound, const ParameterType& periods,
-			 					const std::function<Real (ParameterType, Real)>& F, const std::function<ParameterType (ParameterType, Real)>& dF, 
-			 					const std::function<void (ParameterType)>& set_param); 
+			 VectorXr step(VectorXr init, const VectorXr& lower_bound, const VectorXr& upper_bound, const VectorXr& periods,
+			 				const std::function<Real (VectorXr, Real)>& F, const std::function<VectorXr (VectorXr, Real)>& dF, 
+			 				const std::function<void (VectorXr)>& set_param); 
 
-			 template<typename ParameterType>
-			 typename std::enable_if< !std::is_floating_point<ParameterType>::value, void>::type
-			 printer(ParameterType input) const
-			 {
-				for(unsigned int i = 0u; i < input.size(); ++i)
-					Rprintf("%f ", input[i]);
-				Rprintf("\n");
-			 };
-
-			 template<typename ParameterType>
-			 typename std::enable_if< std::is_floating_point<ParameterType>::value, void>::type
-			 printer(ParameterType input) const
-			 {
-				Rprintf("%f\n", input);
-			 };
-
-
-			 
 	public: // Constructor that computes the vector of lambdas from the vector of rhos presented in \cite{Bernardi}
 			Parameter_Cascading(PDE_Parameter_Functional<ORDER, mydim, ndim>& H_)
 			: H(H_) 
@@ -88,6 +69,8 @@ class Parameter_Cascading
 				lambdas = rhos.array() / (1 - rhos.array()) * n / area;
 
 				// Initialize the parameters with the values in RegressionData and OptimizationData
+				diffusion.resize(2);
+				b.resize(2);
 				diffusion(0) = H.getModel().getRegressionData().getK().getAngle();
 				diffusion(1) = H.getModel().getRegressionData().getK().getIntensity();
 				b(0) = H.getModel().getRegressionData().getB().get_b1_coeff();

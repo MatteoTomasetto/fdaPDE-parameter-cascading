@@ -13,9 +13,9 @@
 //! Output struct to be used to return results of parameter cascading in R
 struct Output_Parameter_Cascading
 {
-        Eigen::Vector2d diffusion_opt;
-        Eigen::Matrix2d K_opt;
-        Eigen::Vector2d b_opt;
+        VectorXr diffusion_opt;
+        MatrixXr K_opt;
+        VectorXr b_opt;
         Real c_opt;
         Real lambda_opt;
 };

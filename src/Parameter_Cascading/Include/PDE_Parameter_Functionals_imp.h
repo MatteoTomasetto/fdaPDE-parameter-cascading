@@ -147,9 +147,9 @@ Real PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_c(const Real& c, const l
 
 
 template <UInt ORDER, UInt mydim, UInt ndim>
-Eigen::Vector2d PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_grad_K(const Real& angle, const Real& intensity, const lambda::type<1>& lambda, const Real& h) const
+VectorXr PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_grad_K(const Real& angle, const Real& intensity, const lambda::type<1>& lambda, const Real& h) const
 {
-	Eigen::Vector2d res;
+	VectorXr res(2);
 
 	res << eval_grad_K_main_direction(angle, intensity, lambda, h), eval_grad_K_eigenval_ratio(angle, intensity, lambda, h);
 	
@@ -158,8 +158,10 @@ Eigen::Vector2d PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_grad_K(const 
 
 
 template <UInt ORDER, UInt mydim, UInt ndim>
-Real PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_grad_K_main_direction(const Real& angle, const Real& intensity, const lambda::type<1>& lambda, const Real& h) const
+VectorXr PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_grad_K_main_direction(const Real& angle, const Real& intensity, const lambda::type<1>& lambda, const Real& h) const
 {
+	VectorXr res(1);
+
 	// Check if angle remain in a proper range after finite difference schemes
 	Real angle_lower, angle_upper;
 	Real h_angle_upper, h_angle_lower;
@@ -186,13 +188,17 @@ Real PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_grad_K_main_direction(co
 		h_angle_upper = 2. * h;
 	}
 	
-	return (eval_K(angle_upper, intensity, lambda) - eval_K(angle_lower, intensity, lambda))/ std::min(h_angle_upper, h_angle_lower);
+	res << (eval_K(angle_upper, intensity, lambda) - eval_K(angle_lower, intensity, lambda))/ std::min(h_angle_upper, h_angle_lower);
+
+	return res;
 }
 
 
 template <UInt ORDER, UInt mydim, UInt ndim>
-Real PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_grad_K_eigenval_ratio(const Real& angle, const Real& intensity, const lambda::type<1>& lambda, const Real& h) const
-{
+VectorXr PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_grad_K_eigenval_ratio(const Real& angle, const Real& intensity, const lambda::type<1>& lambda, const Real& h) const
+{	
+	VectorXr res(1);
+
 	// Check if intensity remain in a proper range after finite difference schemes
 	Real intensity_lower;
 	Real h_intensity;
@@ -208,15 +214,16 @@ Real PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_grad_K_eigenval_ratio(co
 		h_intensity = 2. * h;
 	}
 
-	return (eval_K(angle, intensity + h, lambda) - eval_K(angle, intensity_lower, lambda)) / h_intensity;
+	res << (eval_K(angle, intensity + h, lambda) - eval_K(angle, intensity_lower, lambda)) / h_intensity;
 	
+	return res;
 }
 
 
 template <UInt ORDER, UInt mydim, UInt ndim>
-Eigen::Vector2d PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_grad_b(const Real& b1, const Real& b2, const lambda::type<1>& lambda, const Real& h) const
+VectorXr PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_grad_b(const Real& b1, const Real& b2, const lambda::type<1>& lambda, const Real& h) const
 {
-	Eigen::Vector2d res;
+	VectorXr res(2);
 	
 	res << (eval_b(b1 + h, b2, lambda) - eval_b(b1 - h, b2, lambda)) / (2. * h),
 		   (eval_b(b1, b2 + h, lambda) - eval_b(b1, b2 - h, lambda)) / (2. * h);
@@ -227,9 +234,13 @@ Eigen::Vector2d PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_grad_b(const 
 
 
 template <UInt ORDER, UInt mydim, UInt ndim>
-Real PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_grad_c(const Real& c, const lambda::type<1>& lambda, const Real& h) const
+VectorXr PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_grad_c(const Real& c, const lambda::type<1>& lambda, const Real& h) const
 {
-	return (eval_c(c + h, lambda) - eval_c(c - h, lambda)) / (2. * h);
+	VectorXr res(1);
+
+	res << (eval_c(c + h, lambda) - eval_c(c - h, lambda)) / (2. * h);
+
+	return res;
 }
 
 
