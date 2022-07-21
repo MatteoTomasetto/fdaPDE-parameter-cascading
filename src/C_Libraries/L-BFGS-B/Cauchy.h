@@ -1,12 +1,12 @@
 // Copyright (C) 2020-2022 Yixuan Qiu <yixuan.qiu@cos.name>
 // Under MIT license
 
-#ifndef LBFGSPP_CAUCHY_H
-#define LBFGSPP_CAUCHY_H
+#ifndef __CAUCHY_H__
+#define __CAUCHY_H__
 
 #include <vector>
 #include "BFGSMat.h"
-#include "../../../FdaPDE.h"
+#include "../../FdaPDE.h"
 
 /// \cond
 

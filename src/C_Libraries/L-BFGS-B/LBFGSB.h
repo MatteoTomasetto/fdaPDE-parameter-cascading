@@ -1,15 +1,35 @@
 // Copyright (C) 2020-2022 Yixuan Qiu <yixuan.qiu@cos.name>
 // Under MIT license
-
+//
+// Documentation at https://lbfgspp.statr.me/
+//
+//
+// Simple example of usage:
+//
+//      Eigen::Vector2d x(1.0, 1.0); // set starting point
+//      LBFGSBParam<Real> param;
+//      LBFGSBSolver<Real> solver(param);
+//      Real fx; // vairable to store min value of F 
+//      std::function<Real (Eigen::Vector2d)> F = [](Eigen::Vector2d x){return x(0) * x(0) + x(1) * x(1);}; // function to minimize
+//      std::function<Eigen::Vector2d (Eigen::Vector2d)> dF = [](Eigen::Vector2d x) // gradient 
+//      {   Eigen::Vector2d res;
+//          res << 2 * x(0), 2 * x(1);
+//          return res;
+//      }
+//
+//      UInt niter = solver.minimize(F, dF, x, fx, lower_bound, upper_bound); // x and fx will be directly modified inside the function
+// Notice that the original implementation of "minimize" requires a single function in input where the gradient is modified by reference,
+// Instead now F and dF are passed to the function 
+ 
 #ifndef __LBFGSB_H__
 #define __LBFGSB_H__
 
 #include <vector>
-#include "LBFGSpp/Param.h"
-#include "LBFGSpp/BFGSMat.h"
-#include "LBFGSpp/Cauchy.h"
-#include "LBFGSpp/SubspaceMin.h"
-#include "LBFGSpp/LineSearchMoreThuente.h"
+#include "Param.h"
+#include "BFGSMat.h"
+#include "Cauchy.h"
+#include "SubspaceMin.h"
+#include "LineSearchMoreThuente.h"
 #include "../../FdaPDE.h"
 
 ///

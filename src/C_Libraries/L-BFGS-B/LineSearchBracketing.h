@@ -1,22 +1,25 @@
 // Copyright (C) 2016-2022 Yixuan Qiu <yixuan.qiu@cos.name>
+// Copyright (C) 2016-2022 Dirk Toewe <DirkToewe@GoogleMail.com>
 // Under MIT license
 
-#ifndef LBFGSPP_LINE_SEARCH_BACKTRACKING_H
-#define LBFGSPP_LINE_SEARCH_BACKTRACKING_H
+#ifndef __LINE_SEARCH_BRACKETING_H__
+#define __LINE_SEARCH_BRACKETING_H__
 
-#include "../../../FdaPDE.h"
+#include "../../FdaPDE.h"
 
 ///
-/// The backtracking line search algorithm for L-BFGS. Mainly for internal use.
+/// The bracketing line search algorithm for L-BFGS. Mainly for internal use.
 ///
 template <typename Scalar>
-class LineSearchBacktracking
+class LineSearchBracketing
 {
 private:
 
 public:
     ///
-    /// Line search by backtracking.
+    /// Line search by bracketing. Similar to the backtracking line search
+    /// except that it actively maintains an upper and lower bound of the
+    /// current search range.
     ///
     /// \param f        A function object such that `f(x, grad)` returns the
     ///                 objective function value at `x`, and overwrites `grad` with
@@ -41,15 +44,11 @@ public:
                            const VectorXr& xp, const VectorXr& drt, const Scalar& step_max,
                            Scalar& step, Scalar& fx, VectorXr& grad, Scalar& dg, VectorXr& x)
     {
-        // Decreasing and increasing factors
-        const Scalar dec = 0.5;
-        const Scalar inc = 2.1;
-
         // Check the value of step
         if (step <= Scalar(0))
         {
-            Rf_error("'step' must be positive");
-            abort();
+            Rprintf("'step' must be positive");
+            step = Scalar(1);
         }
 
         // Save the function value at the current x
@@ -59,12 +58,15 @@ public:
         // Make sure d points to a descent direction
         if (dg_init > 0)
         {
-            Rf_error("the moving direction increases the objective function value");
-            abort();
+            Rprintf("the moving direction increases the objective function value");
+            return;
         }
 
         const Scalar test_decr = param.ftol * dg_init;
-        Scalar width;
+
+        // Upper and lower end of the current line search range
+        Scalar step_lo = 0,
+               step_hi = std::numeric_limits<Scalar>::infinity();
 
         int iter;
         for (iter = 0; iter < param.max_linesearch; iter++)
@@ -76,7 +78,7 @@ public:
 
             if (fx > fx_init + step * test_decr || (fx != fx))
             {
-                width = dec;
+                step_hi = step;
             }
             else
             {
@@ -87,7 +89,7 @@ public:
                 const Scalar dg = grad.dot(drt);
                 if (dg < param.wolfe * dg_init)
                 {
-                    width = inc;
+                    step_lo = step;
                 }
                 else
                 {
@@ -97,7 +99,7 @@ public:
 
                     if (dg > -param.wolfe * dg_init)
                     {
-                        width = dec;
+                        step_hi = step;
                     }
                     else
                     {
@@ -107,28 +109,30 @@ public:
                 }
             }
 
+            assert(step_lo < step_hi);
+
             if (step < param.min_step)
             {
-                Rf_error("the line search step became smaller than the minimum value allowed");
-                abort();
+                Rprintf("the line search step became smaller than the minimum value allowed");
+                return;
             }
 
             if (step > param.max_step)
             {
-                Rf_error("the line search step became larger than the maximum value allowed");
-                abort();
+                Rprintf("the line search step became larger than the maximum value allowed");
+                return;
             }
 
-            step *= width;
+            // continue search in mid of current search range
+            step = std::isinf(step_hi) ? 2 * step : step_lo / 2 + step_hi / 2;
         }
 
         if (iter >= param.max_linesearch)
         {
-            Rf_error("the line search routine reached the maximum number of iterations");
-            abort();
+            Rprintf("the line search routine reached the maximum number of iterations");
+            return;
         }
     }
 };
 
-
-#endif  // LBFGSPP_LINE_SEARCH_BACKTRACKING_H
+#endif  // LBFGSPP_LINE_SEARCH_BRACKETING_H

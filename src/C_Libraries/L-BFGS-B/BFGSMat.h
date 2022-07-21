@@ -1,12 +1,12 @@
 // Copyright (C) 2020-2022 Yixuan Qiu <yixuan.qiu@cos.name>
 // Under MIT license
 
-#ifndef LBFGSPP_BFGS_MAT_H
-#define LBFGSPP_BFGS_MAT_H
+#ifndef __BFGS_MAT_H__
+#define __BFGS_MAT_H__
 
 #include <vector>
 #include "BKLDLT.h"
-#include "../../../FdaPDE.h"
+#include "../../FdaPDE.h"
 
 /// \cond
 

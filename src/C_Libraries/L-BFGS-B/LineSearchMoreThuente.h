@@ -1,11 +1,11 @@
 // Copyright (C) 2020-2022 Yixuan Qiu <yixuan.qiu@cos.name>
 // Under MIT license
 
-#ifndef LBFGSPP_LINE_SEARCH_MORE_THUENTE_H
-#define LBFGSPP_LINE_SEARCH_MORE_THUENTE_H
+#ifndef __LINE_SEARCH_MORE_THUENTE_H__
+#define __LINE_SEARCH_MORE_THUENTE_H__
 
 #include "Param.h"
-#include "../../../FdaPDE.h"
+#include "../../FdaPDE.h"
 
 ///
 /// The line search algorithm by Moré and Thuente (1994), currently used for the L-BFGS-B algorithm.
@@ -217,13 +217,13 @@ public:
         // Check the value of step
         if (step <= Scalar(0))
         {
-            Rf_error("'step' must be positive");
-            abort();
+            Rprintf("'step' must be positive");
+            step = Scalar(1);
         }
         if (step > step_max)
         {
-            Rf_error("'step' exceeds 'step_max'");
-            abort();
+            Rprintf("'step' exceeds 'step_max'");
+            step = step_max;
         }
 
         // Save the function value at the current x
@@ -236,8 +236,8 @@ public:
         // Make sure d points to a descent direction
         if (dg_init >= Scalar(0))
         {
-            Rf_error("the moving direction does not decrease the objective function value");
-            abort();
+            Rprintf("the moving direction does not decrease the objective function value");
+            return;
         }
 
         // Tolerance for convergence test
@@ -355,14 +355,14 @@ public:
 
             if (step < param.min_step)
             {
-                Rf_error("the line search step became smaller than the minimum value allowed");
-                abort();
+                Rprintf("the line search step became smaller than the minimum value allowed");
+                return;
             }
 
             if (step > param.max_step)
             {
-                Rf_error("the line search step became larger than the maximum value allowed");
-                abort();
+                Rprintf("the line search step became larger than the maximum value allowed");
+                return;
             }
 
             // Update parameter, function value, and gradient
@@ -405,8 +405,8 @@ public:
 
         if (iter >= param.max_linesearch)
         {
-            Rf_error("the line search routine reached the maximum number of iterations");
-            abort();
+            Rprintf("the line search routine reached the maximum number of iterations");
+            return;
         }
     }
 };

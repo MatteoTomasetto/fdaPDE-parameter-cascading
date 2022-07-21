@@ -1,11 +1,11 @@
 // Copyright (C) 2020-2022 Yixuan Qiu <yixuan.qiu@cos.name>
 // Under MIT license
 
-#ifndef LBFGSPP_BK_LDLT_H
-#define LBFGSPP_BK_LDLT_H
+#ifndef __BKLDLT_H__
+#define __BKLDLT_H__
 
 #include <vector>
-#include "../../../FdaPDE.h"
+#include "../../FdaPDE.h"
 
 /// \cond
 
@@ -39,7 +39,7 @@ private:
     typedef const Eigen::Ref<const VectorXr> ConstGenericVectorXr;
 
     Index m_n;
-    VectorXr m_data;                                  // storage for a lower-triangular MatrixXr
+    VectorXr m_data;                                  // storage for a lower-triangular matrix
     std::vector<Scalar*> m_colptr;                  // pointers to columns
     IntVectorXr m_perm;                               // [-2, -1, 3, 1, 4, 5]: 0 <-> 2, 1 <-> 1, 2 <-> 3, 3 <-> 1, 4 <-> 4, 5 <-> 5
     std::vector<std::pair<Index, Index> > m_permc;  // compressed version of m_perm: [(0, 2), (2, 3), (3, 1)]
@@ -389,7 +389,7 @@ public:
         m_n = mat.rows();
         if (m_n != mat.cols())
         {
-            Rf_error("BKLDLT: MatrixXr must be square");
+            Rf_error("BKLDLT: matrix must be square");
             abort();
         }
 

@@ -1,10 +1,10 @@
 // Copyright (C) 2016-2022 Yixuan Qiu <yixuan.qiu@cos.name>
 // Under MIT license
 
-#ifndef LBFGSPP_PARAM_H
-#define LBFGSPP_PARAM_H
+#ifndef __PARAM_H__
+#define __PARAM_H__
 
-#include "../../../FdaPDE.h"
+#include "../../FdaPDE.h"
 ///
 /// \defgroup Enumerations
 ///

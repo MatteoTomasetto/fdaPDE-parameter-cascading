@@ -2,10 +2,10 @@
 // Copyright (C) 2016-2022 Dirk Toewe <DirkToewe@GoogleMail.com>
 // Under MIT license
 
-#ifndef LBFGSPP_LINE_SEARCH_NOCEDAL_WRIGHT_H
-#define LBFGSPP_LINE_SEARCH_NOCEDAL_WRIGHT_H
+#ifndef __LINE_SEARCH_NOCEDAL_WRIGHT_H__
+#define __LINE_SEARCH_NOCEDAL_WRIGHT_H__
 
-#include "../../../FdaPDE.h"
+#include "../../FdaPDE.h"
 
 ///
 /// A line search algorithm for the strong Wolfe condition. Implementation based on:
@@ -49,8 +49,7 @@ public:
         // Check the value of step
         if (step <= Scalar(0))
         {
-            Rf_error("'step' must be positive");
-            abort();
+            step = Scalar(1);
         }
 
         if (param.linesearch != LBFGS_LINESEARCH_BACKTRACKING_STRONG_WOLFE)
@@ -63,7 +62,7 @@ public:
         // methods in LBFGSpp, the symbol names from the literature
         // ("Numerical Optimizations") have been changed.
         //
-        // Literature | LBFGSpp
+        // Literature | LBFGSB
         // -----------|--------
         // alpha      | step
         // phi        | fx
@@ -79,8 +78,8 @@ public:
         // Make sure d points to a descent direction
         if (dg_init > 0)
         {
-            Rf_error("the moving direction increases the objective function value");
-            abort();
+            Rprintf("the moving direction increases the objective function value");
+            return;
         }
 
         const Scalar test_decr = param.ftol * dg_init,  // Sufficient decrease
@@ -167,8 +166,8 @@ public:
             {
                 if (step == step_hi)
                 {
-                    Rf_error("the line search routine failed, possibly due to insufficient numeric precision");
-                    abort();
+                    Rprintf("the line search routine failed, possibly due to insufficient numeric precision");
+                    return;
                 }
 
                 step_hi = step;
@@ -189,8 +188,8 @@ public:
 
                 if (step == step_lo)
                 {
-                    Rf_error("the line search routine failed, possibly due to insufficient numeric precision");
-                    abort();
+                    Rprintf("the line search routine failed, possibly due to insufficient numeric precision");
+                    return;
                 }
 
                 step_lo = step;

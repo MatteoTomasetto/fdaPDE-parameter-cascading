@@ -1,12 +1,12 @@
 // Copyright (C) 2020-2022 Yixuan Qiu <yixuan.qiu@cos.name>
 // Under MIT license
 
-#ifndef LBFGSPP_SUBSPACE_MIN_H
-#define LBFGSPP_SUBSPACE_MIN_H
+#ifndef __SUBSPACE_MIN_H__
+#define __SUBSPACE_MIN_H__
 
 #include <vector>
 #include "BFGSMat.h"
-#include "../../../FdaPDE.h"
+#include "../../FdaPDE.h"
 
 //
 // Subspace minimization procedure of the L-BFGS-B algorithm,
