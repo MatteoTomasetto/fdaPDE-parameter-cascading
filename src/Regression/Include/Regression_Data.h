@@ -55,9 +55,9 @@ class  RegressionData
 		bool flag_SpaceTime_{}; 			// TRUE if space time smoothing
 		UInt search_ = 0; 				// search algorith type
 
-        	// Iterative method
-        	UInt max_num_iterations_ = 0; 			//!< Max number of iterations allowed
-        	Real threshold_ = 0.; 				//!< Limit in difference among J_k and J_k+1 for which we stop iterative method.
+        // Iterative method
+        UInt max_num_iterations_ = 0; 			//!< Max number of iterations allowed
+        Real threshold_ = 0.; 				//!< Limit in difference among J_k and J_k+1 for which we stop iterative method.
 
 		// -- SETTERS --
 		void setObservations(SEXP Robservations);

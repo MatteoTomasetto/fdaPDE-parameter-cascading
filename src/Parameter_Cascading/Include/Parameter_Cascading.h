@@ -21,21 +21,35 @@ class Parameter_Cascading
 
 			 // Booleans to keep track of the wanted parameters to optimize
 			 bool update_K;
-			 bool update_K_main_direction;
+			 bool update_K_direction;
 			 bool update_K_eigenval_ratio;
 			 bool update_b;
 			 bool update_c;
 
-			 // Optimization algorithm to use: 0 for Gradient Descent, 1 for Genetic algorithm
+			 // Optimization algorithm to use: 0 for L-BFGS-B, 1 for Gradient Descent, 2 for Genetic algorithm,
 			 UInt optimization_algorithm;
 			 
-			 // Diffusion parameters (angle/main_direction and intensity/eigenval_ratio)
+			 // Diffusion parameters
+			 // with 2D non-space varying cases the diffusion parameters are:
+       		 //       1) the diffusion angle, i.e. the main eigenvector direction of K
+    		 //       2) the diffusion intensity, i.e. the ratio between the second and the first eigenvalue of K
+			 // with 3D non-space varying cases the diffusion parameters are:
+			 //       1) the angle wrt z-axis
+    		 //       2) the angle wrt y-axis
+    		 //       3) the angle wrt x-axis
+    		 //       4) the ratio between the first (biggest) and the third (smallest) eigenvalue of K
+    		 //       5) the ratio between the second and the third (smallest) eigenvalue of K
+    		 // SpaceVarying case not implemented yet
 			 VectorXr diffusion;
 			 
-			 // Advection parameter
+			 // Advection parameters
+			 // 2D or 3D non-space varying case: the advection parameters are the components of advection vector
+			 // SpaceVarying case not implemented yet
 			 VectorXr b;
 			 
 			 // Reaction coefficient
+			 // 2D or 3D non-space varying case: reaction parameter is the reaction coefficient
+			 // space-varying case not implemented yet
 			 Real c;
 
 			 VectorXr lambdas; // lambdas used to search the optimal PDE parameters
@@ -47,8 +61,20 @@ class Parameter_Cascading
 			 								   GCV_Exact<Carrier<RegressionDataElliptic>, 1>& solver,
 			 								   Real lambda_init) const;
 			 
+			 // Main function of the algorithm; inputs are
+			 // init -> starting point for optimization algorithm
+			 // lower_bound -> vector of the lower bounds for each parameter to optimize
+			 // upper_bound -> vector of the upper bounds for each parameter to optimize
+			 // periods -> vector with the periods of each parameter to optimize (if a parameter is not periodic then period = 0.0)
+			 // F -> function to optimize (RMSE with ParameterCascading)
+			 // dF -> gradient function or approximated gradient via finite differences
+			 // set_param -> function to set the proper parameter in RegressionData
 			 VectorXr step(VectorXr init, const VectorXr& lower_bound, const VectorXr& upper_bound, const VectorXr& periods,
 			 				const std::function<Real (VectorXr, Real)>& F, const std::function<VectorXr (VectorXr, Real)>& dF, 
+			 				const std::function<void (VectorXr)>& set_param);
+
+			 // Alternative version of step() where lower bounds are -inf, upper bounds are +inf and periods are 0.0 
+			 VectorXr step(VectorXr init, const std::function<Real (VectorXr, Real)>& F, const std::function<VectorXr (VectorXr, Real)>& dF, 
 			 				const std::function<void (VectorXr)>& set_param); 
 
 	public: // Constructor that computes the vector of lambdas from the vector of rhos presented in \cite{Bernardi}
@@ -69,18 +95,14 @@ class Parameter_Cascading
 				lambdas = rhos.array() / (1 - rhos.array()) * n / area;
 
 				// Initialize the parameters with the values in RegressionData and OptimizationData
-				diffusion.resize(2);
-				b.resize(2);
-				diffusion(0) = H.getModel().getRegressionData().getK().getAngle();
-				diffusion(1) = H.getModel().getRegressionData().getK().getIntensity();
-				b(0) = H.getModel().getRegressionData().getB().get_b1_coeff();
-				b(1) = H.getModel().getRegressionData().getB().get_b2_coeff();
-				c = H.getModel().getRegressionData().getC().get_c_coeff();
+				diffusion = H.getModel().getRegressionData().getK().template getDiffusionParam<ndim>();
+				b = H.getModel().getRegressionData().getB().template getAdvectionParam<ndim>();
+				c = H.getModel().getRegressionData().getC().getReactionParam();
 				lambda_opt = H.getModel().getOptimizationData().get_initial_lambda_S();
 
 				// Set which parameters to update
 				update_K = false;
-				update_K_main_direction = false;
+				update_K_direction = false;
 				update_K_eigenval_ratio = false;
 				update_b = false;
 				update_c = false;
@@ -91,7 +113,7 @@ class Parameter_Cascading
 				}
 				
 				if(parameter_cascading_option == 2){
-					update_K_main_direction = true;
+					update_K_direction = true;
 				}
 				
 				if(parameter_cascading_option == 3){

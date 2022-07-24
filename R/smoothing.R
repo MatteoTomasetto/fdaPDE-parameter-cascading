@@ -43,12 +43,12 @@
 #' }
 #' For 2.5D and 3D, only the Laplacian is available (\code{PDE_parameters=NULL}).
 #' In addition, it is possible to add a further not mandatory list in PDE_parameters called 'parameter_cascading' in order to estimate
-#' the PDE_parameters via Parameter Cascading Algorithm optimizing the mean squared error (for 2D case only).
-#' The first component is called 'parameter'; it has the following possibilities: NULL (default option), 'K', 'K_main_direction', 'K_eigenval_ratio'.
+#' the PDE_parameters via Parameter Cascading Algorithm optimizing the mean squared error (available if PDE_parameters$u is NULL).
+#' The first component is called 'parameter'; it has the following possibilities: NULL (default option), 'K', 'K_direction', 'K_eigenval_ratio'.
 #' If NULL is selected, the parameter cascading algorithm is not enabled.
 #' If 'K' is selected, the diffusion matrix K will be estimated via Parameter Cascading algorithm.
-#' If 'K_main_direction' is selected, the diffusion matrix anlge will be estimated via Parameter Cascading algorithm.
-#' If 'K_eigenval_ratio' is selected, the diffusion matrix intensity will be estimated via Parameter Cascading algorithm.
+#' If 'K_direction' is selected, the directions of anisotropy will be estimated via Parameter Cascading algorithm.
+#' If 'K_eigenval_ratio' is selected, the anisotropy intensities will be estimated via Parameter Cascading algorithm.
 #' Notice that, if also the parameters K, b or c are provided in PDE_parameters, Parameter Cascading algorithm uses them as initialization.
 #' Otherwise, the parameters that are not provided will be automatically initialized (K = Identity matrix, b = zero vector, c = zero). 
 #' The second component is called 'optimization_method'; it has the following possibilities: 'L-BFGS-B' (default option), 'gradient', 'genetic'.
@@ -509,14 +509,14 @@ smooth.FEM<-function(locations = NULL, observations, FEMbasis,
 
   # Set a convention for parameter cascading options
   parameter_cascading_option = c(0, 0)
-  if(!is.null(PDE_parameters) & is.null(PDE_parameters$u) & ndim == 2)
+  if(!is.null(PDE_parameters) & is.null(PDE_parameters$u)) # only non-space varying case implemented so far
   {
   	# Set which parameter to estimate with Parameter Cascading algorithm
     if(is.null(PDE_parameters$parameter_cascading) || is.null(PDE_parameters$parameter_cascading$parameter)){
       parameter_cascading_option[1] = 0
     }else if(PDE_parameters$parameter_cascading$parameter == 'K'){
     	parameter_cascading_option[1] = 1
-    }else if(PDE_parameters$parameter_cascading$parameter == 'K_main_direction'){
+    }else if(PDE_parameters$parameter_cascading$parameter == 'K_direction'){
     	parameter_cascading_option[1] = 2
     }else if(PDE_parameters$parameter_cascading$parameter == 'K_eigenval_ratio'){
     	parameter_cascading_option[1] = 3
@@ -538,12 +538,18 @@ smooth.FEM<-function(locations = NULL, observations, FEMbasis,
 
   		# Set initial values for the PDE_parameters if user does not pass them    
   	    if(is.null(PDE_parameters$K)){
-  		  PDE_parameters$K <- cbind(c(1, 0), c(0, 1))
+  	    	if(ndim == 2)
+  	    	  PDE_parameters$K <- cbind(c(1, 0), c(0, 1))
+  	    	else
+  	    		PDE_parameters$K <- cbind(c(1, 0, 0), c(0, 1, 0), c(0, 0, 1))
   	    }else{
   	  	  warning("K in PDE_parameters used as initialization for Parameter Cascading Algorithm")
   	    }
   	    if(is.null(PDE_parameters$b)){
-  		  PDE_parameters$b <- c(0, 0)
+  	    	if(ndim == 2)
+  	    	  PDE_parameters$b <- c(0, 0)
+  	    	else
+  	    		PDE_parameters$b <- c(0, 0, 0)
   	    }else{
   	  	  warning("b in PDE_parameters used as initialization for Parameter Cascading Algorithm")
   	    }
@@ -1003,13 +1009,27 @@ smooth.FEM<-function(locations = NULL, observations, FEMbasis,
     # save information of parameter cascading
     if(parameter_cascading_option[1] != 0)
     {
-    	parameter_cascading = list(
-    		K_main_direction = bigsol[[23]],
-			K_eigenval_ratio = bigsol[[24]],
-    		K = bigsol[[25]],
-    		b = bigsol[[26]],
-    		c = bigsol[[27]]
-    	)
+    	if(ndim == 2)
+    	{
+    		parameter_cascading = list(
+    			K_direction = bigsol[[23]],
+				K_eigenval_ratio = bigsol[[24]],
+    			K = bigsol[[25]],
+    			b = bigsol[[26]],
+    			c = bigsol[[27]])
+    	}
+    	else
+    	{
+    		parameter_cascading = list(
+    			K_first_direction = bigsol[[23]],
+				K_second_direction = bigsol[[24]],
+				K_third_direction = bigsol[[25]],
+    			K_first_eigenval_ratio = bigsol[[26]],
+    			K_second_eigenval_ratio = bigsol[[27]],
+    			K = bigsol[[28]],
+    			b = bigsol[[29]],
+    			c = bigsol[[30]])
+    	}
 
     	reslist$parameter_cascading = parameter_cascading
     }

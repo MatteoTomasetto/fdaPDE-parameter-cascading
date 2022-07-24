@@ -302,7 +302,7 @@ smooth.FEM.time<-function(locations = NULL, time_locations = NULL, observations,
     lambdaS = as.matrix(lambdaS)
   if(!is.null(lambdaT))
     lambdaT = as.matrix(lambdaT)
-  
+
   space_varying = checkSmoothingParameters_time(locations = locations, time_locations = time_locations, observations = observations, FEMbasis = FEMbasis, time_mesh = time_mesh,
                   covariates = covariates, PDE_parameters = PDE_parameters, BC = BC, 
                   incidence_matrix = incidence_matrix, areal.data.avg = areal.data.avg, 
@@ -320,7 +320,7 @@ smooth.FEM.time<-function(locations = NULL, time_locations = NULL, observations,
   }
 
   # Set parameter cascading option (it is set to zero since it is not available for time dependent case)
-  parameter_cascading_option = 0
+  parameter_cascading_option = c(0,0)
 
   checkSmoothingParametersSize_time(locations = locations, time_locations = time_locations, observations = observations, FEMbasis = FEMbasis, time_mesh = time_mesh,
     covariates = covariates, PDE_parameters = PDE_parameters, incidence_matrix = incidence_matrix,

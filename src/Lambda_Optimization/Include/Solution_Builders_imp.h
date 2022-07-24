@@ -397,20 +397,19 @@ Solution_Builders::build_solution_plain_regression(const MatrixXr & solution, co
                         rans11[i + barycenters.rows()*j] = barycenters(i,j);
         }
 
+        UInt dim = (ndim == 2) ? 2 : 5;
+        
+        for(UInt j = 0; j < dim; ++j)
+        {
+            // Add optimal diffusion parameters
+            SET_VECTOR_ELT(result, 22 + j, Rf_allocVector(REALSXP, 1));
+            rans= REAL(VECTOR_ELT(result, 22 + j));
+            rans[0] = parameter_cascading_result.diffusion_opt(j);
+        }
 
-        // Add optimal K main direction in position 22
-        SET_VECTOR_ELT(result, 22, Rf_allocVector(REALSXP, 1));
-        rans= REAL(VECTOR_ELT(result, 22));
-        rans[0] = parameter_cascading_result.diffusion_opt(0);
-
-        // Add optimal K eigenval ratio in position 23
-        SET_VECTOR_ELT(result, 23, Rf_allocVector(REALSXP, 1));
-        rans= REAL(VECTOR_ELT(result, 23));
-        rans[0] = parameter_cascading_result.diffusion_opt(1);
-
-        // Add optimal diffusion matrix in position 24
-        SET_VECTOR_ELT(result, 24, Rf_allocMatrix(REALSXP, parameter_cascading_result.K_opt.rows(), parameter_cascading_result.K_opt.cols()));
-        rans = REAL(VECTOR_ELT(result, 24));
+        // Add optimal diffusion matrix in position 22+dim
+        SET_VECTOR_ELT(result, 22+dim, Rf_allocMatrix(REALSXP, parameter_cascading_result.K_opt.rows(), parameter_cascading_result.K_opt.cols()));
+        rans = REAL(VECTOR_ELT(result, 22+dim));
         for(UInt j = 0; j < parameter_cascading_result.K_opt.cols(); j++)
         {
             for(UInt i = 0; i < parameter_cascading_result.K_opt.rows(); i++)
@@ -418,17 +417,17 @@ Solution_Builders::build_solution_plain_regression(const MatrixXr & solution, co
         }
 
        
-        // Add optimal advection vector in position 25
-        SET_VECTOR_ELT(result, 25, Rf_allocVector(REALSXP, parameter_cascading_result.b_opt.size()));
-        rans = REAL(VECTOR_ELT(result, 25));
+        // Add optimal advection vector in position 23+dim
+        SET_VECTOR_ELT(result, 23+dim, Rf_allocVector(REALSXP, parameter_cascading_result.b_opt.size()));
+        rans = REAL(VECTOR_ELT(result, 23+dim));
         for(UInt j = 0; j < parameter_cascading_result.b_opt.size(); j++)
         {
             rans[j] = parameter_cascading_result.b_opt(j);
         }
 
-         // Add optimal reaction coefficient in position 26
-        SET_VECTOR_ELT(result, 26, Rf_allocVector(REALSXP, 1));
-        rans= REAL(VECTOR_ELT(result, 26));
+         // Add optimal reaction coefficient in position 24+dim
+        SET_VECTOR_ELT(result, 24+dim, Rf_allocVector(REALSXP, 1));
+        rans= REAL(VECTOR_ELT(result, 24+dim));
         rans[0] = parameter_cascading_result.c_opt;
 
         UNPROTECT(1);

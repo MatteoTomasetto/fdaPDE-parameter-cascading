@@ -73,6 +73,7 @@ regression_skeleton(InputHandler & regressionData, OptimizationData & optimizati
 }
 
 // Specialization for RegressionDataElliptic to allow parameter cascading algorithm in this case
+// So far, Parameter Cascading is implemented only non-space varying cases
 template<typename InputHandler, UInt ORDER, UInt mydim, UInt ndim>
 typename std::enable_if<std::is_same<InputHandler, RegressionDataElliptic>::value, SEXP>::type
 regression_skeleton(InputHandler & regressionData, OptimizationData & optimizationData, SEXP Rmesh)
@@ -93,9 +94,7 @@ regression_skeleton(InputHandler & regressionData, OptimizationData & optimizati
 		// Object to perform the algorithm
 		Parameter_Cascading<ORDER, mydim, ndim> ParameterCascadingEngine(H);
 
-		Rprintf("Start Parameter Cascading Algorithm\n");
 		parameter_cascading_result = ParameterCascadingEngine.apply(); // Parameter cascading algorithm applied
-		Rprintf("End Parameter Cascading Algorithm\n");
 
 		// Reset the last lambdaS used in OptimizationData
 		optimizationData.set_last_lS_used(std::numeric_limits<Real>::infinity());

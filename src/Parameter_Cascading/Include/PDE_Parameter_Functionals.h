@@ -30,23 +30,19 @@ class PDE_Parameter_Functional
 									 const MeshHandler<ORDER, mydim, ndim> & mesh_)
 			: model(model_), mesh(mesh_) {};
 
-			// Functions to build PDE parameters, set them in RegressionData and recompute R1 matrix
-			MatrixXr compute_K(const Real& angle, const Real& intensity) const;
-			void set_K(const Real& angle, const Real& intensity) const;
-			void set_b(const Real& b1, const Real& b2) const;
+			void set_K(const VectorXr& DiffParam) const;
+			void set_b(const VectorXr& AdvParam) const;
 			void set_c(const Real& c) const;
 
 			// Functions to retrieve the value of the functional in the given input
-			Real eval_K(const Real& angle, const Real& intensity, const lambda::type<1>& lambda) const;
-			Real eval_b(const Real& b1, const Real& b2, const lambda::type<1>& lambda) const;
+			Real eval_K(const VectorXr& DiffParam, const VectorXr& LowerBound, const VectorXr& UpperBound, const lambda::type<1>& lambda) const;
+			Real eval_b(const VectorXr& AdvParam, const lambda::type<1>& lambda) const;
 			Real eval_c(const Real& c, const lambda::type<1>& lambda) const;
 			
-			// Functions to retrieve the derivatives of the functional approximated via finite differences
+			// Functions to retrieve the derivatives of the functional approximated via centered finite differences
 			// (these could be useful for optimization methods)
-			VectorXr eval_grad_K(const Real& angle, const Real& intensity, const lambda::type<1>& lambda, const Real& h = 1e-3) const;
-			VectorXr eval_grad_K_main_direction(const Real& angle, const Real& intensity, const lambda::type<1>& lambda, const Real& h = 1e-3) const;
-			VectorXr eval_grad_K_eigenval_ratio(const Real& angle, const Real& intensity, const lambda::type<1>& lambda, const Real& h = 1e-3) const;
-			VectorXr eval_grad_b(const Real& b1, const Real& b2, const lambda::type<1>& lambda, const Real& h = 1e-3) const;
+			VectorXr eval_grad_K(const VectorXr& DiffParam, const VectorXr& LowerBound, const VectorXr& UpperBound, const lambda::type<1>& lambda, const Real& h = 1e-3) const;
+			VectorXr eval_grad_b(const VectorXr& AdvParam, const lambda::type<1>& lambda, const Real& h = 1e-3) const;
 			VectorXr eval_grad_c(const Real& c, const lambda::type<1>& lambda, const Real& h = 1e-3) const;
 			
 			// GETTERS
