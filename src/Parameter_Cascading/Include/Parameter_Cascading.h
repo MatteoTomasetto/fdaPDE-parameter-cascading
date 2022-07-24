@@ -36,9 +36,8 @@ class Parameter_Cascading
 			 // with 3D non-space varying cases the diffusion parameters are:
 			 //       1) the angle wrt z-axis
     		 //       2) the angle wrt y-axis
-    		 //       3) the angle wrt x-axis
-    		 //       4) the ratio between the first (biggest) and the third (smallest) eigenvalue of K
-    		 //       5) the ratio between the second and the third (smallest) eigenvalue of K
+    		 //       3) the ratio between the first (biggest) and the third (smallest) eigenvalue of K
+    		 //       4) the ratio between the second and the third (smallest) eigenvalue of K
     		 // SpaceVarying case not implemented yet
 			 VectorXr diffusion;
 			 

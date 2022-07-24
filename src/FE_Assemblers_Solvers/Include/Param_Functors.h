@@ -86,7 +86,7 @@ public:
     // if ndim == 2 then the parameters are:
     //       1) the diffusion angle, i.e. the main eigenvector direction of K
     //       2) the diffusion intensity, i.e. the ratio between the second and the first eigenvalue of K
-    if((DiffParam.size() != 2) && (DiffParam.size() != 5))
+    if((DiffParam.size() != 2) && (DiffParam.size() != 4))
     {
       Rf_error("Wrong diffusion parameters vector dimension in setDiffusion");
       abort();
@@ -109,33 +109,27 @@ public:
     // if ndim == 3 then the parameters are:
     //       1) the rotation angle alpha wrt z-axis
     //       2) the rotation angle beta wrt y-axis
-    //       3) the rotation angle gamma wrt x-axis
-    //       4) the ratio between the first (biggest) and the third (smallest) eigenvalue of K
-    //       5) the ratio between the second and the third (smallest) eigenvalue of K
-    else if(DiffParam.size() == 5) // case with ndim = 3
+    //       3) the ratio between the first (biggest) and the third (smallest) eigenvalue of K
+    //       4) the ratio between the second and the third (smallest) eigenvalue of K
+    else if(DiffParam.size() == 4) // case with ndim = 3
     {
       // Use the parametrization of K through the diffusion parameters
-      MatrixXr Qx(3,3);
-      Qx << 1.0, 0.0, 0.0,
-            0.0, std::cos(DiffParam(2)), -std::sin(DiffParam(2)),
-            0.0, std::sin(DiffParam(2)), std::cos(DiffParam(2));
-
-      MatrixXr Qy(3,3);
-      Qy << std::cos(DiffParam(1)), 0.0, std::sin(DiffParam(1)),
-            0.0, 1.0, 0.0,
-            -std::sin(DiffParam(1)), 0.0, std::cos(DiffParam(1));
-
       MatrixXr Qz(3,3);
       Qz << std::cos(DiffParam(0)), -std::sin(DiffParam(0)), 0.0,
             std::sin(DiffParam(0)), std::cos(DiffParam(0)), 0.0,
             0.0, 0.0, 1.0;
 
-      MatrixXr Sigma(3,3);
-      Sigma << std::cbrt(DiffParam(3) * DiffParam(3) / DiffParam(4)), 0.0, 0.0,
-               0.0, std::cbrt(DiffParam(4) * DiffParam(4) / DiffParam(3)), 0.0,
-               0.0, 0.0, std::cbrt( 1.0 / (DiffParam(3) * DiffParam(4)));
+      MatrixXr Qy(3,3);
+      Qy << std::cos(DiffParam(1)), 0.0, -std::sin(DiffParam(1)),
+            0.0, 1.0, 0.0,
+            std::sin(DiffParam(1)), 0.0, std::cos(DiffParam(1));
 
-      MatrixXr Q = Qz * Qy * Qx;
+      MatrixXr Sigma(3,3);
+      Sigma << std::cbrt(DiffParam(2) * DiffParam(2) / DiffParam(3)), 0.0, 0.0,
+               0.0, std::cbrt(DiffParam(3) * DiffParam(3) / DiffParam(2)), 0.0,
+               0.0, 0.0, std::cbrt( 1.0 / (DiffParam(2) * DiffParam(3)));
+
+      MatrixXr Q = Qz * Qy;
 
       MatrixXr K = Q * Sigma * Q.transpose();
 
@@ -171,7 +165,7 @@ public:
   template<UInt ndim>
   VectorXr getDiffusionParam(void) const
   { 
-    UInt dim = (ndim == 2) ? 2 : 5; // Diffusion paramter dimension
+    UInt dim = (ndim == 2) ? 2 : 4; // Diffusion paramter dimension
 
     VectorXr res(dim); // Vector to store the result (the diffusion parameters)
 
@@ -213,21 +207,21 @@ public:
       else
         midpos = 2;
 
-      res(3) = K_eigenvalues(maxpos)/K_eigenvalues(minpos);
-      res(4) = K_eigenvalues(midpos)/K_eigenvalues(minpos);
+      res(2) = K_eigenvalues(maxpos)/K_eigenvalues(minpos); // first eigenvalue ratio
+      res(3) = K_eigenvalues(midpos)/K_eigenvalues(minpos); // second eigenvalue ratio
 
       VectorXr v1 = K_eigen.eigenvectors().col(maxpos).real();
       VectorXr v2 = K_eigen.eigenvectors().col(midpos).real();
       VectorXr v3 = K_eigen.eigenvectors().col(minpos).real();
 
-      if(v1(2) >= 0.0)
-        v1 *= (-1.0);
+      if(v1(2) <= 0.0)
+        v1 *= (-1.0); // Change sign to have beta in [0, EIGEN_PI]
 
-      Real beta1 = std::asin(-v1(2));
+      Real beta1 = std::asin(v1(2));
       Real beta2 = EIGEN_PI - beta1;
 
-      Real alpha1 = std::acos(v1(0)/std::cos(beta1)); // first eigenvalue ratio
-      Real alpha2 = std::acos(v1(0)/std::cos(beta2)); // second eigenvalue ratio
+      Real alpha1 = std::acos(v1(0)/std::cos(beta1));
+      Real alpha2 = std::acos(v1(0)/std::cos(beta2));
 
       if(std::abs(v1(1) - std::cos(beta1)*std::sin(alpha1)) < 1e-6)
       {
@@ -239,12 +233,6 @@ public:
         res(0) = alpha2;  // rotation angle wrt z axis
         res(1) = beta2;  // rotation angle wrt y axis
       }
-
-      if(v2(2) * std::cos(res(1)) < 0.0)
-        v2 *= (-1.0);
-
-
-      res(2) = std::acos(std::cos(res(0)) * v2(1) - std::sin(res(0)) * v2(0)); // rotation angle wrt x axis
     }
 
     return res;

@@ -60,12 +60,12 @@ template <UInt ORDER, UInt mydim, UInt ndim>
 VectorXr Parameter_Cascading<ORDER, mydim, ndim>::step(VectorXr init, const std::function<Real (VectorXr, Real)>& F, 
 	const std::function<VectorXr (VectorXr, Real)>& dF, const std::function<void (VectorXr)>& set_param)
 {
-	UInt dim = (ndim == 2) ? 2 : 5;
+	UInt dim = init.size();
 
-	VectorXr lower_bound(ndim);
-	VectorXr upper_bound(ndim);
-	VectorXr periods(ndim);
-	for(UInt i = 0; i < ndim; ++i)
+	VectorXr lower_bound(dim);
+	VectorXr upper_bound(dim);
+	VectorXr periods(dim);
+	for(UInt i = 0; i < dim; ++i)
 	{
 		lower_bound(i) = std::numeric_limits<Real>::min();
 		upper_bound(i) = std::numeric_limits<Real>::max();
@@ -223,7 +223,7 @@ Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim>::apply(void)
 		Rprintf("Finding diffusion matrix K\n");
 		VectorXr init = diffusion;
 
-		UInt dim = (ndim == 2) ? 2 : 5;
+		UInt dim = (ndim == 2) ? 2 : 4;
 
 		VectorXr lower_bound(dim);
 		VectorXr upper_bound(dim);
@@ -238,9 +238,9 @@ Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim>::apply(void)
 		}
 		else if(ndim == 3)
 		{
-			lower_bound << 0.0, 0.0, 0.0, 1.0, 1.0;
-			upper_bound << EIGEN_PI, EIGEN_PI, EIGEN_PI, 1000.0, 1000.0;
-			periods << EIGEN_PI, EIGEN_PI, EIGEN_PI, 0.0, 0.0;
+			lower_bound << 0.0, 0.0, 1.0, 1.0;
+			upper_bound << EIGEN_PI, EIGEN_PI, 1000.0, 1000.0;
+			periods << EIGEN_PI, EIGEN_PI, 0.0, 0.0;
 		}
 				
 		std::function<Real (VectorXr, Real)> F = [this, &lower_bound, &upper_bound](VectorXr x, Real lambda)
@@ -261,11 +261,11 @@ Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim>::apply(void)
 		diffusion = step(init, lower_bound, upper_bound, periods, F, dF, set_param);
 	}
 
-	if(update_K_direction) // Update only the diffusion angles parameter (the first in 2D case, the first three in 3D case)
+	if(update_K_direction) // Update only the diffusion angles parameter (the first in 2D case, the first two in 3D case)
 	{	
 		Rprintf("Finding K direction\n");
 
-		UInt angle_dim = (ndim == 2) ? 1 : 3;
+		UInt angle_dim = (ndim == 2) ? 1 : 2;
 
 		VectorXr init(angle_dim);
 		VectorXr lower_bound(angle_dim);
@@ -323,18 +323,18 @@ Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim>::apply(void)
 		}
 		else if(ndim == 3)
 		{
-			init << diffusion(0), diffusion(1), diffusion(2);
-			lower_bound << 0.0, 0.0, 0.0;
-			upper_bound << EIGEN_PI, EIGEN_PI, EIGEN_PI;
-			periods << EIGEN_PI, EIGEN_PI, EIGEN_PI;
+			init << diffusion(0), diffusion(1);
+			lower_bound << 0.0, 0.0;
+			upper_bound << EIGEN_PI, EIGEN_PI;
+			periods << EIGEN_PI, EIGEN_PI;
 
 			F = [this, &upper_bound, &lower_bound](VectorXr x, Real lambda)
 			{
-				VectorXr param(5);
-				VectorXr lb(5);
-				VectorXr ub(5);
+				VectorXr param(4);
+				VectorXr lb(4);
+				VectorXr ub(4);
 
-				param << x(0), x(1), x(2), this -> diffusion(3), this -> diffusion(4);
+				param << x(0), x(1), this -> diffusion(2), this -> diffusion(3);
 				lb << lower_bound, 1.0, 1.0;
 				ub << upper_bound, 1000.0, 1000.0;
 			
@@ -343,33 +343,32 @@ Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim>::apply(void)
 
 			dF = [this, &upper_bound, &lower_bound](VectorXr x, Real lambda)
 			{
-				VectorXr param(5);
-				VectorXr lb(5);
-				VectorXr ub(5);
+				VectorXr param(4);
+				VectorXr lb(4);
+				VectorXr ub(4);
 			
-				param << x(0), x(1), x(2), this -> diffusion(3), this -> diffusion(4);
+				param << x(0), x(1), this -> diffusion(2), this -> diffusion(3);
 				lb << lower_bound, 1.0, 1.0;
 				ub << upper_bound, 1000.0, 1000.0;
 
-				VectorXr grad(3);
-				VectorXr tmp(5);
+				VectorXr grad(2);
+				VectorXr tmp(4);
 				tmp = this -> H.eval_grad_K(param, lb, ub, lambda);
-				grad << tmp(0), tmp(1), tmp(2);
+				grad << tmp(0), tmp(1);
 
 				return grad;
 			};
 
 			set_param = [this](VectorXr x)
 			{
-				VectorXr param(5);
-				param << x(0), x(1), x(2), this -> diffusion(3), this -> diffusion(4);
+				VectorXr param(4);
+				param << x(0), x(1), this -> diffusion(2), this -> diffusion(3);
 				this -> H.set_K(param);
 			};
 
 			VectorXr res = step(init, lower_bound, upper_bound, periods, F, dF, set_param);
 			diffusion(0) = res(0);
 			diffusion(1) = res(1);
-			diffusion(2) = res(2);
 		}
 	}
 
@@ -435,52 +434,52 @@ Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim>::apply(void)
 		}
 		else if(ndim == 3)
 		{
-			init << diffusion(3), diffusion(4);
+			init << diffusion(2), diffusion(3);
 			lower_bound << 1.0, 1.0;
 			upper_bound << 1000.0, 1000.0;
 			periods << 0.0, 0.0;
 
 			F = [this, &upper_bound, &lower_bound](VectorXr x, Real lambda)
 			{
-				VectorXr param(5);
-				VectorXr lb(5);
-				VectorXr ub(5);
+				VectorXr param(4);
+				VectorXr lb(4);
+				VectorXr ub(4);
 
-				param << this -> diffusion(0), this -> diffusion(1), this -> diffusion(2), x(0), x(1);
-				lb << 0.0, 0.0, 0.0, lower_bound;
-				ub << EIGEN_PI, EIGEN_PI, EIGEN_PI, upper_bound;
+				param << this -> diffusion(0), this -> diffusion(1), x(0), x(1);
+				lb << 0.0, 0.0, lower_bound;
+				ub << EIGEN_PI, EIGEN_PI, upper_bound;
 			
 				return this -> H.eval_K(param, lb, ub, lambda);
 			};
 
 			dF = [this, &upper_bound, &lower_bound](VectorXr x, Real lambda)
 			{
-				VectorXr param(5);
-				VectorXr lb(5);
-				VectorXr ub(5);
+				VectorXr param(4);
+				VectorXr lb(4);
+				VectorXr ub(4);
 			
-				param << this -> diffusion(0), this -> diffusion(1), this -> diffusion(2), x(0), x(1);
-				lb << 0.0, 0.0, 0.0, lower_bound;
-				ub << EIGEN_PI, EIGEN_PI, EIGEN_PI, upper_bound;
+				param << this -> diffusion(0), this -> diffusion(1), x(0), x(1);
+				lb << 0.0, 0.0, lower_bound;
+				ub << EIGEN_PI, EIGEN_PI, upper_bound;
 
 				VectorXr grad(2);
-				VectorXr tmp(5);
+				VectorXr tmp(4);
 				tmp = this -> H.eval_grad_K(param, lb, ub, lambda);
-				grad << tmp(3), tmp(4);
+				grad << tmp(2), tmp(3);
 
 				return grad;
 			};
 
 			set_param = [this](VectorXr x)
 			{
-				VectorXr param(5);
-				param << this -> diffusion(0), this -> diffusion(1), this -> diffusion(2), x(0), x(1);
+				VectorXr param(4);
+				param << this -> diffusion(0), this -> diffusion(1), x(0), x(1);
 				this -> H.set_K(param);
 			};
 
 			VectorXr res = step(init, lower_bound, upper_bound, periods, F, dF, set_param);
-			diffusion(3) = res(0);
-			diffusion(4) = res(1);
+			diffusion(2) = res(0);
+			diffusion(3) = res(1);
 		}
 	}	
 	

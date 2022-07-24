@@ -397,7 +397,7 @@ Solution_Builders::build_solution_plain_regression(const MatrixXr & solution, co
                         rans11[i + barycenters.rows()*j] = barycenters(i,j);
         }
 
-        UInt dim = (ndim == 2) ? 2 : 5;
+        UInt dim = (ndim == 2) ? 2 : 4;
         
         for(UInt j = 0; j < dim; ++j)
         {

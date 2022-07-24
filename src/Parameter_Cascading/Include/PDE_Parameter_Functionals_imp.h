@@ -125,7 +125,7 @@ Real PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_c(const Real& c, const l
 template <UInt ORDER, UInt mydim, UInt ndim>
 VectorXr PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_grad_K(const VectorXr& DiffParam, const VectorXr& LowerBound, const VectorXr& UpperBound, const lambda::type<1>& lambda, const Real& h) const
 {
-	UInt dim = (ndim == 2) ? 2 : 5;
+	UInt dim = (ndim == 2) ? 2 : 4;
 	VectorXr res(dim);
 
 	// Check if angle remain in a proper range after finite difference schemes

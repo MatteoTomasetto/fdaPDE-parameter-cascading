@@ -47,8 +47,8 @@
 #' The first component is called 'parameter'; it has the following possibilities: NULL (default option), 'K', 'K_direction', 'K_eigenval_ratio'.
 #' If NULL is selected, the parameter cascading algorithm is not enabled.
 #' If 'K' is selected, the diffusion matrix K will be estimated via Parameter Cascading algorithm.
-#' If 'K_direction' is selected, the directions of anisotropy will be estimated via Parameter Cascading algorithm.
-#' If 'K_eigenval_ratio' is selected, the anisotropy intensities will be estimated via Parameter Cascading algorithm.
+#' If 'K_direction' is selected, the angle identifying the direction of anisotropy will be estimated via Parameter Cascading algorithm.
+#' If 'K_eigenval_ratio' is selected, the ratio of K's eigenvalues identifying the anisotropy shape will be estimated via Parameter Cascading algorithm.
 #' Notice that, if also the parameters K, b or c are provided in PDE_parameters, Parameter Cascading algorithm uses them as initialization.
 #' Otherwise, the parameters that are not provided will be automatically initialized (K = Identity matrix, b = zero vector, c = zero). 
 #' The second component is called 'optimization_method'; it has the following possibilities: 'L-BFGS-B' (default option), 'gradient', 'genetic'.
@@ -1023,12 +1023,11 @@ smooth.FEM<-function(locations = NULL, observations, FEMbasis,
     		parameter_cascading = list(
     			K_first_direction = bigsol[[23]],
 				K_second_direction = bigsol[[24]],
-				K_third_direction = bigsol[[25]],
-    			K_first_eigenval_ratio = bigsol[[26]],
-    			K_second_eigenval_ratio = bigsol[[27]],
-    			K = bigsol[[28]],
-    			b = bigsol[[29]],
-    			c = bigsol[[30]])
+    			K_first_eigenval_ratio = bigsol[[25]],
+    			K_second_eigenval_ratio = bigsol[[26]],
+    			K = bigsol[[27]],
+    			b = bigsol[[28]],
+    			c = bigsol[[29]])
     	}
 
     	reslist$parameter_cascading = parameter_cascading
