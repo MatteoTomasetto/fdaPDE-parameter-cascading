@@ -238,9 +238,11 @@ Solution_Builders::build_solution_plain_regression(const MatrixXr & solution, co
         const MatrixXr & barycenters = (regressionData.isLocationsByBarycenter()) ? regressionData.getBarycenters() : regression.getBarycenters();
         const VectorXi & elementIds = (regressionData.isLocationsByBarycenter()) ? regressionData.getElementIds() : regression.getElementIds();
 
+        UInt dim = (ndim == 2) ? 2 : 4; // Number of Parameter Cascading Outputs changes wrt the problem dimension  
+
         // ---- Copy results in R memory ----
         SEXP result = NILSXP;  // Define emty term --> never pass to R empty or is "R session aborted"
-        result = PROTECT(Rf_allocVector(VECSXP, 27)); // 22 elements to be allocated
+        result = PROTECT(Rf_allocVector(VECSXP, 25+dim));
 
         // Add solution matrix in position 0
         SET_VECTOR_ELT(result, 0, Rf_allocMatrix(REALSXP, solution.rows(), solution.cols()));
@@ -397,8 +399,6 @@ Solution_Builders::build_solution_plain_regression(const MatrixXr & solution, co
                         rans11[i + barycenters.rows()*j] = barycenters(i,j);
         }
 
-        UInt dim = (ndim == 2) ? 2 : 4;
-        
         for(UInt j = 0; j < dim; ++j)
         {
             // Add optimal diffusion parameters
