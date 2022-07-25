@@ -65,8 +65,7 @@ Real PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_K(const VectorXr& DiffPa
 	set_K(DiffParam);
 	
 	// Solve the regression problem
-	// Since this function will be called a lot of times in Parameter Cascading, GCV_stochastic is used (it's faster than GCV_Exact);
-	// moreover it is good since it computes directly z_hat
+	// Use GCV_stochastic since it computes directly z_hat
 	Carrier<RegressionDataElliptic> carrier = CarrierBuilder<RegressionDataElliptic>::build_plain_carrier(model.getRegressionData(), model, model.getOptimizationData());
 	GCV_Stochastic<Carrier<RegressionDataElliptic>, 1> solver(carrier, true);
 		
@@ -87,8 +86,7 @@ Real PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_b(const VectorXr& AdvPar
 	set_b(AdvParam);
 	
 	// Solve the regression problem
-	// Since this function will be called a lot of times in Parameter Cascading, GCV_stochastic is used (it's faster than GCV_Exact);
-	// moreover it is good since it computes directly z_hat
+	// Use GCV_stochastic since it computes directly z_hat
 	Carrier<RegressionDataElliptic> carrier = CarrierBuilder<RegressionDataElliptic>::build_plain_carrier(model.getRegressionData(), model, model.getOptimizationData());
 	GCV_Stochastic<Carrier<RegressionDataElliptic>, 1> solver(carrier, true);
 		
@@ -108,8 +106,7 @@ Real PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_c(const Real& c, const l
 	set_c(c);
 	
 	// Solve the regression problem
-	// Since this function will be called a lot of times in Parameter Cascading, GCV_stochastic is used (it's faster than GCV_Exact);
-	// moreover it is good since it computes directly z_hat
+	// Use GCV_stochastic since it computes directly z_hat
 	Carrier<RegressionDataElliptic> carrier = CarrierBuilder<RegressionDataElliptic>::build_plain_carrier(model.getRegressionData(), model, model.getOptimizationData());
 	GCV_Stochastic<Carrier<RegressionDataElliptic>, 1> solver(carrier, true);
 		

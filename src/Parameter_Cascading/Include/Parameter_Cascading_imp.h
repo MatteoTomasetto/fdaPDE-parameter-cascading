@@ -14,17 +14,18 @@
 #include <iostream> 
 
 template <UInt ORDER, UInt mydim, UInt ndim>
+template <typename EvaluationType>
 std::pair<Real, Real>
 Parameter_Cascading<ORDER, mydim, ndim>::compute_GCV(Carrier<RegressionDataElliptic>& carrier,
-													 GCV_Exact<Carrier<RegressionDataElliptic>, 1>& solver,
+													 EvaluationType& solver,
 													 Real lambda_init) const
 {	
 
-	Function_Wrapper<Real, Real, Real, Real, GCV_Exact<Carrier<RegressionDataElliptic>, 1>> Fun(solver);
+	Function_Wrapper<Real, Real, Real, Real, EvaluationType> Fun(solver);
 	const OptimizationData optr = H.getModel().getOptimizationData();
 
-	std::unique_ptr<Opt_methods<Real,Real,GCV_Exact<Carrier<RegressionDataElliptic>, 1>>>
-	optim_p = Opt_method_factory<Real, Real, GCV_Exact<Carrier<RegressionDataElliptic>, 1>>::create_Opt_method(optr.get_criterion(), Fun);
+	std::unique_ptr<Opt_methods<Real,Real,EvaluationType>>
+	optim_p = Opt_method_factory<Real, Real, EvaluationType>::create_Opt_method(optr.get_criterion(), Fun);
 
 	// Start from 6 lambda and find the minimum value of GCV to pick a good initialization for Newton method
 	std::vector<Real> lambda_grid = {5.000000e-05, 1.442700e-03, 4.162766e-02, 1.201124e+00, 3.465724e+01, 1.000000e+03};
@@ -145,14 +146,24 @@ VectorXr Parameter_Cascading<ORDER, mydim, ndim>::step(VectorXr init, const Vect
 		Rprintf("\n");
 
 		// Compute GCV with the new parameters
+		// By default GCV_Exact is used; If user set GCV_Stochastic option in input, then it will be used
 		set_param(opt_sol);
-
-		Carrier<RegressionDataElliptic> carrier = CarrierBuilder<RegressionDataElliptic>::build_plain_carrier(H.getModel().getRegressionData(), H.getModel(), H.getModel().getOptimizationData());
-		GCV_Exact<Carrier<RegressionDataElliptic>, 1> solver(carrier);
+		std::pair<Real, Real> opt_sol_GCV;
 		
 		Rprintf("Computing GCV with the optimal sol for lambda = %e\n", lambdas(iter));
 
-		std::pair<Real, Real> opt_sol_GCV = compute_GCV(carrier, solver, lambda_opt); // Use the last optimal lambda found as initial lambda computing GCV
+		OptimizationData& optr = H.getModel().getOptimizationData();
+		Carrier<RegressionDataElliptic> carrier = CarrierBuilder<RegressionDataElliptic>::build_plain_carrier(H.getModel().getRegressionData(), H.getModel(), optr);
+		if(optr.get_loss_function() == "GCV" && (optr.get_DOF_evaluation() == "stochastic" || optr.get_DOF_evaluation() == "not_required"))
+		{
+			GCV_Stochastic<Carrier<RegressionDataElliptic>, 1> solver(carrier, true);
+			opt_sol_GCV = compute_GCV<GCV_Stochastic<Carrier<RegressionDataElliptic>, 1>>(carrier, solver, lambda_opt); // Use the last optimal lambda found as initial lambda computing GCV
+		}
+		else
+		{
+			GCV_Exact<Carrier<RegressionDataElliptic>, 1> solver(carrier);
+			opt_sol_GCV = compute_GCV<GCV_Exact<Carrier<RegressionDataElliptic>, 1>>(carrier, solver, lambda_opt); // Use the last optimal lambda found as initial lambda computing GCV
+		}
 		
 		if(iter == 0 || opt_sol_GCV.second <= GCV)
 		{

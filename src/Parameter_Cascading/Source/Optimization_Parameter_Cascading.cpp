@@ -192,8 +192,6 @@ void Gradient_Descent_fd::upgrade_best(void)
 {	
  	VectorXr new_best = best;
 
- 	Rprintf("current best sol: %f, %f \n", best(0), best(1));
-
 	// Set some useful parameters
 	Real alpha = 1.0;
 	Real beta = 0.5;

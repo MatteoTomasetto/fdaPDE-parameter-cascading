@@ -56,8 +56,9 @@ class Parameter_Cascading
 			 Real lambda_opt; // Optimal lambda for GCV
 			 
 			 // Function to compute the optimal lambda through GCV
+			 template <typename EvaluationType>
 			 std::pair<Real, Real> compute_GCV(Carrier<RegressionDataElliptic>& carrier,
-			 								   GCV_Exact<Carrier<RegressionDataElliptic>, 1>& solver,
+			 								   EvaluationType& solver,
 			 								   Real lambda_init) const;
 			 
 			 // Main function of the algorithm; inputs are
