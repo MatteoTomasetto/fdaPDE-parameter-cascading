@@ -109,7 +109,11 @@ public:
                 }
             }
 
-            assert(step_lo < step_hi);
+            if(step_lo > step_hi)
+            {
+                Rprintf("step lower is bigger than step higher in LineSearchBracketing");
+                return;
+            }
 
             if (step < param.min_step)
             {

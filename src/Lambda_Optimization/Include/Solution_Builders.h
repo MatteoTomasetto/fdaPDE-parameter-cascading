@@ -14,6 +14,7 @@
 struct Output_Parameter_Cascading
 {
         VectorXr diffusion_opt;
+        Real aniso_intensity_opt;
         MatrixXr K_opt;
         VectorXr b_opt;
         Real c_opt;

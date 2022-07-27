@@ -11,7 +11,9 @@
 
 
 template <UInt ORDER, UInt mydim, UInt ndim>
-void PDE_Parameter_Functional<ORDER, mydim, ndim>::set_K(const VectorXr& DiffParam) const
+template <typename DiffType>
+typename std::enable_if<std::is_same<DiffType, VectorXr>::value || std::is_same<DiffType, MatrixXr>::value, void>::type
+PDE_Parameter_Functional<ORDER, mydim, ndim>::set_K(const DiffType& DiffParam) const
 {
 	// Set the diffusion in RegressionData
 	model.getRegressionData().getK().setDiffusion(DiffParam);
@@ -22,7 +24,6 @@ void PDE_Parameter_Functional<ORDER, mydim, ndim>::set_K(const VectorXr& DiffPar
 
 	return;
 }
-			
 
 template <UInt ORDER, UInt mydim, UInt ndim>
 void PDE_Parameter_Functional<ORDER, mydim, ndim>::set_b(const VectorXr& AdvParam) const
@@ -49,6 +50,26 @@ void PDE_Parameter_Functional<ORDER, mydim, ndim>::set_c(const Real& c) const
 	return;
 }
 
+template <UInt ORDER, UInt mydim, UInt ndim>
+Real PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_K(const MatrixXr& K, const lambda::type<1>& lambda) const
+{
+	// Set parameter in RegressionData
+	set_K<MatrixXr>(K);
+	
+	// Solve the regression problem
+	// Use GCV_stochastic since it computes directly z_hat
+	Carrier<RegressionDataElliptic> carrier = CarrierBuilder<RegressionDataElliptic>::build_plain_carrier(model.getRegressionData(), model, model.getOptimizationData());
+	GCV_Stochastic<Carrier<RegressionDataElliptic>, 1> solver(carrier, true);
+		
+	solver.update_parameters(lambda); // solve the problem and compute z_hat
+
+	VectorXr z_hat = solver.get_z_hat();
+	VectorXr zp = *(model.getRegressionData().getObservations());
+	Real res = (zp - z_hat).squaredNorm();
+
+	return res;
+}
+
 
 template <UInt ORDER, UInt mydim, UInt ndim>
 Real PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_K(const VectorXr& DiffParam, const VectorXr& LowerBound, const VectorXr& UpperBound, const lambda::type<1>& lambda) const
@@ -62,7 +83,7 @@ Real PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_K(const VectorXr& DiffPa
 	}
 	
 	// Set parameter in RegressionData
-	set_K(DiffParam);
+	set_K<VectorXr>(DiffParam);
 	
 	// Solve the regression problem
 	// Use GCV_stochastic since it computes directly z_hat
@@ -118,6 +139,18 @@ Real PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_c(const Real& c, const l
 	return (zp - z_hat).squaredNorm();
 }
 
+template <UInt ORDER, UInt mydim, UInt ndim>
+VectorXr PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_grad_aniso_intensity(const MatrixXr& K, const Real& aniso_intensity, const lambda::type<1>& lambda, const Real& h) const
+{
+	VectorXr res(1);
+	
+	MatrixXr KUpper = K * (aniso_intensity + h);
+	MatrixXr KLower = K * (aniso_intensity - h);
+
+	res(0) = (eval_K(KUpper, lambda) - eval_K(KLower, lambda)) / (2. * h);
+	
+	return res;
+}
 
 template <UInt ORDER, UInt mydim, UInt ndim>
 VectorXr PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_grad_K(const VectorXr& DiffParam, const VectorXr& LowerBound, const VectorXr& UpperBound, const lambda::type<1>& lambda, const Real& h) const

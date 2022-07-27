@@ -184,8 +184,12 @@ class  RegressionDataElliptic:public RegressionData
 		Advection<PDEParameterOptions::Constant> b_;
 		Reaction<PDEParameterOptions::Constant> c_;
 
-		UInt parameter_cascading_ = 0;	// Option for the parameters to estimate in Parameter Cascading algortihm
-		UInt parameter_cascading_opt_ = 0; // Option for the optimization algorithm to use in Parameter Cascading algorithm
+		UInt parameter_cascading_diffusion = 0;	// Option for the diffusion parameter in Parameter Cascading algortihm
+		UInt parameter_cascading_advection = 0;	// Option for the advection parameter in Parameter Cascading algortihm
+		UInt parameter_cascading_reaction = 0;	// Option for the reaction parameter in Parameter Cascading algortihm
+		UInt parameter_cascading_diffusion_opt = 0;	// Option for the optimization algorithm in Parameter Cascading algortihm
+		UInt parameter_cascading_advection_opt = 0;	// Option for the optimization algorithm in Parameter Cascading algortihm
+		UInt parameter_cascading_reaction_opt = 0;	// Option for the optimization algorithm in Parameter Cascading algortihm
 
 	public:
 		//! A complete version of the constructor.
@@ -198,7 +202,7 @@ class  RegressionDataElliptic:public RegressionData
 			\param RK an R-double 2X2 matrix containing the coefficients for a anisotropic DIFFUSION term.
 			\param Rb an R-double 2-dim vector that contains the coefficients for the TRANSPORT coefficients.
 			\param Rc an R-double that contains the coefficient of the REACTION term
-			\param RparameterCascading an R-integer that contain the option for Parameter Cascading algorithm
+			\param RparameterCascading an R-vector of integer that contain the options for Parameter Cascading algorithm
 			\param Rcovariates an R-matrix storing the covariates of the regression
 			\param RincidenceMatrix an R-matrix containing the incidence matrix defining the regions in the model with areal data
 			\param RBCIndices an R-integer containing the indexes of the nodes the user want to apply a Dirichlet Condition,
@@ -209,7 +213,7 @@ class  RegressionDataElliptic:public RegressionData
 		        \param Rnrealizations the number of random points used in the stochastic computation of the dofs
 		        \param Rsearch an R-integer to decide the search algorithm type (tree or naive or walking search algorithm).
 		*/
-		// Constructor that allows to set the option parameter_cascading_
+		// Constructor that allows to set the options for Parameter Cascading
 		explicit RegressionDataElliptic(SEXP Rlocations, SEXP RbaryLocations, SEXP Robservations, SEXP Rorder,
 			 SEXP RK, SEXP Rb, SEXP Rc, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues,
 			 SEXP RincidenceMatrix, SEXP RarealDataAvg, SEXP Rsearch);
@@ -230,11 +234,24 @@ class  RegressionDataElliptic:public RegressionData
 		const Advection<PDEParameterOptions::Constant> & getB() const {return b_;}
 		const Reaction<PDEParameterOptions::Constant> & getC() const {return c_;}
 
-		const UInt get_parameter_cascading_option() const {return parameter_cascading_;}
-		const UInt get_parameter_cascading_optimization_option() const {return parameter_cascading_opt_;}
-		void set_parameter_cascading_option(UInt new_option) {parameter_cascading_ = new_option;}
+		const UInt get_parameter_cascading_diffusion() const {return parameter_cascading_diffusion;}
+		const UInt get_parameter_cascading_advection() const {return parameter_cascading_advection;}
+		const UInt get_parameter_cascading_reaction() const {return parameter_cascading_reaction;}
+		const UInt get_parameter_cascading_diffusion_opt() const {return parameter_cascading_diffusion_opt;}
+		const UInt get_parameter_cascading_advection_opt() const {return parameter_cascading_advection_opt;}
+		const UInt get_parameter_cascading_reaction_opt() const {return parameter_cascading_reaction_opt;}
 
-		bool ParameterCascadingOn(void) const { return parameter_cascading_ != 0;} // return true if Parameter Cascading algorithm has to be done
+		void reset_parameter_cascading_option()
+		{
+			parameter_cascading_diffusion = 0;
+			parameter_cascading_advection = 0;
+			parameter_cascading_reaction = 0;
+		}
+
+		bool ParameterCascadingOn(void) const
+		{ 
+			return (parameter_cascading_diffusion != 0 || parameter_cascading_advection != 0 || parameter_cascading_reaction != 0);
+		} // return true if Parameter Cascading algorithm has to be done
 
 };
 
@@ -246,8 +263,12 @@ class RegressionDataEllipticSpaceVarying:public RegressionData
 		Reaction<PDEParameterOptions::SpaceVarying> c_;
 		ForcingTerm u_;
 
-		UInt parameter_cascading_ = 0;	// Option for the parameters to estimate in Parameter Cascading algortihm
-		UInt parameter_cascading_opt_ = 0; // Option for the optimization algorithm to use in Parameter Cascading algorithm
+		UInt parameter_cascading_diffusion = 0;	// Option for the diffusion parameter in Parameter Cascading algortihm
+		UInt parameter_cascading_advection = 0;	// Option for the advection parameter in Parameter Cascading algortihm
+		UInt parameter_cascading_reaction = 0;	// Option for the reaction parameter in Parameter Cascading algortihm
+		UInt parameter_cascading_diffusion_opt = 0;	// Option for the optimization algorithm in Parameter Cascading algortihm
+		UInt parameter_cascading_advection_opt = 0;	// Option for the optimization algorithm in Parameter Cascading algortihm
+		UInt parameter_cascading_reaction_opt = 0;	// Option for the optimization algorithm in Parameter Cascading algortihm
 
 	public:
 
@@ -294,12 +315,24 @@ class RegressionDataEllipticSpaceVarying:public RegressionData
 		const Reaction<PDEParameterOptions::SpaceVarying> & getC() const {return c_;}
 		const ForcingTerm & getU() const {return u_;}
 
-		const UInt get_parameter_cascading_option() const {return parameter_cascading_;}
-		const UInt get_parameter_cascading_optimization_option() const {return parameter_cascading_opt_;}
-		void set_parameter_cascading_option(UInt new_option) {parameter_cascading_ = new_option;}
+		const UInt get_parameter_cascading_diffusion() const {return parameter_cascading_diffusion;}
+		const UInt get_parameter_cascading_advection() const {return parameter_cascading_advection;}
+		const UInt get_parameter_cascading_reaction() const {return parameter_cascading_reaction;}
+		const UInt get_parameter_cascading_diffusion_opt() const {return parameter_cascading_diffusion_opt;}
+		const UInt get_parameter_cascading_advection_opt() const {return parameter_cascading_advection_opt;}
+		const UInt get_parameter_cascading_reaction_opt() const {return parameter_cascading_reaction_opt;}
 
-		bool ParameterCascadingOn(void) const { return parameter_cascading_ != 0;} // return true if Parameter Cascading algorithm has to be done
+		void reset_parameter_cascading_option()
+		{
+			parameter_cascading_diffusion = 0;
+			parameter_cascading_advection = 0;
+			parameter_cascading_reaction = 0;
+		}
 
+		bool ParameterCascadingOn(void) const
+		{ 
+			return (parameter_cascading_diffusion != 0) || (parameter_cascading_advection != 0) || (parameter_cascading_reaction != 0);
+		} // return true if Parameter Cascading algorithm has to be done
 
 };
 

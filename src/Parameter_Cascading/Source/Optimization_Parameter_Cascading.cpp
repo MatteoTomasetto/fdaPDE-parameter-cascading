@@ -227,10 +227,12 @@ void Gradient_Descent_fd::upgrade_best(void)
 	}
 
 	// Backtracking line search to set the step size
-	while(F(new_best) > f - alpha * df_norm / 2.0)
+	UInt counter = 0;
+	while(F(new_best) > f - alpha * df_norm / 2.0 || counter < 40)
 	{
 		alpha *= beta;
 		new_best = best - alpha * df;
+		counter++;
 	}
 
 	best = new_best;

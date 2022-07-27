@@ -42,23 +42,31 @@
 #' a vector with length #points.}
 #' }
 #' For 2.5D and 3D, only the Laplacian is available (\code{PDE_parameters=NULL}).
+#'
 #' In addition, it is possible to add a further not mandatory list in PDE_parameters called 'parameter_cascading' in order to estimate
 #' the PDE_parameters via Parameter Cascading Algorithm optimizing the mean squared error (available if PDE_parameters$u is NULL).
-#' The first component is called 'parameter'; it has the following possibilities: NULL (default option), 'K', 'K_direction', 'K_eigenval_ratio'.
-#' If NULL is selected, the parameter cascading algorithm is not enabled.
-#' If 'K' is selected, the diffusion matrix K will be estimated via Parameter Cascading algorithm.
-#' If 'K_direction' is selected, the angle identifying the direction of anisotropy will be estimated via Parameter Cascading algorithm.
-#' If 'K_eigenval_ratio' is selected, the ratio of K's eigenvalues identifying the anisotropy shape will be estimated via Parameter Cascading algorithm.
-#' Notice that, if also the parameters K, b or c are provided in PDE_parameters, Parameter Cascading algorithm uses them as initialization.
-#' Otherwise, the parameters that are not provided will be automatically initialized (K = Identity matrix, b = zero vector, c = zero). 
-#' The second component is called 'optimization_method'; it has the following possibilities: 'L-BFGS-B' (default option), 'gradient', 'genetic'.
-#' If 'L-BFGS-B' is selected, the L-BFGS-B Algorithm is used for optimization step in Parameter Cascading.
+#' 'parameter_cascading' must be a list with 3 entries, each one is a vector containing the parameter to optimize and the optimization algorithm to use for that parameter:
+#' 		1) the first option 'diffusion' admits the following parameter possibilities: NULL (default option), 'K', 'K_direction', 'K_eigenval_ratio', 'anisotropy_intensity'.
+#' 		   If NULL is selected, the parameter cascading algorithm is not enabled.
+#' 		   If 'K' is selected, the diffusion matrix K will be estimated via Parameter Cascading algorithm.
+#' 		   If 'K_direction' is selected, the angle identifying the direction of anisotropy will be estimated via Parameter Cascading algorithm.
+#' 		   If 'K_eigenval_ratio' is selected, the ratio of K's eigenvalues identifying the anisotropy shape will be estimated via Parameter Cascading algorithm.
+#'		   If 'anisotropy_intensity' is selected, the anisotropy intensity (a coefficient that multiply K) will be estimated via Parameter Cascading algorithm.
+#'		2) the second option 'advection' admits the following parameter possibilities: NULL (default option), 'b' to estimate the advection vector.
+#'		3) the third option 'reaction' admits the following parameter possibilities: NULL (default option), 'c' to estimate the reaction term.
+#' Moreover, for each entry in the list, it is possible to indicate the optimization algorithm to use;
+#' the following possibilities are available: 'L-BFGS' (default option), 'gradient', 'genetic'.
+#' If 'L-BFGS' is selected, the L-BFGS Algorithm is used for unconstraint optimizations and 'L-BFGS-B' Algorithm is used for contraint optimizations.
 #' If 'gradient' is selected, the Gradient Descent is used for optimization step in Parameter Cascading.
 #' If 'genetic' is selected, the Genetic Algortihm is used for optimization step in Parameter Cascading.
+#' Notice that, if also the parameters K, b or c are provided in PDE_parameters, Parameter Cascading algorithm uses them as initialization.
+#' Otherwise, the parameters that are not provided will be automatically initialized (K = Identity matrix, b = zero vector, c = zero). 
+#' Notice that if an entry of parameter_cascading is not explicitly added, it will be considered as NULL.
+#
 #' EXAMPLE: kappa <- cbind(c(1,0), c(0,1))
 #'			b = array(0, c(2, nrow(points)))
 #'			c = 0
-#'			parameter_cascading = list(parameter = 'K', optimization_method = 'gradient')
+#'			parameter_cascading = list(diffusion =c('K','L-BFGS'), reaction = c('c', 'gradient'))
 #'			PDE_parameters <- list(K = kappa, b = b, c = c, parameter_cascading = parameter_cascading)
 #' @param BC A list with two vectors:
 #'  \code{BC_indices}, a vector with the indices in \code{nodes} of boundary nodes where a Dirichlet Boundary Condition should be applied;
@@ -508,57 +516,106 @@ smooth.FEM<-function(locations = NULL, observations, FEMbasis,
     DOF.matrix = as.matrix(DOF.matrix)
 
   # Set a convention for parameter cascading options
-  parameter_cascading_option = c(0, 0)
-  if(!is.null(PDE_parameters) & is.null(PDE_parameters$u)) # only non-space varying case implemented so far
+  parameter_cascading_option = c(0,0,0,0,0,0)
+  if(!is.null(PDE_parameters$parameter_cascading) & is.null(PDE_parameters$u)) # Only non-space varying case implemented so far
   {
   	# Set which parameter to estimate with Parameter Cascading algorithm
-    if(is.null(PDE_parameters$parameter_cascading) || is.null(PDE_parameters$parameter_cascading$parameter)){
-      parameter_cascading_option[1] = 0
-    }else if(PDE_parameters$parameter_cascading$parameter == 'K'){
-    	parameter_cascading_option[1] = 1
-    }else if(PDE_parameters$parameter_cascading$parameter == 'K_direction'){
-    	parameter_cascading_option[1] = 2
-    }else if(PDE_parameters$parameter_cascading$parameter == 'K_eigenval_ratio'){
-    	parameter_cascading_option[1] = 3
-    }else{
-      	stop("Invalid input for Parameter Cascading algorithm in PDE_parameters")
-    }
-  
-  	if(parameter_cascading_option[1] != 0){
-  		# Set a convention for optimization algorithm used in parameter cascading
-  		if(PDE_parameters$parameter_cascading$optimization_method == "L-BFGS-B"){
-      		parameter_cascading_option[2] = 0
-    	}else if(PDE_parameters$parameter_cascading$optimization_method == "gradient"){
-      		parameter_cascading_option[2] = 1
-      	}else if(PDE_parameters$parameter_cascading$optimization_method == "genetic"){
-      		parameter_cascading_option[2] = 2
-  		}else{
-  			stop("Invalid input for Parameter Cascading algorithm in PDE_parameters")
-  		}
+    if(is.null(PDE_parameters$parameter_cascading$diffusion)){
+   		parameter_cascading_option = 0
+   	}else if(PDE_parameters$parameter_cascading$diffusion[1] == 'K'){
+   		parameter_cascading_option = 1
+   	}else if(PDE_parameters$parameter_cascading$diffusion[1] == 'K_direction'){
+   		parameter_cascading_option = 2
+   	}else if(PDE_parameters$parameter_cascading$diffusion[1] == 'K_eigenval_ratio'){
+   		parameter_cascading_option = 3
+   	}else if(PDE_parameters$parameter_cascading$diffusion[1] == 'anisotropy_intensity'){
+   		parameter_cascading_option = 4
+   	}else{
+    	stop("Invalid input for Parameter Cascading algorithm in PDE_parameters")
+   	}
 
-  		# Set initial values for the PDE_parameters if user does not pass them    
-  	    if(is.null(PDE_parameters$K)){
-  	    	if(ndim == 2)
-  	    	  PDE_parameters$K <- cbind(c(1, 0), c(0, 1))
-  	    	else
-  	    		PDE_parameters$K <- cbind(c(1, 0, 0), c(0, 1, 0), c(0, 0, 1))
-  	    }else{
-  	  	  warning("K in PDE_parameters used as initialization for Parameter Cascading Algorithm")
-  	    }
-  	    if(is.null(PDE_parameters$b)){
-  	    	if(ndim == 2)
-  	    	  PDE_parameters$b <- c(0, 0)
-  	    	else
-  	    		PDE_parameters$b <- c(0, 0, 0)
-  	    }else{
-  	  	  warning("b in PDE_parameters used as initialization for Parameter Cascading Algorithm")
-  	    }
-  	    if(is.null(PDE_parameters$c)){
-  		  PDE_parameters$c <- 0
-  	    }else{
-  	  	  warning("c in PDE_parameters used as initialization for Parameter Cascading Algorithm")
-  	    }
+   	if(is.null(PDE_parameters$parameter_cascading$advection)){
+   		parameter_cascading_option = c(parameter_cascading_option,0)
+   	}else if(PDE_parameters$parameter_cascading$advection[1] == 'b'){
+   		parameter_cascading_option = c(parameter_cascading_option,1)
+   	}else{
+     	stop("Invalid input for Parameter Cascading algorithm in PDE_parameters")
+   	}
+   
+   	if(is.null(PDE_parameters$parameter_cascading$reaction)){
+    	parameter_cascading_option = c(parameter_cascading_option,0)
+    }else if(PDE_parameters$parameter_cascading$reaction[1] == 'c'){
+    	parameter_cascading_option = c(parameter_cascading_option,1)
+    }else{
+    	stop("Invalid input for Parameter Cascading algorithm in PDE_parameters")
     }
+
+    # Set a convention for optimization algorithm used in parameter cascading
+  	if(is.null(PDE_parameters$parameter_cascading$diffusion)){
+  		parameter_cascading_option = c(parameter_cascading_option,0)
+  	}else if(length(PDE_parameters$parameter_cascading$diffusion) < 2){
+  		parameter_cascading_option = c(parameter_cascading_option,0)
+  	}else if(PDE_parameters$parameter_cascading$diffusion[2] == "L-BFGS"){
+    	parameter_cascading_option = c(parameter_cascading_option,0)
+    }else if(PDE_parameters$parameter_cascading$diffusion[2] == "gradient"){
+    	parameter_cascading_option = c(parameter_cascading_option,1)
+    }else if(PDE_parameters$parameter_cascading$diffusion[2] == "genetic"){
+    	parameter_cascading_option = c(parameter_cascading_option,2)
+  	}else{
+  		stop("Invalid input for Parameter Cascading algorithm in PDE_parameters")
+  	}
+
+  	if(is.null(PDE_parameters$parameter_cascading$advection)){
+  		parameter_cascading_option = c(parameter_cascading_option,0)
+  	}else if(length(PDE_parameters$parameter_cascading$advection) < 2){
+  		parameter_cascading_option = c(parameter_cascading_option,0)
+  	}else if(PDE_parameters$parameter_cascading$advection[2] == "L-BFGS"){
+    	parameter_cascading_option = c(parameter_cascading_option,0)
+    }else if(PDE_parameters$parameter_cascading$advection[2] == "gradient"){
+    	parameter_cascading_option = c(parameter_cascading_option,1)
+    }else if(PDE_parameters$parameter_cascading$advection[2] == "genetic"){
+    	parameter_cascading_option = c(parameter_cascading_option,2)
+  	}else{
+  		stop("Invalid input for Parameter Cascading algorithm in PDE_parameters")
+  	}
+
+  	if(is.null(PDE_parameters$parameter_cascading$reaction)){
+  		parameter_cascading_option = c(parameter_cascading_option,0)
+  	}else if(length(PDE_parameters$parameter_cascading$reaction) < 2){
+  		parameter_cascading_option = c(parameter_cascading_option,0)
+  	}else if(PDE_parameters$parameter_cascading$reaction[2] == "L-BFGS"){
+    	parameter_cascading_option = c(parameter_cascading_option,0)
+    }else if(PDE_parameters$parameter_cascading$reaction[2] == "gradient"){
+    	parameter_cascading_option = c(parameter_cascading_option,1)
+    }else if(PDE_parameters$parameter_cascading$reaction[2] == "genetic"){
+    	parameter_cascading_option = c(parameter_cascading_option,2)
+  	}else{
+  		stop("Invalid input for Parameter Cascading algorithm in PDE_parameters")
+  	}
+
+  	# Set initial values for the PDE_parameters if user does not pass them    
+  	if(is.null(PDE_parameters$K)){
+  		if(ndim == 2)
+  	  		PDE_parameters$K <- cbind(c(1, 0), c(0, 1))
+  		else
+  			PDE_parameters$K <- cbind(c(1, 0, 0), c(0, 1, 0), c(0, 0, 1))
+  	}else{
+  		warning("K in PDE_parameters used as initialization for Parameter Cascading Algorithm")
+  	}
+  	if(is.null(PDE_parameters$b)){
+  		if(ndim == 2)
+  	  		PDE_parameters$b <- c(0, 0)
+  		else
+  			PDE_parameters$b <- c(0, 0, 0)
+  	}else{
+  		warning("b in PDE_parameters used as initialization for Parameter Cascading Algorithm")
+  	}
+  	if(is.null(PDE_parameters$c)){
+  		PDE_parameters$c <- 0
+  	}else{
+  		warning("c in PDE_parameters used as initialization for Parameter Cascading Algorithm")
+  	}
+
   }
 
     space_varying = checkSmoothingParameters(locations = locations, observations = observations, FEMbasis = FEMbasis,
@@ -1006,17 +1063,18 @@ smooth.FEM<-function(locations = NULL, observations, FEMbasis,
     reslist = list(fit.FEM = fit.FEM, PDEmisfit.FEM = PDEmisfit.FEM, solution = solution,
                 optimization  = optimization, time = time, bary.locations = bary.locations)
 
-    # save information of parameter cascading
-    if(parameter_cascading_option[1] != 0)
+    # Save information of parameter cascading
+    if(parameter_cascading_option[1] != 0 | parameter_cascading_option[2] != 0 | parameter_cascading_option[3] != 0)
     {
     	if(ndim == 2)
     	{
     		parameter_cascading = list(
     			K_direction = bigsol[[23]],
 				K_eigenval_ratio = bigsol[[24]],
-    			K = bigsol[[25]],
-    			b = bigsol[[26]],
-    			c = bigsol[[27]])
+				aniso_intensity = bigsol[[25]],
+    			K = bigsol[[26]],
+    			b = bigsol[[27]],
+    			c = bigsol[[28]])
     	}
     	else
     	{
@@ -1025,9 +1083,10 @@ smooth.FEM<-function(locations = NULL, observations, FEMbasis,
 				K_second_direction = bigsol[[24]],
     			K_first_eigenval_ratio = bigsol[[25]],
     			K_second_eigenval_ratio = bigsol[[26]],
-    			K = bigsol[[27]],
-    			b = bigsol[[28]],
-    			c = bigsol[[29]])
+    			aniso_intensity = bigsol[[27]],
+    			K = bigsol[[28]],
+    			b = bigsol[[29]],
+    			c = bigsol[[30]])
     	}
 
     	reslist$parameter_cascading = parameter_cascading

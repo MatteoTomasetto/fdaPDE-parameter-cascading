@@ -21,13 +21,13 @@ class Parameter_Cascading
 
 			 // Booleans to keep track of the wanted parameters to optimize
 			 bool update_K;
+			 bool update_anisotropy_intensity;
 			 bool update_K_direction;
 			 bool update_K_eigenval_ratio;
 			 bool update_b;
 			 bool update_c;
 
-			 // Optimization algorithm to use: 0 for L-BFGS-B, 1 for Gradient Descent, 2 for Genetic algorithm,
-			 UInt optimization_algorithm;
+			 MatrixXr K;
 			 
 			 // Diffusion parameters
 			 // with 2D non-space varying cases the diffusion parameters are:
@@ -51,6 +51,11 @@ class Parameter_Cascading
 			 // space-varying case not implemented yet
 			 Real c;
 
+			 // Anisotropy intensity
+			 // 2D or 3D non-space varying case: coefficient that multiply the diffusion matrix K (it gives the intensity of anisotropy wrt advection / reaction)
+			 // space-varying case not implemented yet
+			 Real aniso_intensity;
+
 			 VectorXr lambdas; // lambdas used to search the optimal PDE parameters
 			 Real GCV;
 			 Real lambda_opt; // Optimal lambda for GCV
@@ -63,18 +68,19 @@ class Parameter_Cascading
 			 
 			 // Main function of the algorithm; inputs are
 			 // init -> starting point for optimization algorithm
+			 // Optimization algorithm to use: 0 for L-BFGS-B, 1 for Gradient Descent, 2 for Genetic algorithm,
 			 // lower_bound -> vector of the lower bounds for each parameter to optimize
 			 // upper_bound -> vector of the upper bounds for each parameter to optimize
 			 // periods -> vector with the periods of each parameter to optimize (if a parameter is not periodic then period = 0.0)
 			 // F -> function to optimize (RMSE with ParameterCascading)
 			 // dF -> gradient function or approximated gradient via finite differences
 			 // set_param -> function to set the proper parameter in RegressionData
-			 VectorXr step(VectorXr init, const VectorXr& lower_bound, const VectorXr& upper_bound, const VectorXr& periods,
+			 VectorXr step(VectorXr init, const UInt& opt_algo, const VectorXr& lower_bound, const VectorXr& upper_bound, const VectorXr& periods,
 			 				const std::function<Real (VectorXr, Real)>& F, const std::function<VectorXr (VectorXr, Real)>& dF, 
-			 				const std::function<void (VectorXr)>& set_param);
+			 				const std::function<void (VectorXr)>& set_param, bool constraint = true);
 
 			 // Alternative version of step() where lower bounds are -inf, upper bounds are +inf and periods are 0.0 
-			 VectorXr step(VectorXr init, const std::function<Real (VectorXr, Real)>& F, const std::function<VectorXr (VectorXr, Real)>& dF, 
+			 VectorXr step(VectorXr init, const UInt& opt_algo, const std::function<Real (VectorXr, Real)>& F, const std::function<VectorXr (VectorXr, Real)>& dF, 
 			 				const std::function<void (VectorXr)>& set_param); 
 
 	public: // Constructor that computes the vector of lambdas from the vector of rhos presented in \cite{Bernardi}
@@ -95,34 +101,45 @@ class Parameter_Cascading
 				lambdas = rhos.array() / (1 - rhos.array()) * n / area;
 
 				// Initialize the parameters with the values in RegressionData and OptimizationData
+				K = H.getModel().getRegressionData().getK().template getDiffusionMatrix<ndim>();
 				diffusion = H.getModel().getRegressionData().getK().template getDiffusionParam<ndim>();
 				b = H.getModel().getRegressionData().getB().template getAdvectionParam<ndim>();
 				c = H.getModel().getRegressionData().getC().getReactionParam();
+				aniso_intensity = 1.0;
 				lambda_opt = H.getModel().getOptimizationData().get_initial_lambda_S();
 
 				// Set which parameters to update
 				update_K = false;
 				update_K_direction = false;
 				update_K_eigenval_ratio = false;
+				update_anisotropy_intensity = false;
 				update_b = false;
 				update_c = false;
-				UInt parameter_cascading_option = H.getModel().getRegressionData().get_parameter_cascading_option();
+				UInt parameter_cascading_diffusion_option = H.getModel().getRegressionData().get_parameter_cascading_diffusion();
 
-				if(parameter_cascading_option == 1){
+				if(parameter_cascading_diffusion_option == 1){
 					update_K = true;
 				}
 				
-				if(parameter_cascading_option == 2){
+				if(parameter_cascading_diffusion_option == 2){
 					update_K_direction = true;
 				}
 				
-				if(parameter_cascading_option == 3){
+				if(parameter_cascading_diffusion_option == 3){
 					update_K_eigenval_ratio = true;
 				}
 
-				// Other cases not implemented yet
+				if(parameter_cascading_diffusion_option == 4){
+					update_anisotropy_intensity = true;
+				}
 
-				optimization_algorithm = H.getModel().getRegressionData().get_parameter_cascading_optimization_option();
+				if(H.getModel().getRegressionData().get_parameter_cascading_advection() == 1){
+					update_b = true;
+				}
+
+				if(H.getModel().getRegressionData().get_parameter_cascading_reaction() == 1){
+					update_c = true;
+				}
 			};
 			
 			// Function to apply the parameter cascading algorithm

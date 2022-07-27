@@ -81,41 +81,59 @@ RegressionDataElliptic::RegressionDataElliptic(SEXP Rlocations, SEXP RbaryLocati
 	SEXP RK, SEXP Rb, SEXP Rc, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues, SEXP RincidenceMatrix, SEXP RarealDataAvg, SEXP Rsearch):
 	RegressionData(Rlocations, RbaryLocations, Robservations, Rorder, Rcovariates,
 		RBCIndices, RBCValues, RincidenceMatrix, RarealDataAvg, Rsearch),
-			K_(RK), b_(Rb), c_(Rc), parameter_cascading_(0), parameter_cascading_opt_(0) {}
+			K_(RK), b_(Rb), c_(Rc) {}
 
 RegressionDataElliptic::RegressionDataElliptic(SEXP Rlocations, SEXP RbaryLocations, SEXP Robservations, SEXP Rorder,
 	SEXP RK, SEXP Rb, SEXP Rc, SEXP RparameterCascading, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues,
 	SEXP RincidenceMatrix, SEXP RarealDataAvg, SEXP Rsearch):
 	RegressionData(Rlocations, RbaryLocations, Robservations, Rorder, Rcovariates, 
 		RBCIndices, RBCValues, RincidenceMatrix, RarealDataAvg, Rsearch),
-			K_(RK), b_(Rb), c_(Rc), parameter_cascading_(INTEGER(RparameterCascading)[0]), parameter_cascading_opt_(INTEGER(RparameterCascading)[1]) {}
+			K_(RK), b_(Rb), c_(Rc),
+			parameter_cascading_diffusion(INTEGER(RparameterCascading)[0]),
+			parameter_cascading_advection(INTEGER(RparameterCascading)[1]),
+			parameter_cascading_reaction(INTEGER(RparameterCascading)[2]),
+			parameter_cascading_diffusion_opt(INTEGER(RparameterCascading)[3]),
+			parameter_cascading_advection_opt(INTEGER(RparameterCascading)[4]),
+			parameter_cascading_reaction_opt(INTEGER(RparameterCascading)[5]) {}
 
 RegressionDataElliptic::RegressionDataElliptic(SEXP Rlocations, SEXP RbaryLocations, SEXP Rtime_locations, SEXP Robservations, SEXP Rorder,
 	SEXP RK, SEXP Rb, SEXP Rc, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues,
 	SEXP RincidenceMatrix, SEXP RarealDataAvg, SEXP Rflag_mass, SEXP Rflag_parabolic, SEXP Rflag_iterative, SEXP Rmax_num_iteration, SEXP Rthreshold, SEXP Ric, SEXP Rsearch):
 	RegressionData(Rlocations, RbaryLocations, Rtime_locations, Robservations, Rorder, Rcovariates,
 		RBCIndices, RBCValues, RincidenceMatrix, RarealDataAvg, Rflag_mass, Rflag_parabolic, Rflag_iterative, Rmax_num_iteration, Rthreshold, Ric, Rsearch),
-			K_(RK), b_(Rb), c_(Rc), parameter_cascading_(0), parameter_cascading_opt_(0) {}
+			K_(RK), b_(Rb), c_(Rc) {}
 
 RegressionDataElliptic::RegressionDataElliptic(SEXP Rlocations, SEXP RbaryLocations, SEXP Rtime_locations, SEXP Robservations, SEXP Rorder,
 	SEXP RK, SEXP Rb, SEXP Rc, SEXP RparameterCascading, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues,
 	SEXP RincidenceMatrix, SEXP RarealDataAvg, SEXP Rflag_mass, SEXP Rflag_parabolic, SEXP Rflag_iterative, SEXP Rmax_num_iteration, SEXP Rthreshold, SEXP Ric, SEXP Rsearch):
 	RegressionData(Rlocations, RbaryLocations, Rtime_locations, Robservations, Rorder, Rcovariates,
 		RBCIndices, RBCValues, RincidenceMatrix, RarealDataAvg, Rflag_mass, Rflag_parabolic, Rflag_iterative, Rmax_num_iteration, Rthreshold, Ric, Rsearch),
-			K_(RK), b_(Rb), c_(Rc), parameter_cascading_(INTEGER(RparameterCascading)[0]), parameter_cascading_opt_(INTEGER(RparameterCascading)[1]) {}
+			K_(RK), b_(Rb), c_(Rc),
+			parameter_cascading_diffusion(INTEGER(RparameterCascading)[0]),
+			parameter_cascading_advection(INTEGER(RparameterCascading)[1]),
+			parameter_cascading_reaction(INTEGER(RparameterCascading)[2]),
+			parameter_cascading_diffusion_opt(INTEGER(RparameterCascading)[3]),
+			parameter_cascading_advection_opt(INTEGER(RparameterCascading)[4]),
+			parameter_cascading_reaction_opt(INTEGER(RparameterCascading)[5]) {}
 
 RegressionDataEllipticSpaceVarying::RegressionDataEllipticSpaceVarying(SEXP Rlocations, SEXP RbaryLocations, SEXP Robservations, SEXP Rorder,
 	SEXP RK, SEXP Rb, SEXP Rc, SEXP Ru, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues,
 	SEXP RincidenceMatrix, SEXP RarealDataAvg, SEXP Rsearch):
 	RegressionData(Rlocations, RbaryLocations, Robservations, Rorder, Rcovariates, RBCIndices, RBCValues, RincidenceMatrix, RarealDataAvg, Rsearch),
-	K_(RK), b_(Rb), c_(Rc), u_(Ru), parameter_cascading_(0), parameter_cascading_opt_(0) 
+	K_(RK), b_(Rb), c_(Rc), u_(Ru)
 {;}
 
 RegressionDataEllipticSpaceVarying::RegressionDataEllipticSpaceVarying(SEXP Rlocations, SEXP RbaryLocations, SEXP Robservations, SEXP Rorder,
 	SEXP RK, SEXP Rb, SEXP Rc, SEXP Ru, SEXP RparameterCascading, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues,
 	SEXP RincidenceMatrix, SEXP RarealDataAvg, SEXP Rsearch):
 	RegressionData(Rlocations, RbaryLocations, Robservations, Rorder, Rcovariates, RBCIndices, RBCValues, RincidenceMatrix, RarealDataAvg, Rsearch),
-	K_(RK), b_(Rb), c_(Rc), u_(Ru), parameter_cascading_(INTEGER(RparameterCascading)[0]), parameter_cascading_opt_(INTEGER(RparameterCascading)[1])
+	K_(RK), b_(Rb), c_(Rc), u_(Ru),
+	parameter_cascading_diffusion(INTEGER(RparameterCascading)[0]),
+	parameter_cascading_advection(INTEGER(RparameterCascading)[1]),
+	parameter_cascading_reaction(INTEGER(RparameterCascading)[2]),
+	parameter_cascading_diffusion_opt(INTEGER(RparameterCascading)[3]),
+	parameter_cascading_advection_opt(INTEGER(RparameterCascading)[4]),
+	parameter_cascading_reaction_opt(INTEGER(RparameterCascading)[5]) 
 {;}
 
 RegressionDataEllipticSpaceVarying::RegressionDataEllipticSpaceVarying(SEXP Rlocations, SEXP RbaryLocations, SEXP Rtime_locations, SEXP Robservations, SEXP Rorder,
@@ -123,7 +141,7 @@ RegressionDataEllipticSpaceVarying::RegressionDataEllipticSpaceVarying(SEXP Rloc
 	SEXP Rflag_mass, SEXP Rflag_parabolic, SEXP Rflag_iterative,SEXP Rmax_num_iteration,SEXP Rthreshold, SEXP Ric, SEXP Rsearch):
 	RegressionData(Rlocations, RbaryLocations, Rtime_locations, Robservations, Rorder, Rcovariates,
 		RBCIndices, RBCValues, RincidenceMatrix, RarealDataAvg, Rflag_mass, Rflag_parabolic, Rflag_iterative, Rmax_num_iteration, Rthreshold, Ric, Rsearch),
-	K_(RK), b_(Rb), c_(Rc), u_(Ru), parameter_cascading_(0), parameter_cascading_opt_(0)
+	K_(RK), b_(Rb), c_(Rc), u_(Ru)
 {;}
 
 RegressionDataEllipticSpaceVarying::RegressionDataEllipticSpaceVarying(SEXP Rlocations, SEXP RbaryLocations, SEXP Rtime_locations, SEXP Robservations, SEXP Rorder,
@@ -131,7 +149,13 @@ RegressionDataEllipticSpaceVarying::RegressionDataEllipticSpaceVarying(SEXP Rloc
 	SEXP Rflag_mass, SEXP Rflag_parabolic, SEXP Rflag_iterative,SEXP Rmax_num_iteration,SEXP Rthreshold, SEXP Ric, SEXP Rsearch):
 	RegressionData(Rlocations, RbaryLocations, Rtime_locations, Robservations, Rorder, Rcovariates,
 		RBCIndices, RBCValues, RincidenceMatrix, RarealDataAvg, Rflag_mass, Rflag_parabolic, Rflag_iterative, Rmax_num_iteration, Rthreshold, Ric, Rsearch),
-	K_(RK), b_(Rb), c_(Rc), u_(Ru), parameter_cascading_(INTEGER(RparameterCascading)[0]), parameter_cascading_opt_(INTEGER(RparameterCascading)[1])
+	K_(RK), b_(Rb), c_(Rc), u_(Ru),
+	parameter_cascading_diffusion(INTEGER(RparameterCascading)[0]),
+	parameter_cascading_advection(INTEGER(RparameterCascading)[1]),
+	parameter_cascading_reaction(INTEGER(RparameterCascading)[2]),
+	parameter_cascading_diffusion_opt(INTEGER(RparameterCascading)[3]),
+	parameter_cascading_advection_opt(INTEGER(RparameterCascading)[4]),
+	parameter_cascading_reaction_opt(INTEGER(RparameterCascading)[5]) 
 {;}
 
 

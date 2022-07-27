@@ -116,9 +116,9 @@ public:
     /// Minimizing a multivariate function subject to box constraints, using the L-BFGS-B algorithm.
     /// Exceptions will be thrown if error occurs.
     ///
-    /// \param f  A function object such that `f(x, grad)` returns the
-    ///           objective function value at `x`, and overwrites `grad` with
-    ///           the gradient.
+    /// \param f_  A function object such that `f(x)` returns the
+    ///           objective function value at `x`
+    /// \param df_ A function that compute the gradient of 'f' in 'x'
     /// \param x  In: An initial guess of the optimal point. Out: The best point
     ///           found.
     /// \param fx Out: The objective function value at `x`.
