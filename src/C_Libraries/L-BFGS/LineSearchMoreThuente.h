@@ -51,9 +51,6 @@ private:
     static Scalar cubic_minimizer(const Scalar& a, const Scalar& b, const Scalar& fa, const Scalar& fb,
                                   const Scalar& ga, const Scalar& gb, bool& exists)
     {
-        using std::abs;
-        using std::sqrt;
-
         const Scalar apb = a + b;
         const Scalar ba = b - a;
         const Scalar ba2 = ba * ba;
@@ -67,7 +64,7 @@ private:
 
         // If c3 = z/(b-a)^3 == 0, reduce to quadratic problem
         const Scalar eps = std::numeric_limits<Scalar>::epsilon();
-        if (abs(z3) < eps * abs(z2) || abs(z3) < eps * abs(z1))
+        if (std::abs(z3) < eps * std::abs(z2) || std::abs(z3) < eps * std::abs(z1))
         {
             // Minimizer exists if c2 > 0
             exists = (z2 * ba > Scalar(0));
@@ -96,15 +93,15 @@ private:
         // r = -u (+-) sqrt(delta), where
         // sqrt(delta) = sqrt(|u|) * sqrt(|v|) * sqrt(1-u/v)
         Scalar r1 = Scalar(0), r2 = Scalar(0);
-        if (abs(u) >= abs(v))
+        if (std::abs(u) >= std::abs(v))
         {
-            const Scalar w = Scalar(1) + sqrt(Scalar(1) - vu);
+            const Scalar w = Scalar(1) + std::sqrt(Scalar(1) - vu);
             r1 = -u * w;
             r2 = -v / w;
         }
         else
         {
-            const Scalar sqrtd = sqrt(abs(u)) * sqrt(abs(v)) * sqrt(1 - u / v);
+            const Scalar sqrtd = std::sqrt(std::abs(u)) * std::sqrt(std::abs(v)) * std::sqrt(1 - u / v);
             r1 = -u - sqrtd;
             r2 = -u + sqrtd;
         }
@@ -118,8 +115,6 @@ private:
         const Scalar& fl, const Scalar& fu, const Scalar& ft,
         const Scalar& gl, const Scalar& gu, const Scalar& gt)
     {
-        using std::abs;
-
         if (al == au)
             return al;
         
@@ -141,18 +136,18 @@ private:
             if (!ac_exists)
                 return aq;
             // Then use the scheme described in the paper
-            return (abs(ac - al) < abs(aq - al)) ? ac : ((aq + ac) / Scalar(2));
+            return (std::abs(ac - al) < std::abs(aq - al)) ? ac : ((aq + ac) / Scalar(2));
         }
 
         // as: quadratic interpolation of gl and gt
         const Scalar as = quadratic_minimizer(al, at, gl, gt);
         // Case 2: ft <= fl, gt * gl < 0
         if (gt * gl < Scalar(0))
-            return (abs(ac - at) >= abs(as - at)) ? ac : as;
+            return (std::abs(ac - at) >= std::abs(as - at)) ? ac : as;
 
         // Case 3: ft <= fl, gt * gl >= 0, |gt| < |gl|
         const Scalar deltal = Scalar(1.1), deltau = Scalar(0.66);
-        if (abs(gt) < abs(gl))
+        if (std::abs(gt) < std::abs(gl))
         {
             // We choose either ac or as
             // The case for ac: 1. It exists, and
@@ -161,7 +156,7 @@ private:
             // Cases for as: otherwise
             const Scalar res = (ac_exists &&
                                 (ac - at) * (at - al) > Scalar(0) &&
-                                abs(ac - at) < abs(as - at)) ?
+                                std::abs(ac - at) < std::abs(as - at)) ?
                 ac :
                 as;
             // Postprocessing the chosen step
@@ -211,7 +206,6 @@ public:
                            const VectorXr& xp, const VectorXr& drt, const Scalar& step_max,
                            Scalar& step, Scalar& fx, VectorXr& grad, Scalar& dg, VectorXr& x)
     {
-        using std::abs;
         // std::cout << "========================= Entering line search =========================\n\n";
 
         // Check the value of step
@@ -259,7 +253,7 @@ public:
         // std::cout << "max_step = " << step_max << ", step = " << step << ", fx = " << fx << ", dg = " << dg << std::endl;
 
         // Convergence test
-        if (fx <= fx_init + step * test_decr && abs(dg) <= test_curv)
+        if (fx <= fx_init + step * test_decr && std::abs(dg) <= test_curv)
         {
             // std::cout << "** Criteria met\n\n";
             // std::cout << "========================= Leaving line search =========================\n\n";
@@ -373,7 +367,7 @@ public:
             // std::cout << "step = " << step << ", fx = " << fx << ", dg = " << dg << std::endl;
 
             // Convergence test
-            if (fx <= fx_init + step * test_decr && abs(dg) <= test_curv)
+            if (fx <= fx_init + step * test_decr && std::abs(dg) <= test_curv)
             {
                 // std::cout << "** Criteria met\n\n";
                 // std::cout << "========================= Leaving line search =========================\n\n";

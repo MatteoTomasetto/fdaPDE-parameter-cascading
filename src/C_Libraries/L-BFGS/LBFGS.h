@@ -102,8 +102,6 @@ public:
             return f_(x);
         };
 
-        using std::abs;
-
         // Dimension of the vector
         const int n = x.size();
         reset(n);
@@ -162,7 +160,7 @@ public:
             if (fpast > 0)
             {
                 const Scalar fxd = m_fx[k % fpast];
-                if (k >= fpast && abs(fxd - fx) <= m_param.delta * std::max(std::max(abs(fx), abs(fxd)), Scalar(1)))
+                if (k >= fpast && std::abs(fxd - fx) <= m_param.delta * std::max(std::max(std::abs(fx), std::abs(fxd)), Scalar(1)))
                     return k;
 
                 m_fx[k % fpast] = fx;

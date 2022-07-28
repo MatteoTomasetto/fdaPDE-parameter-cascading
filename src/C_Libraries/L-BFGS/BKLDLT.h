@@ -174,17 +174,15 @@ private:
     // Assume k < end
     Scalar find_lambda(Index k, Index& r)
     {
-        using std::abs;
-
         const Scalar* head = col_pointer(k);  // => A[k, k]
         const Scalar* end = col_pointer(k + 1);
         // Start with r=k+1, lambda=A[k+1, k]
         r = k + 1;
-        Scalar lambda = abs(head[1]);
+        Scalar lambda = std::abs(head[1]);
         // Scan remaining elements
         for (const Scalar* ptr = head + 2; ptr < end; ptr++)
         {
-            const Scalar abs_elem = abs(*ptr);
+            const Scalar abs_elem = std::abs(*ptr);
             if (lambda < abs_elem)
             {
                 lambda = abs_elem;
@@ -201,8 +199,6 @@ private:
     // Assume k < r < end
     Scalar find_sigma(Index k, Index r, Index& p)
     {
-        using std::abs;
-
         // First search A[r+1, r], ...,  A[end, r], which has the same task as find_lambda()
         // If r == end, we skip this search
         Scalar sigma = Scalar(-1);
@@ -212,7 +208,7 @@ private:
         // Then search A[k, r], ..., A[r-1, r], which maps to A[r, k], ..., A[r, r-1]
         for (Index j = k; j < r; j++)
         {
-            const Scalar abs_elem = abs(coeff(r, j));
+            const Scalar abs_elem = std::abs(coeff(r, j));
             if (sigma < abs_elem)
             {
                 sigma = abs_elem;
@@ -227,15 +223,13 @@ private:
     // Return true if the resulting pivoting is 1x1, and false if 2x2
     bool permutate_mat(Index k, const Scalar& alpha)
     {
-        using std::abs;
-
         Index r = k, p = k;
         const Scalar lambda = find_lambda(k, r);
 
         // If lambda=0, no need to interchange
         if (lambda > Scalar(0))
         {
-            const Scalar abs_akk = abs(diag_coeff(k));
+            const Scalar abs_akk = std::abs(diag_coeff(k));
             // If |A[k, k]| >= alpha * lambda, no need to interchange
             if (abs_akk < alpha * lambda)
             {
@@ -384,13 +378,11 @@ public:
 
     void compute(ConstGenericMatrixXr& mat, int uplo = Eigen::Lower, const Scalar& shift = Scalar(0))
     {
-        using std::abs;
 
         m_n = mat.rows();
         if (m_n != mat.cols())
         {
             Rf_error("BKLDLT: matrix must be square");
-            abort();
         }
 
         m_perm.setLinSpaced(m_n, 0, m_n - 1);
@@ -444,7 +436,6 @@ public:
         if (!m_computed)
         {
             Rf_error("BKLDLT: need to call compute() first");
-            abort();
         }
 
         // PAP' = LDL'

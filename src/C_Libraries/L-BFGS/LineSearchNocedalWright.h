@@ -55,7 +55,6 @@ public:
         if (param.linesearch != LBFGS_LINESEARCH_BACKTRACKING_STRONG_WOLFE)
         {
             Rf_error("'param.linesearch' must be 'LBFGS_LINESEARCH_BACKTRACKING_STRONG_WOLFE' for LineSearchNocedalWright");
-            abort();
         }
 
         // To make this implementation more similar to the other line search

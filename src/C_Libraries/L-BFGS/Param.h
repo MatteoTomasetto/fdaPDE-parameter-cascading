@@ -189,63 +189,51 @@ public:
         if (m <= 0)
         {   
             Rf_error("'m' must be positive");
-            abort();
         }
         if (epsilon < 0)
         {
             Rf_error("'epsilon' must be non-negative");
-            abort();
         }
         if (epsilon_rel < 0)
         {
             Rf_error("'epsilon_rel' must be non-negative");
-            abort();
         }
         if (past < 0)
         {
             Rf_error("'past' must be non-negative");
-            abort();
         }
         if (delta < 0)
         {
             Rf_error("'delta' must be non-negative");
-            abort();
         }
         if (max_iterations < 0)
         {
             Rf_error("'max_iterations' must be non-negative");
-            abort();
         }
         if (linesearch < LBFGS_LINESEARCH_BACKTRACKING_ARMIJO ||
             linesearch > LBFGS_LINESEARCH_BACKTRACKING_STRONG_WOLFE)
         {
             Rf_error("unsupported line search termination condition");
-            abort();
         }
         if (max_linesearch <= 0)
         {
             Rf_error("'max_linesearch' must be positive");
-            abort();
         }
         if (min_step < 0)
         {
             Rf_error("'min_step' must be positive");
-            abort();
         }
         if (max_step < min_step)
         {
             Rf_error("'max_step' must be greater than 'min_step'");
-            abort();
         }
         if (ftol <= 0 || ftol >= 0.5)
         {
             Rf_error("'ftol' must satisfy 0 < ftol < 0.5");
-            abort();
         }
         if (wolfe <= ftol || wolfe >= 1)
         {
             Rf_error("'wolfe' must satisfy ftol < wolfe < 1");
-            abort();
         }
     }
 };
@@ -384,63 +372,50 @@ public:
         if (m <= 0)
         {
             Rf_error("'m' must be positive");
-            abort();
         }
         if (epsilon < 0)
         {
             Rf_error("'epsilon' must be non-negative");
-            abort();
-
         }
         if (epsilon_rel < 0)
         {
             Rf_error("'epsilon_rel' must be non-negative");
-            abort();
         }
         if (past < 0)
         {
             Rf_error("'past' must be non-negative");
-            abort();
         }
         if (delta < 0)
         {
             Rf_error("'delta' must be non-negative");
-            abort();
         }
         if (max_iterations < 0)
         {
             Rf_error("'max_iterations' must be non-negative");
-            abort();
         }
         if (max_submin < 0)
         {
             Rf_error("'max_submin' must be non-negative");
-            abort();
         }
         if (max_linesearch <= 0)
         {
             Rf_error("'max_linesearch' must be positive");
-            abort();
         }
         if (min_step < 0)
         {
             Rf_error("'min_step' must be positive");
-            abort();
         }
         if (max_step < min_step)
         {
             Rf_error("'max_step' must be greater than 'min_step'");
-            abort();
         }
         if (ftol <= 0 || ftol >= 0.5)
         {
             Rf_error("'ftol' must satisfy 0 < ftol < 0.5");
-            abort();
         }
         if (wolfe <= ftol || wolfe >= 1)
         {
             Rf_error("'wolfe' must satisfy ftol < wolfe < 1");
-            abort();
         }
     }
 };
