@@ -136,6 +136,9 @@ public:
             return f_(x);
         };
 
+        Rprintf("Start L-BFGS-B algorithm\n");
+
+
         // Dimension of the vector
         const int n = x.size();
         if (lb.size() != n || ub.size() != n)
@@ -190,6 +193,7 @@ public:
         int k = 1;
         for (;;)
         {
+            Rprintf("iter %d\n",k);
             // Save the curent x and gradient
             m_xp.noalias() = x;
             m_gradp.noalias() = m_grad;
@@ -220,7 +224,74 @@ public:
             step_max = std::min(m_param.max_step, step_max);
             Scalar step = Scalar(1);
             step = std::min(step, step_max);
-            LineSearch<Scalar>::LineSearch(f, m_param, m_xp, m_drt, step_max, step, fx, m_grad, dg, x);
+            
+//LineSearch<Scalar>::LineSearch(f, m_param, m_xp, m_drt, step_max, step, fx, m_grad, dg, x);
+        // Decreasing and increasing factors
+        const Scalar dec = 0.5;
+        const Scalar inc = 2.1;
+
+        // Check the value of step
+        if (step <= Scalar(0))
+            Rf_error("'step' must be positive");
+
+        // Save the function value at the current x
+        const Scalar fx_init = fx;
+        // Projection of gradient on the search direction
+        const Scalar dg_init = m_grad.dot(m_drt);
+        // Make sure d points to a descent direction
+        if (dg_init > 0)
+            Rf_error("the moving direction increases the objective function value");
+
+        const Scalar test_decr = m_param.ftol * dg_init;
+        Scalar width;
+
+        int iter;
+        for (iter = 0; iter < m_param.max_linesearch; ++iter)
+        {
+            // x_{k+1} = x_k + step * d_k
+            x.noalias() = m_xp + step * m_drt;
+            // Evaluate this candidate
+            fx = f(x, m_grad);
+
+            if (fx > fx_init + step * test_decr)
+            {
+                width = dec;
+            }
+            else
+            {
+
+                const Scalar dg = m_grad.dot(m_drt);
+                if (dg < m_param.wolfe * dg_init)
+                {
+                    width = inc;
+                }
+                else
+                {
+                    
+                    if (dg > -m_param.wolfe * dg_init)
+                    {
+                        width = dec;
+                    }
+                    else
+                    {
+                        // Strong Wolfe condition is met
+                        break;
+                    }
+                }
+            }
+
+            if (step < m_param.min_step)
+                Rf_error("the line search step became smaller than the minimum value allowed");
+
+            if (step > m_param.max_step)
+                Rf_error("the line search step became larger than the maximum value allowed");
+
+            step *= width;
+        }
+
+
+
+
 
             // New projected gradient norm
             m_projgnorm = proj_grad_norm(x, m_grad, lb, ub);
@@ -260,6 +331,7 @@ public:
             force_bounds(x, lb, ub);
             Cauchy<Scalar>::get_cauchy_point(m_bfgs, x, m_grad, lb, ub, xcp, vecc, newact_set, fv_set);
 
+
             /*VectorXr gcp(n);
             Scalar fcp = f(xcp, gcp);
             Scalar projgcpnorm = proj_grad_norm(xcp, gcp, lb, ub);
@@ -277,6 +349,8 @@ public:
 
             k++;
         }
+
+        Rprintf("End L-BFGS-B algorithm in %d iterations\n",k);
 
         return k;
     }

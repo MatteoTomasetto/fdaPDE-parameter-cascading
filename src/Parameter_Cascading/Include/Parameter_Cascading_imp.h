@@ -112,44 +112,33 @@ VectorXr Parameter_Cascading<ORDER, mydim, ndim>::step(VectorXr init, const UInt
 		if(opt_algo == 0 && constraint) // L-BFGS-B
 		{
 			LBFGSBParam<Real> param;
-			//param.epsilon = 1e-6;
-    		//param.max_iterations = 100;
-    		//param.max_linesearch = 40;
+			param.epsilon = 1e-6;
+    		param.max_iterations = 100;
+    		param.max_linesearch = 40;
 			
 			LBFGSBSolver<Real> solver(param);
 			std::function<VectorXr (VectorXr)> dF_ = [&dF, lambda](VectorXr x){return dF(x, lambda);}; // Fix lambda in dF
 			Real fx; // f(x) value
 
-			// Exploit periodicity of the parameter to avoid boundary problems of the opt algorithm
-			VectorXr new_lb = lower_bound;
-			VectorXr new_ub = upper_bound;
-			for(UInt i = 0; i < init.size(); ++i)
-			{
-				if(periods(i) != 0.0)
-				{
-					new_lb(i) -= periods(i) / 10.0;
-					new_ub(i) += periods(i) / 10.0;
-				}
-			}
+	   		UInt niter = solver.minimize(F_, dF_, opt_sol, fx, lower_bound, upper_bound); // opt_sol and fx will be directly modified  
 
-	   		UInt niter = solver.minimize(F_, dF_, opt_sol, fx, new_lb, new_ub); // opt_sol and fx will be directly modified  
-
-	   		// Shift periodic parameters inside the original upper and lower bounds
+	   		// Exploit periodicity if present
 	   		for(UInt i = 0; i < init.size(); ++i)
-			{
-				if(periods(i) != 0.0)
-				{
-					if(opt_sol(i) < lower_bound(i))
-						opt_sol(i) += periods(i);
+	   		{
+	   			if(periods(i) != 0.0 && (std::abs(opt_sol(i) - lower_bound(i)) < 1e-3) || std::abs(opt_sol(i) - upper_bound(i)) > 1e-3)
+	   			{	
+	   				Real new_fx;
+	   				VectorXr new_sol = opt_sol;
+	   				niter = solver.minimize(F_, dF_, new_sol, new_fx, lower_bound, upper_bound);
 
-					if(opt_sol(i) > upper_bound(i))
-						opt_sol(i) -= periods(i);
+	   				if(new_fx < fx)
+	   					opt_sol = new_sol;
 				}
-			}
+	   		}
 
 	   		Rprintf("N iter: %d\n", niter);  		
 		}
-		/*else if(opt_algo == 0 && !constraint) // L-BFGS
+		else if(opt_algo == 0 && !constraint) // L-BFGS
 		{
 			LBFGSParam<Real> param;
     		param.epsilon = 1e-6;
@@ -165,8 +154,8 @@ VectorXr Parameter_Cascading<ORDER, mydim, ndim>::step(VectorXr init, const UInt
 			UInt niter = solver.minimize(F_, dF_, opt_sol, fx); // opt_sol and fx will be directly modified  
 
 	   		Rprintf("N iter: %d\n", niter);  		
-		}*/
-		else if(opt_algo == 2) // gradient
+		}
+		else if(opt_algo == 1) // gradient
 		{
 			Parameter_Gradient_Descent_fd param = {lower_bound, upper_bound, periods};
 			std::function<VectorXr (VectorXr)> dF_ = [&dF, lambda](VectorXr x){return dF(x, lambda);}; // Fix lambda in dF
@@ -177,7 +166,7 @@ VectorXr Parameter_Cascading<ORDER, mydim, ndim>::step(VectorXr init, const UInt
 			opt_sol = opt.get_solution();
 			init = opt_sol; // init modified to initialize the next iteration with the actual optimal solution
 		}
-		else if(opt_algo == 3) // genetic
+		else if(opt_algo == 2) // genetic
 		{
 			Parameter_Genetic_Algorithm param = {100, lower_bound, upper_bound};
 			

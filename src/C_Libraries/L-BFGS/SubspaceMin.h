@@ -154,6 +154,7 @@ public:
         // If yes, then the solution has been found
         if (in_bounds(vecy, vecl, vecu))
         {
+            Rprintf("check1");
             subvec_assign(drt, fv_set, vecy);
             return;
         }
@@ -190,6 +191,7 @@ public:
                 const Scalar li = vecl[i], ui = vecu[i];
                 if ((vecy[i] < li) || (vecy[i] == li && lambda[i] >= Scalar(0)))
                 {
+                    Rprintf("check2");
                     L_set.push_back(coord);
                     yL_set.push_back(i);
                     vecy[i] = li;
@@ -197,6 +199,7 @@ public:
                 }
                 else if ((vecy[i] > ui) || (vecy[i] == ui && mu[i] >= Scalar(0)))
                 {
+                    Rprintf("check3");
                     U_set.push_back(coord);
                     yU_set.push_back(i);
                     vecy[i] = ui;
@@ -204,6 +207,7 @@ public:
                 }
                 else
                 {
+                    Rprintf("check4");
                     P_set.push_back(coord);
                     yP_set.push_back(i);
                     lambda[i] = Scalar(0);
@@ -222,6 +226,7 @@ public:
             const int nP = P_set.size();
             if (nP > 0)
             {
+                Rprintf("check5");
                 VectorXr rhs = subvec(vecc, yP_set);
                 VectorXr lL = subvec(vecl, yL_set);
                 VectorXr uU = subvec(vecu, yU_set);
@@ -245,6 +250,7 @@ public:
                 bfgs.apply_WtPv(fv_set, vecy, Fy);
             if (nL > 0)
             {
+                Rprintf("check6");
                 VectorXr res;
                 bfgs.apply_PtWMv(L_set, Fy, res, Scalar(-1));
                 res.noalias() += subvec(vecc, yL_set) + bfgs.theta() * subvec(vecy, yL_set);
@@ -254,6 +260,7 @@ public:
             // Solve mu[U] = -B[U, F] * y - c[U]
             if (nU > 0)
             {
+                Rprintf("check7");
                 VectorXr negRes;
                 bfgs.apply_PtWMv(U_set, Fy, negRes, Scalar(-1));
                 negRes.noalias() += subvec(vecc, yU_set) + bfgs.theta() * subvec(vecy, yU_set);
@@ -268,6 +275,7 @@ public:
         // If the iterations do not converge, try the projection
         if (k >= maxit)
         {
+            Rprintf("check8");
             vecy.noalias() = vecy.cwiseMax(vecl).cwiseMin(vecu);
             subvec_assign(drt, fv_set, vecy);
             // Test whether drt is a descent direction

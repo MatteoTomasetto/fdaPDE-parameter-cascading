@@ -102,6 +102,9 @@ public:
             return f_(x);
         };
 
+        Rprintf("Start L-BFGS algorithm\n");
+
+
         // Dimension of the vector
         const int n = x.size();
         reset(n);
@@ -135,7 +138,7 @@ public:
         {
             // std::cout << "Iter " << k << " begins" << std::endl << std::endl;
 
-            // Save the curent x and gradient
+            // Save the current x and gradient
             m_xp.noalias() = x;
             m_gradp.noalias() = m_grad;
             Scalar dg = m_grad.dot(m_drt);
@@ -183,6 +186,8 @@ public:
             step = Scalar(1);
             k++;
         }
+
+        Rprintf("End L-BFGS algorithm in %d iterations\n",k);
 
         return k;
     }

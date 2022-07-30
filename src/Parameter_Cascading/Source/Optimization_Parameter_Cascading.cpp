@@ -190,9 +190,7 @@ Rprintf("End genetic algorithm\n");
 
 void Gradient_Descent_fd::upgrade_best(void)
 {	
- 	VectorXr new_best = best;
-
-	// Set some useful parameters
+ 	// Set some useful parameters
 	Real alpha = 1.0;
 	Real beta = 0.5;
 	Real f = F(best);
@@ -200,7 +198,8 @@ void Gradient_Descent_fd::upgrade_best(void)
 	Real df_norm = df.squaredNorm();
 
 	// Update best
-	new_best = best - alpha * df;
+	VectorXr new_best = best;
+	new_best -= alpha * df;
 
  	// Check bounds
  	for(unsigned int i = 0u; i < best.size(); ++i)
@@ -228,7 +227,7 @@ void Gradient_Descent_fd::upgrade_best(void)
 
 	// Backtracking line search to set the step size
 	UInt counter = 0;
-	while(F(new_best) > f - alpha * df_norm / 2.0 || counter < 40)
+	while(F(new_best) > f - alpha * df_norm / 2.0 && counter < 20)
 	{
 		alpha *= beta;
 		new_best = best - alpha * df;
@@ -262,7 +261,7 @@ void Gradient_Descent_fd::apply(void)
 
 	}
 
-	Rprintf("End gradient descent algorithm\n");
+	Rprintf("End gradient descent algorithm in %d iterations\n", iter);
 
 	return;
 }
