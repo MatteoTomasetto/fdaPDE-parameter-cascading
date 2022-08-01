@@ -1,18 +1,45 @@
 #ifndef __PARAMETER_CASCADING_IMP_H__
 #define __PARAMETER_CASCADING_IMP_H__
 
+#include <memory>
+#include <functional>
+#include <limits>
+#include <iostream>
+#include <cmath>
+#include <cstddef>
+#include <algorithm>
+
 #include "../../Lambda_Optimization/Include/Optimization_Data.h"
 #include "../../Lambda_Optimization/Include/Function_Variadic.h"
 #include "../../Lambda_Optimization/Include/Newton.h"
 #include "../../Lambda_Optimization/Include/Optimization_Methods_Factory.h"
 #include "Optimization_Parameter_Cascading.h"
-#include "../../C_Libraries/L-BFGS/LBFGSB.h" 
-#include "../../C_Libraries/L-BFGS/LBFGS.h" 
+#include "../../C_Libraries/roptim.h"
 
-#include <memory>
-#include <functional>
-#include <limits>
-#include <iostream> 
+using namespace roptim;
+
+// Wrapper needed to use Roptim
+class optimWrapper : public Functor
+{
+	public:
+		optimWrapper(const std::function<Real (VectorXr)>& F_, const std::function<VectorXr (VectorXr)>& dF_)
+		: F(F_), dF(dF_) {};
+
+		Real operator()(const VectorXr &x) override
+		{
+			return F(x);
+  		};
+
+  		void Gradient(const VectorXr &x, VectorXr& grad) override
+		{
+			grad = dF(x);
+  		};
+
+private:
+  	const std::function<Real (VectorXr)>& F;
+  	const std::function<Real (VectorXr)>& dF;
+};
+
 
 template <UInt ORDER, UInt mydim, UInt ndim>
 template <typename EvaluationType>
@@ -74,13 +101,13 @@ VectorXr Parameter_Cascading<ORDER, mydim, ndim>::step(VectorXr init, const UInt
 		periods(i) = 0.0;
 	}
 
-	return step(init, opt_algo, lower_bound, upper_bound, periods, F, dF, set_param, false);
+	return step(init, opt_algo, lower_bound, upper_bound, periods, F, dF, set_param);
 } 
 
 template <UInt ORDER, UInt mydim, UInt ndim>
 VectorXr Parameter_Cascading<ORDER, mydim, ndim>::step(VectorXr init, const UInt& opt_algo, const VectorXr& lower_bound, const VectorXr& upper_bound, 
 	const VectorXr& periods, const std::function<Real (VectorXr, Real)>& F, const std::function<VectorXr (VectorXr, Real)>& dF, 
-	const std::function<void (VectorXr)>& set_param, bool constraint)
+	const std::function<void (VectorXr)>& set_param)
 {
 	// Current optimal solution and best solution
 	VectorXr opt_sol = init;
@@ -98,7 +125,7 @@ VectorXr Parameter_Cascading<ORDER, mydim, ndim>::step(VectorXr init, const UInt
 	// Initialize GCV and variables to check if GCV is increasing
 	GCV = -1.0;
 	UInt counter_GCV_increasing = 0; // Variable to count how many iterations present an increasing GCV
-	//bool finer_grid = false;		 // Finer grid to activate when GCV is increasing
+	bool finer_grid = false;		 // Finer grid to activate when GCV is increasing
 	Real old_GCV = std::numeric_limits<Real>::max();
 
 	for (UInt iter = 0; iter < lambdas.size(); ++iter)
@@ -109,53 +136,41 @@ VectorXr Parameter_Cascading<ORDER, mydim, ndim>::step(VectorXr init, const UInt
 
 		std::function<Real (VectorXr)> F_ = [&F, lambda](VectorXr x){return F(x, lambda);}; // Fix lambda in F
 
-		if(opt_algo == 0 && constraint) // L-BFGS-B
+		if(opt_algo == 0) // L-BFGS-B
 		{
-			LBFGSBParam<Real> param;
-			param.epsilon = 1e-6;
-    		param.max_iterations = 100;
-    		param.max_linesearch = 40;
-			
-			LBFGSBSolver<Real> solver(param);
-			std::function<VectorXr (VectorXr)> dF_ = [&dF, lambda](VectorXr x){return dF(x, lambda);}; // Fix lambda in dF
-			Real fx; // f(x) value
-
-	   		UInt niter = solver.minimize(F_, dF_, opt_sol, fx, lower_bound, upper_bound); // opt_sol and fx will be directly modified  
-
-	   		// Exploit periodicity if present
-	   		for(UInt i = 0; i < init.size(); ++i)
-	   		{
-	   			if(periods(i) != 0.0 && (std::abs(opt_sol(i) - lower_bound(i)) < 1e-3) || std::abs(opt_sol(i) - upper_bound(i)) > 1e-3)
-	   			{	
-	   				Real new_fx;
-	   				VectorXr new_sol = opt_sol;
-	   				niter = solver.minimize(F_, dF_, new_sol, new_fx, lower_bound, upper_bound);
-
-	   				if(new_fx < fx)
-	   					opt_sol = new_sol;
-				}
-	   		}
-
-	   		Rprintf("N iter: %d\n", niter);  		
+			Rprintf("Start L-BFGS-B algortihm");
+	   		optimWrapper function_to_optimize(F_);
+  			Roptim<optimWrapper> solver("L-BFGS-B");
+  			solver.set_lower(lower_bound);
+  			solver.set_upper(upper_bound);
+  			solver.minimize(function_to_optimize, opt_sol);
+  			Rprintf("End L-BFGS-B algorithm");
 		}
-		else if(opt_algo == 0 && !constraint) // L-BFGS
+		else if(opt_algo == 1) // BFGS
 		{
-			LBFGSParam<Real> param;
-    		param.epsilon = 1e-6;
-    		param.max_iterations = 100;
-    		param.max_linesearch = 40;
-
-   			 // Create solver and function object
-    		LBFGSSolver<Real> solver(param);
-    		
-			std::function<VectorXr (VectorXr)> dF_ = [&dF, lambda](VectorXr x){return dF(x, lambda);}; // Fix lambda in dF
-			Real fx; // f(x) value
-
-			UInt niter = solver.minimize(F_, dF_, opt_sol, fx); // opt_sol and fx will be directly modified  
-
-	   		Rprintf("N iter: %d\n", niter);  		
+			Rprintf("Start BFGS algortihm");
+	   		optimWrapper function_to_optimize(F_);
+  			Roptim<optimWrapper> solver("BFGS");
+  			solver.minimize(function_to_optimize, opt_sol);
+  			Rprintf("End BFGS algorithm");
 		}
-		else if(opt_algo == 1) // gradient
+		else if(opt_algo == 2) // CG
+		{
+			Rprintf("Start CG algortihm");
+	   		optimWrapper function_to_optimize(F_);
+  			Roptim<optimWrapper> solver("CG");
+  			solver.minimize(function_to_optimize, opt_sol);
+  			Rprintf("End CG algorithm");
+		}
+		else if(opt_algo == 3) // Nelder-Mead
+		{
+			Rprintf("Start Nelder-Mead algortihm");
+	   		optimWrapper function_to_optimize(F_);
+  			Roptim<optimWrapper> solver("Nelder-Mead");
+  			solver.minimize(function_to_optimize, opt_sol);
+  			Rprintf("End Nelder-Mead algorithm");
+		}
+		else if(opt_algo == 4) // Gradient
 		{
 			Parameter_Gradient_Descent_fd param = {lower_bound, upper_bound, periods};
 			std::function<VectorXr (VectorXr)> dF_ = [&dF, lambda](VectorXr x){return dF(x, lambda);}; // Fix lambda in dF
@@ -166,7 +181,7 @@ VectorXr Parameter_Cascading<ORDER, mydim, ndim>::step(VectorXr init, const UInt
 			opt_sol = opt.get_solution();
 			init = opt_sol; // init modified to initialize the next iteration with the actual optimal solution
 		}
-		else if(opt_algo == 2) // genetic
+		else if(opt_algo == 5) // Genetic
 		{
 			Parameter_Genetic_Algorithm param = {100, lower_bound, upper_bound};
 			
@@ -219,27 +234,28 @@ VectorXr Parameter_Cascading<ORDER, mydim, ndim>::step(VectorXr init, const UInt
 		Rprintf("Best GCV: %f\n", GCV);
 		
 		// Check increasing GCV
-		//if(!finer_grid)
-		//{
-		if(old_GCV < opt_sol_GCV.second)
+		if(!finer_grid)
 		{
-			counter_GCV_increasing++;
+			if(old_GCV < opt_sol_GCV.second)
+			{
+				counter_GCV_increasing++;
 
-		// Build a finer grid of lambdas if GCV is increasing for 3 iterations in a row
+				// Build a finer grid of lambdas if GCV is increasing for 3 iterations in a row
 				if(counter_GCV_increasing == 3)
 				{
 					Rprintf("Increasing GCV, restart Parameter Cascading algortihm with finer grid of lambdas\n");
-		//			UInt start_finer_grid = (best_iter < 2) ? 0 : best_iter - 1;
-		//			lambdas = VectorXr::LinSpaced(6, lambdas(start_finer_grid), lambdas(best_iter + 1));
-		//			lambdas.resize(6, 1);
+					UInt start_finer_grid = (best_iter < 2) ? 0 : best_iter - 1;
+					lambdas = VectorXr::LinSpaced(6, lambdas(start_finer_grid), lambdas(best_iter + 1));
+					lambdas.resize(6, 1);
 					iter = lambdas.size();
-		//			init = best_sol;
-		//			finer_grid = true;
+					init = best_sol;
+					finer_grid = true;
 				}
-		}
+			}
 		else
 			counter_GCV_increasing = 0;
-		//}
+		}
+		
 		old_GCV = opt_sol_GCV.second;
 
 	}
@@ -307,7 +323,7 @@ Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim>::apply(void)
 			this -> H.template set_K<VectorXr>(x);
 		};
 
-		diffusion = step(init, opt_algo, lower_bound, upper_bound, periods, F, dF, set_param, true);
+		diffusion = step(init, opt_algo, lower_bound, upper_bound, periods, F, dF, set_param);
 	}
 
 	if(update_K_direction) // Update only the diffusion angles parameter (the first in 2D case, the first two in 3D case)
@@ -369,7 +385,7 @@ Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim>::apply(void)
 				this -> H.template set_K<VectorXr>(param);
 			};
 
-			diffusion(0) = step(init, opt_algo, lower_bound, upper_bound, periods, F, dF, set_param, true)(0);
+			diffusion(0) = step(init, opt_algo, lower_bound, upper_bound, periods, F, dF, set_param)(0);
 		}
 		else if(ndim == 3)
 		{
@@ -416,7 +432,7 @@ Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim>::apply(void)
 				this -> H.template set_K<VectorXr>(param);
 			};
 
-			VectorXr res = step(init, opt_algo, lower_bound, upper_bound, periods, F, dF, set_param, true);
+			VectorXr res = step(init, opt_algo, lower_bound, upper_bound, periods, F, dF, set_param);
 			diffusion(0) = res(0);
 			diffusion(1) = res(1);
 		}
@@ -481,7 +497,7 @@ Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim>::apply(void)
 				this -> H.template set_K<VectorXr>(param);
 			};
 
-			diffusion(1) = step(init, opt_algo, lower_bound, upper_bound, periods, F, dF, set_param, true)(0);
+			diffusion(1) = step(init, opt_algo, lower_bound, upper_bound, periods, F, dF, set_param)(0);
 		}
 		else if(ndim == 3)
 		{
@@ -528,7 +544,7 @@ Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim>::apply(void)
 				this -> H.template set_K<VectorXr>(param);
 			};
 
-			VectorXr res = step(init, opt_algo, lower_bound, upper_bound, periods, F, dF, set_param, true);
+			VectorXr res = step(init, opt_algo, lower_bound, upper_bound, periods, F, dF, set_param);
 			diffusion(2) = res(0);
 			diffusion(3) = res(1);
 		}

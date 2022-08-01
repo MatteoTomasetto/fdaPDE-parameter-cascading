@@ -55,10 +55,8 @@
 #'		2) the second option 'advection' admits the following parameter possibilities: NULL (default option), 'b' to estimate the advection vector.
 #'		3) the third option 'reaction' admits the following parameter possibilities: NULL (default option), 'c' to estimate the reaction term.
 #' Moreover, for each entry in the list, it is possible to indicate the optimization algorithm to use;
-#' the following possibilities are available: 'L-BFGS' (default option), 'gradient', 'genetic'.
-#' If 'L-BFGS' is selected, the L-BFGS Algorithm is used for unconstraint optimizations and 'L-BFGS-B' Algorithm is used for contraint optimizations.
-#' If 'gradient' is selected, the Gradient Descent is used for optimization step in Parameter Cascading.
-#' If 'genetic' is selected, the Genetic Algortihm is used for optimization step in Parameter Cascading.
+#' the following possibilities are available: 'L-BFGS-B' (default option for diffusion), 'BFGS' (default option for advection and reaction), 
+#' 'CG' (Conjugate Gradient), 'Nelder-Mead', 'Gradient', 'Genetic'.
 #' Notice that, if also the parameters K, b or c are provided in PDE_parameters, Parameter Cascading algorithm uses them as initialization.
 #' Otherwise, the parameters that are not provided will be automatically initialized (K = Identity matrix, b = zero vector, c = zero). 
 #' Notice that if an entry of parameter_cascading is not explicitly added, it will be considered as NULL.
@@ -66,7 +64,7 @@
 #' EXAMPLE: kappa <- cbind(c(1,0), c(0,1))
 #'			b = array(0, c(2, nrow(points)))
 #'			c = 0
-#'			parameter_cascading = list(diffusion =c('K','L-BFGS'), reaction = c('c', 'gradient'))
+#'			parameter_cascading = list(diffusion =c('K','L-BFGS-B'), reaction = c('c', 'Gradient'))
 #'			PDE_parameters <- list(K = kappa, b = b, c = c, parameter_cascading = parameter_cascading)
 #' @param BC A list with two vectors:
 #'  \code{BC_indices}, a vector with the indices in \code{nodes} of boundary nodes where a Dirichlet Boundary Condition should be applied;
@@ -551,30 +549,42 @@ smooth.FEM<-function(locations = NULL, observations, FEMbasis,
     }
 
     # Set a convention for optimization algorithm used in parameter cascading
-  	if(is.null(PDE_parameters$parameter_cascading$diffusion)){
+	if(is.null(PDE_parameters$parameter_cascading$diffusion)){
   		parameter_cascading_option = c(parameter_cascading_option,0)
   	}else if(length(PDE_parameters$parameter_cascading$diffusion) < 2){
   		parameter_cascading_option = c(parameter_cascading_option,0)
-  	}else if(PDE_parameters$parameter_cascading$diffusion[2] == "L-BFGS"){
+  	}else if(PDE_parameters$parameter_cascading$diffusion[2] == "L-BFGS-B"){
     	parameter_cascading_option = c(parameter_cascading_option,0)
-    }else if(PDE_parameters$parameter_cascading$diffusion[2] == "gradient"){
+    }else if(PDE_parameters$parameter_cascading$diffusion[2] == "BFGS"){
     	parameter_cascading_option = c(parameter_cascading_option,1)
-    }else if(PDE_parameters$parameter_cascading$diffusion[2] == "genetic"){
+    }else if(PDE_parameters$parameter_cascading$diffusion[2] == "CG"){
     	parameter_cascading_option = c(parameter_cascading_option,2)
+    }else if(PDE_parameters$parameter_cascading$diffusion[2] == "Nelder-Mead"){
+    	parameter_cascading_option = c(parameter_cascading_option,3)
+    }else if(PDE_parameters$parameter_cascading$diffusion[2] == "Gradient"){
+    	parameter_cascading_option = c(parameter_cascading_option,4)
+    }else if(PDE_parameters$parameter_cascading$diffusion[2] == "Genetic"){
+    	parameter_cascading_option = c(parameter_cascading_option,5)
   	}else{
   		stop("Invalid input for Parameter Cascading algorithm in PDE_parameters")
   	}
 
-  	if(is.null(PDE_parameters$parameter_cascading$advection)){
+	if(is.null(PDE_parameters$parameter_cascading$advection)){
   		parameter_cascading_option = c(parameter_cascading_option,0)
   	}else if(length(PDE_parameters$parameter_cascading$advection) < 2){
-  		parameter_cascading_option = c(parameter_cascading_option,0)
-  	}else if(PDE_parameters$parameter_cascading$advection[2] == "L-BFGS"){
+  		parameter_cascading_option = c(parameter_cascading_option,1)
+  	}else if(PDE_parameters$parameter_cascading$advection[2] == "L-BFGS-B"){
     	parameter_cascading_option = c(parameter_cascading_option,0)
-    }else if(PDE_parameters$parameter_cascading$advection[2] == "gradient"){
+    }else if(PDE_parameters$parameter_cascading$advection[2] == "BFGS"){
     	parameter_cascading_option = c(parameter_cascading_option,1)
-    }else if(PDE_parameters$parameter_cascading$advection[2] == "genetic"){
+    }else if(PDE_parameters$parameter_cascading$advection[2] == "CG"){
     	parameter_cascading_option = c(parameter_cascading_option,2)
+    }else if(PDE_parameters$parameter_cascading$advection[2] == "Nelder-Mead"){
+    	parameter_cascading_option = c(parameter_cascading_option,3)
+    }else if(PDE_parameters$parameter_cascading$advection[2] == "Gradient"){
+    	parameter_cascading_option = c(parameter_cascading_option,4)
+    }else if(PDE_parameters$parameter_cascading$advection[2] == "Genetic"){
+    	parameter_cascading_option = c(parameter_cascading_option,5)
   	}else{
   		stop("Invalid input for Parameter Cascading algorithm in PDE_parameters")
   	}
@@ -582,13 +592,19 @@ smooth.FEM<-function(locations = NULL, observations, FEMbasis,
   	if(is.null(PDE_parameters$parameter_cascading$reaction)){
   		parameter_cascading_option = c(parameter_cascading_option,0)
   	}else if(length(PDE_parameters$parameter_cascading$reaction) < 2){
-  		parameter_cascading_option = c(parameter_cascading_option,0)
-  	}else if(PDE_parameters$parameter_cascading$reaction[2] == "L-BFGS"){
+  		parameter_cascading_option = c(parameter_cascading_option,1)
+  	}else if(PDE_parameters$parameter_cascading$reaction[2] == "L-BFGS-B"){
     	parameter_cascading_option = c(parameter_cascading_option,0)
-    }else if(PDE_parameters$parameter_cascading$reaction[2] == "gradient"){
+    }else if(PDE_parameters$parameter_cascading$reaction[2] == "BFGS"){
     	parameter_cascading_option = c(parameter_cascading_option,1)
-    }else if(PDE_parameters$parameter_cascading$reaction[2] == "genetic"){
+    }else if(PDE_parameters$parameter_cascading$reaction[2] == "CG"){
     	parameter_cascading_option = c(parameter_cascading_option,2)
+    }else if(PDE_parameters$parameter_cascading$reaction[2] == "Nelder-Mead"){
+    	parameter_cascading_option = c(parameter_cascading_option,3)
+    }else if(PDE_parameters$parameter_cascading$reaction[2] == "Gradient"){
+    	parameter_cascading_option = c(parameter_cascading_option,4)
+    }else if(PDE_parameters$parameter_cascading$reaction[2] == "Genetic"){
+    	parameter_cascading_option = c(parameter_cascading_option,5)
   	}else{
   		stop("Invalid input for Parameter Cascading algorithm in PDE_parameters")
   	}
