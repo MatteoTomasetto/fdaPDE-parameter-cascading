@@ -75,9 +75,10 @@ class Parameter_Cascading
 			 // F -> function to optimize (RMSE with ParameterCascading)
 			 // dF -> gradient function or approximated gradient via finite differences
 			 // set_param -> function to set the proper parameter in RegressionData
+			 // constraint -> boolean for contraint optimization
 			 VectorXr step(VectorXr init, const UInt& opt_algo, const VectorXr& lower_bound, const VectorXr& upper_bound, const VectorXr& periods,
 			 				const std::function<Real (VectorXr, Real)>& F, const std::function<VectorXr (VectorXr, Real)>& dF, 
-			 				const std::function<void (VectorXr)>& set_param);
+			 				const std::function<void (VectorXr)>& set_param, bool constraint = false);
 
 			 // Alternative version of step() where lower bounds are -inf, upper bounds are +inf and periods are 0.0 
 			 VectorXr step(VectorXr init, const UInt& opt_algo, const std::function<Real (VectorXr, Real)>& F, const std::function<VectorXr (VectorXr, Real)>& dF, 

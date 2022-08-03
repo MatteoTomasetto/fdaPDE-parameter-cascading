@@ -55,8 +55,10 @@
 #'		2) the second option 'advection' admits the following parameter possibilities: NULL (default option), 'b' to estimate the advection vector.
 #'		3) the third option 'reaction' admits the following parameter possibilities: NULL (default option), 'c' to estimate the reaction term.
 #' Moreover, for each entry in the list, it is possible to indicate the optimization algorithm to use;
-#' the following possibilities are available: 'L-BFGS-B' (default option for diffusion), 'BFGS' (default option for advection and reaction), 
+#' in general the following possibilities are available: 'L-BFGS-B' (default option for diffusion), 'BFGS' (default option for advection and reaction), 
 #' 'CG' (Conjugate Gradient), 'Nelder-Mead', 'Gradient', 'Genetic'.
+#' For contraint optimization problems such as 'K', 'K_direction' and 'K_eigenval_ratio' options, only the following possibilities are
+#' available: 'L-BFGS-B', 'Gradient', 'Genetic'.
 #' Notice that, if also the parameters K, b or c are provided in PDE_parameters, Parameter Cascading algorithm uses them as initialization.
 #' Otherwise, the parameters that are not provided will be automatically initialized (K = Identity matrix, b = zero vector, c = zero). 
 #' Notice that if an entry of parameter_cascading is not explicitly added, it will be considered as NULL.
@@ -555,11 +557,11 @@ smooth.FEM<-function(locations = NULL, observations, FEMbasis,
   		parameter_cascading_option = c(parameter_cascading_option,0)
   	}else if(PDE_parameters$parameter_cascading$diffusion[2] == "L-BFGS-B"){
     	parameter_cascading_option = c(parameter_cascading_option,0)
-    }else if(PDE_parameters$parameter_cascading$diffusion[2] == "BFGS"){
+    }else if(PDE_parameters$parameter_cascading$diffusion[2] == "BFGS" & parameter_cascading_option[1] == 4){
     	parameter_cascading_option = c(parameter_cascading_option,1)
-    }else if(PDE_parameters$parameter_cascading$diffusion[2] == "CG"){
+    }else if(PDE_parameters$parameter_cascading$diffusion[2] == "CG" & parameter_cascading_option[1] == 4){
     	parameter_cascading_option = c(parameter_cascading_option,2)
-    }else if(PDE_parameters$parameter_cascading$diffusion[2] == "Nelder-Mead"){
+    }else if(PDE_parameters$parameter_cascading$diffusion[2] == "Nelder-Mead" & parameter_cascading_option[1] == 4){
     	parameter_cascading_option = c(parameter_cascading_option,3)
     }else if(PDE_parameters$parameter_cascading$diffusion[2] == "Gradient"){
     	parameter_cascading_option = c(parameter_cascading_option,4)
