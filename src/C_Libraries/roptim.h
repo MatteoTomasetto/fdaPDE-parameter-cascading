@@ -278,8 +278,8 @@ inline void Roptim<Derived>::minimize(Derived &func, VectorXr &par) {
   // PART 1: optim()
 
   // Checks if lower and upper bounds is used
-  if ((lower_.size() == 0 || !upper_.size() == 0) && method_ != "L-BFGS-B") {
-    Rprintf("bounds can only be used with method L-BFGS-B");
+  if ((lower_.size() != 0 || upper_.size() != 0) && method_ != "L-BFGS-B") {
+    Rprintf("Bounds can only be used with method L-BFGS-B");
     method_ = "L-BFGS-B";
   }
 

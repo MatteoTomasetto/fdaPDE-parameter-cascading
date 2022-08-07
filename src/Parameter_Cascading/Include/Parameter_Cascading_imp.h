@@ -116,6 +116,9 @@ VectorXr Parameter_Cascading<ORDER, mydim, ndim>::step(VectorXr init, const UInt
 	// Variable to store the best iteration
 	UInt best_iter;
 
+	// Variable to avoid boundary problems
+	Real eps = 1e-3;
+
 	// Print initial solution
 	Rprintf("Initial sol: ");
 	for(unsigned int i = 0u; i < init.size(); ++i)
@@ -139,37 +142,56 @@ VectorXr Parameter_Cascading<ORDER, mydim, ndim>::step(VectorXr init, const UInt
 
 		if(opt_algo == 0) // L-BFGS-B
 		{
-			Rprintf("Start L-BFGS-B algortihm");
+			Rprintf("Start L-BFGS-B algortihm\n");
 	   		optimWrapper function_to_optimize(F_, dF_);
   			Roptim<optimWrapper> solver("L-BFGS-B");
   			solver.set_lower(lower_bound);
   			solver.set_upper(upper_bound);
   			solver.minimize(function_to_optimize, opt_sol);
-  			Rprintf("End L-BFGS-B algorithm");
+
+  			// Exploit periodicity
+  			for(UInt i = 0; i < init.size(); ++i)
+  			{
+  				if(periods(i) != 0.0)
+  				{
+  					if(std::abs(opt_sol(i) - lower_bound(i)) < eps)
+  					{
+  						opt_sol(i) = upper_bound(i) - eps;
+  						solver.minimize(function_to_optimize, opt_sol);
+  					}
+  					else if(std::abs(opt_sol(i) - upper_bound(i)) < eps)
+  					{
+  						opt_sol(i) = lower_bound(i) + eps;
+  						solver.minimize(function_to_optimize, opt_sol);
+  					}
+				}  					
+  			}
+
+  			Rprintf("End L-BFGS-B algorithm\n");
 		}
 		else if(opt_algo == 1 && !constraint) // BFGS
 		{
-			Rprintf("Start BFGS algortihm");
+			Rprintf("Start BFGS algortihm\n");
 	   		optimWrapper function_to_optimize(F_, dF_);
   			Roptim<optimWrapper> solver("BFGS");
   			solver.minimize(function_to_optimize, opt_sol);
-  			Rprintf("End BFGS algorithm");
+  			Rprintf("End BFGS algorithm\n");
 		}
 		else if(opt_algo == 2 && !constraint) // CG
 		{
-			Rprintf("Start CG algortihm");
+			Rprintf("Start CG algortihm\n");
 	   		optimWrapper function_to_optimize(F_, dF_);
   			Roptim<optimWrapper> solver("CG");
   			solver.minimize(function_to_optimize, opt_sol);
-  			Rprintf("End CG algorithm");
+  			Rprintf("End CG algorithm\n");
 		}
 		else if(opt_algo == 3 && !constraint) // Nelder-Mead
 		{
-			Rprintf("Start Nelder-Mead algortihm");
+			Rprintf("Start Nelder-Mead algortihm\n");
 	   		optimWrapper function_to_optimize(F_, dF_);
   			Roptim<optimWrapper> solver("Nelder-Mead");
   			solver.minimize(function_to_optimize, opt_sol);
-  			Rprintf("End Nelder-Mead algorithm");
+  			Rprintf("End Nelder-Mead algorithm\n");
 		}
 		else if(opt_algo == 4) // Gradient
 		{
@@ -287,20 +309,22 @@ Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim>::apply(void)
 
 		UInt dim = (ndim == 2) ? 2 : 4;
 
+		Real eps = 1e-3;
+
 		VectorXr lower_bound(dim);
 		VectorXr upper_bound(dim);
 		VectorXr periods(dim); // periods for each diffusion parameter (if variable not periodic then period = 0.0)
 
 		if(ndim == 2)
 		{
-			lower_bound << 0.0, 0.0;
-			upper_bound << EIGEN_PI, 1000.0;
+			lower_bound << eps, eps;
+			upper_bound << EIGEN_PI - eps, 1000.0;
 			periods << EIGEN_PI, 0.0;
 		}
 		else if(ndim == 3)
 		{
-			lower_bound << 0.0, 0.0, 1.0, 1.0;
-			upper_bound << EIGEN_PI, EIGEN_PI, 1000.0, 1000.0;
+			lower_bound << eps, eps, 1.0, 1.0;
+			upper_bound << EIGEN_PI - eps, EIGEN_PI - eps, 1000.0, 1000.0;
 			periods << EIGEN_PI, EIGEN_PI, 0.0, 0.0;
 		}
 				
@@ -341,8 +365,8 @@ Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim>::apply(void)
 		if(ndim == 2)
 		{
 			init << diffusion(0);
-			lower_bound << 0.0;
-			upper_bound << EIGEN_PI;
+			lower_bound << eps;
+			upper_bound << EIGEN_PI - eps;
 			periods << EIGEN_PI;
 
 			F = [this, &upper_bound, &lower_bound](VectorXr x, Real lambda)
@@ -386,8 +410,8 @@ Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim>::apply(void)
 		else if(ndim == 3)
 		{
 			init << diffusion(0), diffusion(1);
-			lower_bound << 0.0, 0.0;
-			upper_bound << EIGEN_PI, EIGEN_PI;
+			lower_bound << eps, eps;
+			upper_bound << EIGEN_PI - eps, EIGEN_PI - eps;
 			periods << EIGEN_PI, EIGEN_PI;
 
 			F = [this, &upper_bound, &lower_bound](VectorXr x, Real lambda)
@@ -464,8 +488,8 @@ Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim>::apply(void)
 				VectorXr ub(2);
 
 				param << this -> diffusion(0), x(0);
-				lb << 0.0, lower_bound;
-				ub << EIGEN_PI, upper_bound;			
+				lb << eps, lower_bound;
+				ub << EIGEN_PI - eps, upper_bound;			
 
 				return this -> H.eval_K(param, lb, ub, lambda);
 			};
@@ -477,8 +501,8 @@ Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim>::apply(void)
 				VectorXr ub(2);
 			
 				param << this -> diffusion(0), x(0);
-				lb << 0.0, lower_bound;
-				ub << EIGEN_PI, upper_bound;
+				lb << eps, lower_bound;
+				ub << EIGEN_PI - eps, upper_bound;
 
 				VectorXr grad(1);
 				grad << this -> H.eval_grad_K(param, lb, ub, lambda)(1);
@@ -509,8 +533,8 @@ Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim>::apply(void)
 				VectorXr ub(4);
 
 				param << this -> diffusion(0), this -> diffusion(1), x(0), x(1);
-				lb << 0.0, 0.0, lower_bound;
-				ub << EIGEN_PI, EIGEN_PI, upper_bound;
+				lb << eps, eps, lower_bound;
+				ub << EIGEN_PI - eps, EIGEN_PI - eps, upper_bound;
 			
 				return this -> H.eval_K(param, lb, ub, lambda);
 			};
@@ -522,8 +546,8 @@ Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim>::apply(void)
 				VectorXr ub(4);
 			
 				param << this -> diffusion(0), this -> diffusion(1), x(0), x(1);
-				lb << 0.0, 0.0, lower_bound;
-				ub << EIGEN_PI, EIGEN_PI, upper_bound;
+				lb << eps, eps, lower_bound;
+				ub << EIGEN_PI - eps, EIGEN_PI - eps, upper_bound;
 
 				VectorXr grad(2);
 				VectorXr tmp(4);
