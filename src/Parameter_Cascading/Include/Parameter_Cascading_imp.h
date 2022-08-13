@@ -116,7 +116,7 @@ VectorXr Parameter_Cascading<ORDER, mydim, ndim>::step(VectorXr init, const UInt
 	// Variable to store the best iteration
 	UInt best_iter;
 
-	// Variable to avoid boundary problems
+	// Variable to avoid boundary problems exploiting periodicity
 	Real eps = 1e-3;
 
 	// Print initial solution
@@ -300,6 +300,7 @@ template <UInt ORDER, UInt mydim, UInt ndim>
 Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim>::apply(void)
 {
 	Rprintf("Start Parameter_Cascading Algorithm\n");
+	//Real eps = 1e-3;
 
 	if(update_K)
 	{	
@@ -309,28 +310,26 @@ Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim>::apply(void)
 
 		UInt dim = (ndim == 2) ? 2 : 4;
 
-		Real eps = 1e-3;
-
 		VectorXr lower_bound(dim);
 		VectorXr upper_bound(dim);
 		VectorXr periods(dim); // periods for each diffusion parameter (if variable not periodic then period = 0.0)
 
 		if(ndim == 2)
 		{
-			lower_bound << eps, eps;
-			upper_bound << EIGEN_PI - eps, 1000.0;
+			lower_bound << 0.0, 0.0;
+			upper_bound << EIGEN_PI, 1000.0;
 			periods << EIGEN_PI, 0.0;
 		}
 		else if(ndim == 3)
 		{
-			lower_bound << eps, eps, 1.0, 1.0;
-			upper_bound << EIGEN_PI - eps, EIGEN_PI - eps, 1000.0, 1000.0;
+			lower_bound << 0.0, 0.0, 1.0, 1.0;
+			upper_bound << EIGEN_PI, EIGEN_PI, 1000.0, 1000.0;
 			periods << EIGEN_PI, EIGEN_PI, 0.0, 0.0;
 		}
 				
-		std::function<Real (VectorXr, Real)> F = [this, &lower_bound, &upper_bound](VectorXr x, Real lambda)
+		std::function<Real (VectorXr, Real)> F = [this](VectorXr x, Real lambda)
 		{
-			return this -> H.eval_K(x, lower_bound, upper_bound, lambda);
+			return this -> H.eval_K(x, lambda);
 		};
 
 		std::function<VectorXr (VectorXr, Real)> dF = [this, &lower_bound, &upper_bound](VectorXr x, Real lambda)
@@ -365,21 +364,15 @@ Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim>::apply(void)
 		if(ndim == 2)
 		{
 			init << diffusion(0);
-			lower_bound << eps;
-			upper_bound << EIGEN_PI - eps;
+			lower_bound << 0.0;
+			upper_bound << EIGEN_PI;
 			periods << EIGEN_PI;
 
-			F = [this, &upper_bound, &lower_bound](VectorXr x, Real lambda)
+			F = [this](VectorXr x, Real lambda)
 			{
 				VectorXr param(2);
-				VectorXr lb(2);
-				VectorXr ub(2);
-
-				param << x(0), this -> diffusion(1);
-				lb << lower_bound, 0.0;
-				ub << upper_bound, 1000.0;			
-
-				return this -> H.eval_K(param, lb, ub, lambda);
+				param << x(0), this -> diffusion(1);	
+				return this -> H.eval_K(param, lambda);
 			};
 
 			dF = [this, &upper_bound, &lower_bound](VectorXr x, Real lambda)
@@ -410,21 +403,15 @@ Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim>::apply(void)
 		else if(ndim == 3)
 		{
 			init << diffusion(0), diffusion(1);
-			lower_bound << eps, eps;
-			upper_bound << EIGEN_PI - eps, EIGEN_PI - eps;
+			lower_bound << 0.0, 0.0;
+			upper_bound << EIGEN_PI, EIGEN_PI;
 			periods << EIGEN_PI, EIGEN_PI;
 
-			F = [this, &upper_bound, &lower_bound](VectorXr x, Real lambda)
+			F = [this](VectorXr x, Real lambda)
 			{
 				VectorXr param(4);
-				VectorXr lb(4);
-				VectorXr ub(4);
-
 				param << x(0), x(1), this -> diffusion(2), this -> diffusion(3);
-				lb << lower_bound, 1.0, 1.0;
-				ub << upper_bound, 1000.0, 1000.0;
-			
-				return this -> H.eval_K(param, lb, ub, lambda);
+				return this -> H.eval_K(param, lambda);
 			};
 
 			dF = [this, &upper_bound, &lower_bound](VectorXr x, Real lambda)
@@ -481,17 +468,11 @@ Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim>::apply(void)
 			upper_bound << 1000.0;
 			periods << 0.0;
 
-			F = [this, &upper_bound, &lower_bound](VectorXr x, Real lambda)
+			F = [this](VectorXr x, Real lambda)
 			{
 				VectorXr param(2);
-				VectorXr lb(2);
-				VectorXr ub(2);
-
 				param << this -> diffusion(0), x(0);
-				lb << eps, lower_bound;
-				ub << EIGEN_PI - eps, upper_bound;			
-
-				return this -> H.eval_K(param, lb, ub, lambda);
+				return this -> H.eval_K(param, lambda);
 			};
 
 			dF = [this, &upper_bound, &lower_bound](VectorXr x, Real lambda)
@@ -501,8 +482,8 @@ Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim>::apply(void)
 				VectorXr ub(2);
 			
 				param << this -> diffusion(0), x(0);
-				lb << eps, lower_bound;
-				ub << EIGEN_PI - eps, upper_bound;
+				lb << 0.0, lower_bound;
+				ub << EIGEN_PI, upper_bound;
 
 				VectorXr grad(1);
 				grad << this -> H.eval_grad_K(param, lb, ub, lambda)(1);
@@ -526,17 +507,11 @@ Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim>::apply(void)
 			upper_bound << 1000.0, 1000.0;
 			periods << 0.0, 0.0;
 
-			F = [this, &upper_bound, &lower_bound](VectorXr x, Real lambda)
+			F = [this](VectorXr x, Real lambda)
 			{
 				VectorXr param(4);
-				VectorXr lb(4);
-				VectorXr ub(4);
-
 				param << this -> diffusion(0), this -> diffusion(1), x(0), x(1);
-				lb << eps, eps, lower_bound;
-				ub << EIGEN_PI - eps, EIGEN_PI - eps, upper_bound;
-			
-				return this -> H.eval_K(param, lb, ub, lambda);
+				return this -> H.eval_K(param, lambda);
 			};
 
 			dF = [this, &upper_bound, &lower_bound](VectorXr x, Real lambda)
@@ -546,8 +521,8 @@ Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim>::apply(void)
 				VectorXr ub(4);
 			
 				param << this -> diffusion(0), this -> diffusion(1), x(0), x(1);
-				lb << eps, eps, lower_bound;
-				ub << EIGEN_PI - eps, EIGEN_PI - eps, upper_bound;
+				lb << 0.0, 0.0, lower_bound;
+				ub << EIGEN_PI, EIGEN_PI, upper_bound;
 
 				VectorXr grad(2);
 				VectorXr tmp(4);
@@ -574,7 +549,13 @@ Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim>::apply(void)
 	{
 		Rprintf("Finding anisotropy intensity\n");
 		VectorXr init(1);
+		VectorXr lower_bound(1);
+		VectorXr upper_bound(1);
+		VectorXr periods(1);
 		init << aniso_intensity;
+		lower_bound << 0.0;
+		upper_bound << 1000.0;
+		periods << 0.0;
 		UInt opt_algo = H.getModel().getRegressionData().get_parameter_cascading_diffusion_opt();
 
 		std::function<Real (VectorXr, Real)> F = [this](VectorXr x, Real lambda)

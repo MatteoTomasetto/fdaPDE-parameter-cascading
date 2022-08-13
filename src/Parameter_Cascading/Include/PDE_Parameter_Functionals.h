@@ -39,7 +39,7 @@ class PDE_Parameter_Functional
 
 			// Functions to retrieve the value of the functional in the given input
 			Real eval_K(const MatrixXr& K, const lambda::type<1>& lambda) const;
-			Real eval_K(const VectorXr& DiffParam, const VectorXr& LowerBound, const VectorXr& UpperBound, const lambda::type<1>& lambda) const;
+			Real eval_K(const VectorXr& DiffParam, const lambda::type<1>& lambda) const;
 			Real eval_b(const VectorXr& AdvParam, const lambda::type<1>& lambda) const;
 			Real eval_c(const Real& c, const lambda::type<1>& lambda) const;
 			

@@ -72,16 +72,8 @@ Real PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_K(const MatrixXr& K, con
 
 
 template <UInt ORDER, UInt mydim, UInt ndim>
-Real PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_K(const VectorXr& DiffParam, const VectorXr& LowerBound, const VectorXr& UpperBound, const lambda::type<1>& lambda) const
+Real PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_K(const VectorXr& DiffParam, const lambda::type<1>& lambda) const
 {
-	// Check for proper values of diffusion parameters
-	// Usually angles are in [0.0, EIGEN_PI] and eigenvalue_ratios are positive
-	for(UInt i = 0; i < DiffParam.size(); ++i)
-	{
-		if(DiffParam(i) < LowerBound(i) || DiffParam(i) > UpperBound(i))
-			return std::numeric_limits<Real>::max();
-	}
-	
 	// Set parameter in RegressionData
 	set_K<VectorXr>(DiffParam);
 	
@@ -143,11 +135,19 @@ template <UInt ORDER, UInt mydim, UInt ndim>
 VectorXr PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_grad_aniso_intensity(const MatrixXr& K, const Real& aniso_intensity, const lambda::type<1>& lambda, const Real& h) const
 {
 	VectorXr res(1);
+	Real h_to_use = 2. * h;
 	
 	MatrixXr KUpper = K * (aniso_intensity + h);
-	MatrixXr KLower = K * (aniso_intensity - h);
+	MatrixXr KLower;
+	if(aniso_intensity - h > 0.0) // Check if the lower aniso_intensity is positive
+		KLower = K * (aniso_intensity - h);
+	else
+	{
+		KLower = K * (aniso_intensity);
+		h_to_use = h;
+	}
 
-	res(0) = (eval_K(KUpper, lambda) - eval_K(KLower, lambda)) / (2. * h);
+	res(0) = (eval_K(KUpper, lambda) - eval_K(KLower, lambda)) / (h_to_use);
 	
 	return res;
 }
@@ -185,7 +185,7 @@ VectorXr PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_grad_K(const VectorX
 			hUpper = 2. * h;
 		}
 
-		res(i) = (eval_K(DiffParamUpper, LowerBound, UpperBound, lambda) - eval_K(DiffParamLower, LowerBound, UpperBound, lambda)) / std::min(hUpper,hLower);
+		res(i) = (eval_K(DiffParamUpper, lambda) - eval_K(DiffParamLower, lambda)) / std::min(hUpper,hLower);
 	}
 	
 	return res;
