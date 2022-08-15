@@ -11,7 +11,7 @@
 #include "../../Lambda_Optimization/Include/Solution_Builders.h"
 #include "../../Mesh/Include/Mesh.h"
 #include "../../Regression/Include/Mixed_FE_Regression.h"
-#include "../../Parameter_Cascading/Include/PDE_Parameter_Functionals.h"
+#include "../../Parameter_Cascading/Include/PDE_Parameter_Functional.h"
 #include "../../Parameter_Cascading/Include/Parameter_Cascading.h"
 
 template<typename CarrierType>

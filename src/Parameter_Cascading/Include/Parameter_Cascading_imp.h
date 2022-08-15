@@ -300,7 +300,6 @@ template <UInt ORDER, UInt mydim, UInt ndim>
 Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim>::apply(void)
 {
 	Rprintf("Start Parameter_Cascading Algorithm\n");
-	//Real eps = 1e-3;
 
 	if(update_K)
 	{	
@@ -560,20 +559,20 @@ Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim>::apply(void)
 
 		std::function<Real (VectorXr, Real)> F = [this](VectorXr x, Real lambda)
 		{	
-			MatrixXr new_K = K * x(0);
+			MatrixXr new_K = this -> K * x(0);
 			return this -> H.eval_K(new_K, lambda);
 		};
 		std::function<VectorXr (VectorXr, Real)> dF = [this](VectorXr x, Real lambda)
 		{	
-			return this -> H.eval_grad_aniso_intensity(K, x(0), lambda);
+			return this -> H.eval_grad_aniso_intensity(this -> K, x(0), lambda);
 		};
 		std::function<void (VectorXr)> set_param = [this](VectorXr x)
 		{	
-			MatrixXr new_K = K * x(0);
+			MatrixXr new_K = this -> K * x(0);
 			this -> H.template set_K<MatrixXr>(new_K);
 		};
 		
-		aniso_intensity = step(init, opt_algo, F, dF, set_param)(0);
+		aniso_intensity = step(init, opt_algo, lower_bound, upper_bound, periods, F, dF, set_param, true)(0);
 	}
 	
 	if(update_b)

@@ -528,7 +528,7 @@ smooth.FEM<-function(locations = NULL, observations, FEMbasis,
    		parameter_cascading_option = 2
    	}else if(PDE_parameters$parameter_cascading$diffusion[1] == 'K_eigenval_ratio'){
    		parameter_cascading_option = 3
-   	}else if(PDE_parameters$parameter_cascading$diffusion[1] == 'anisotropy_intensity'){
+   	}else if(PDE_parameters$parameter_cascading$diffusion[1] == 'anisotropy_intensity' & (PDE_parameters$parameter_cascading$advection[1] == 'b' | PDE_parameters$parameter_cascading$reaction[1] == 'c')){
    		parameter_cascading_option = 4
    	}else{
     	stop("Invalid input for Parameter Cascading algorithm in PDE_parameters")
@@ -557,12 +557,6 @@ smooth.FEM<-function(locations = NULL, observations, FEMbasis,
   		parameter_cascading_option = c(parameter_cascading_option,0)
   	}else if(PDE_parameters$parameter_cascading$diffusion[2] == "L-BFGS-B"){
     	parameter_cascading_option = c(parameter_cascading_option,0)
-    }else if(PDE_parameters$parameter_cascading$diffusion[2] == "BFGS" & parameter_cascading_option[1] == 4){
-    	parameter_cascading_option = c(parameter_cascading_option,1)
-    }else if(PDE_parameters$parameter_cascading$diffusion[2] == "CG" & parameter_cascading_option[1] == 4){
-    	parameter_cascading_option = c(parameter_cascading_option,2)
-    }else if(PDE_parameters$parameter_cascading$diffusion[2] == "Nelder-Mead" & parameter_cascading_option[1] == 4){
-    	parameter_cascading_option = c(parameter_cascading_option,3)
     }else if(PDE_parameters$parameter_cascading$diffusion[2] == "Gradient"){
     	parameter_cascading_option = c(parameter_cascading_option,4)
     }else if(PDE_parameters$parameter_cascading$diffusion[2] == "Genetic"){

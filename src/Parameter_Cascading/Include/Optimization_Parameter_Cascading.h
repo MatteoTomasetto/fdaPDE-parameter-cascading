@@ -2,7 +2,7 @@
 #define __OPTIMIZATION_PARAMETER_CASCADING_H__
 
 #include "../../FdaPDE.h"
-#include "PDE_Parameter_Functionals.h"
+#include "PDE_Parameter_Functional.h"
 #include <functional>
 #include <vector>
 #include <deque>

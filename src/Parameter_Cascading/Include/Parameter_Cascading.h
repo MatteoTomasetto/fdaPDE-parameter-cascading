@@ -2,7 +2,7 @@
 #define __PARAMETER_CASCADING_H__
 
 #include "../../FdaPDE.h"
-#include "PDE_Parameter_Functionals.h"
+#include "PDE_Parameter_Functional.h"
 #include "../../Lambda_Optimization/Include/Solution_Builders.h"
 
 /* *** Parameter_Cascading ***

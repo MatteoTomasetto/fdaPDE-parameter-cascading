@@ -1,5 +1,5 @@
-#ifndef __PDE_PARAMETER_FUNCTIONALS_H__
-#define __PDE_PARAMETER_FUNCTIONALS_H__
+#ifndef __PDE_PARAMETER_FUNCTIONAL_H__
+#define __PDE_PARAMETER_FUNCTIONAL_H__
 
 #include "../../FdaPDE.h"
 #include "../../FE_Assemblers_Solvers/Include/Param_Functors.h"
@@ -38,8 +38,9 @@ class PDE_Parameter_Functional
 			void set_c(const Real& c) const;
 
 			// Functions to retrieve the value of the functional in the given input
-			Real eval_K(const MatrixXr& K, const lambda::type<1>& lambda) const;
-			Real eval_K(const VectorXr& DiffParam, const lambda::type<1>& lambda) const;
+			template <typename DiffType> // VectorXr (diffusion parameters) and MatrixXr (diffusion matrix) are allowed
+			typename std::enable_if<std::is_same<DiffType, VectorXr>::value || std::is_same<DiffType, MatrixXr>::value, Real>::type
+			eval_K(const DiffType& DiffParam, const lambda::type<1>& lambda) const;
 			Real eval_b(const VectorXr& AdvParam, const lambda::type<1>& lambda) const;
 			Real eval_c(const Real& c, const lambda::type<1>& lambda) const;
 			
@@ -55,6 +56,6 @@ class PDE_Parameter_Functional
 			inline const MeshHandler<ORDER, mydim, ndim> & getMesh(void) const { return mesh; };
 };
 
-#include "PDE_Parameter_Functionals_imp.h"
+#include "PDE_Parameter_Functional_imp.h"
 
 #endif
