@@ -22,22 +22,16 @@ using namespace roptim;
 class optimWrapper : public Functor
 {
 	public:
-		optimWrapper(const std::function<Real (VectorXr)>& F_, const std::function<VectorXr (VectorXr)>& dF_)
-		: F(F_), dF(dF_) {};
+		optimWrapper(const std::function<Real (VectorXr)>& F_)
+		: F(F_) {};
 
-		Real operator()(const VectorXr &x) override
+		double operator()(const VectorXr &par) override
 		{
-			return F(x);
+			return F(par);
   		};
 
-  		void Gradient(const VectorXr &x, VectorXr& grad) override
-		{
-			grad = dF(x);
-  		};
-
-private:
-  	const std::function<Real (VectorXr)>& F;
-  	const std::function<VectorXr (VectorXr)>& dF;
+	private:
+  		const std::function<Real (VectorXr)>& F;
 };
 
 
@@ -131,6 +125,10 @@ VectorXr Parameter_Cascading<ORDER, mydim, ndim>::step(VectorXr init, const UInt
 	bool finer_grid = false;		 // Finer grid to activate when GCV is increasing
 	Real old_GCV = std::numeric_limits<Real>::max();
 
+	// Variables needed to compute the GCV
+	Carrier<RegressionDataElliptic> carrier = CarrierBuilder<RegressionDataElliptic>::build_plain_carrier(H.getModel().getRegressionData(), H.getModel(), H.getModel().getOptimizationData());
+
+	// For loop to explore the grid of lambdas
 	for (UInt iter = 0; iter < lambdas.size(); ++iter)
 	{
 		Rprintf("Finding optimal sol for lambda = %e\n", lambdas(iter));
@@ -143,7 +141,7 @@ VectorXr Parameter_Cascading<ORDER, mydim, ndim>::step(VectorXr init, const UInt
 		if(opt_algo == 0) // L-BFGS-B
 		{
 			Rprintf("Start L-BFGS-B algortihm\n");
-	   		optimWrapper function_to_optimize(F_, dF_);
+	   		optimWrapper function_to_optimize(F_);
   			Roptim<optimWrapper> solver("L-BFGS-B");
   			solver.set_lower(lower_bound);
   			solver.set_upper(upper_bound);
@@ -164,7 +162,7 @@ VectorXr Parameter_Cascading<ORDER, mydim, ndim>::step(VectorXr init, const UInt
   						opt_sol(i) = lower_bound(i) + eps;
   						solver.minimize(function_to_optimize, opt_sol);
   					}
-				}  					
+				} 					
   			}
 
   			Rprintf("End L-BFGS-B algorithm\n");
@@ -172,7 +170,7 @@ VectorXr Parameter_Cascading<ORDER, mydim, ndim>::step(VectorXr init, const UInt
 		else if(opt_algo == 1 && !constraint) // BFGS
 		{
 			Rprintf("Start BFGS algortihm\n");
-	   		optimWrapper function_to_optimize(F_, dF_);
+	   		optimWrapper function_to_optimize(F_);
   			Roptim<optimWrapper> solver("BFGS");
   			solver.minimize(function_to_optimize, opt_sol);
   			Rprintf("End BFGS algorithm\n");
@@ -180,7 +178,7 @@ VectorXr Parameter_Cascading<ORDER, mydim, ndim>::step(VectorXr init, const UInt
 		else if(opt_algo == 2 && !constraint) // CG
 		{
 			Rprintf("Start CG algortihm\n");
-	   		optimWrapper function_to_optimize(F_, dF_);
+	   		optimWrapper function_to_optimize(F_);
   			Roptim<optimWrapper> solver("CG");
   			solver.minimize(function_to_optimize, opt_sol);
   			Rprintf("End CG algorithm\n");
@@ -188,7 +186,7 @@ VectorXr Parameter_Cascading<ORDER, mydim, ndim>::step(VectorXr init, const UInt
 		else if(opt_algo == 3 && !constraint) // Nelder-Mead
 		{
 			Rprintf("Start Nelder-Mead algortihm\n");
-	   		optimWrapper function_to_optimize(F_, dF_);
+	   		optimWrapper function_to_optimize(F_);
   			Roptim<optimWrapper> solver("Nelder-Mead");
   			solver.minimize(function_to_optimize, opt_sol);
   			Rprintf("End Nelder-Mead algorithm\n");
@@ -223,9 +221,7 @@ VectorXr Parameter_Cascading<ORDER, mydim, ndim>::step(VectorXr init, const UInt
 		
 		Rprintf("Computing GCV with the optimal sol for lambda = %e\n", lambdas(iter));
 
-		OptimizationData& optr = H.getModel().getOptimizationData();
-		Carrier<RegressionDataElliptic> carrier = CarrierBuilder<RegressionDataElliptic>::build_plain_carrier(H.getModel().getRegressionData(), H.getModel(), optr);
-		if(optr.get_loss_function() == "GCV" && (optr.get_DOF_evaluation() == "stochastic" || optr.get_DOF_evaluation() == "not_required"))
+		if(stochastic_GCV)
 		{
 			GCV_Stochastic<Carrier<RegressionDataElliptic>, 1> solver(carrier, true);
 			opt_sol_GCV = compute_GCV<GCV_Stochastic<Carrier<RegressionDataElliptic>, 1>>(carrier, solver, lambda_opt); // Use the last optimal lambda found as initial lambda computing GCV
@@ -315,7 +311,7 @@ Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim>::apply(void)
 
 		if(ndim == 2)
 		{
-			lower_bound << 0.0, 0.0;
+			lower_bound << 0.0,  1e-3;
 			upper_bound << EIGEN_PI, 1000.0;
 			periods << EIGEN_PI, 0.0;
 		}
@@ -381,7 +377,7 @@ Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim>::apply(void)
 				VectorXr ub(2);
 			
 				param << x(0), this -> diffusion(1);
-				lb << lower_bound, 0.0;
+				lb << lower_bound, 1e-3;
 				ub << upper_bound, 1000.0;
 
 				VectorXr grad(1);
@@ -463,7 +459,7 @@ Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim>::apply(void)
 		if(ndim == 2)
 		{		
 			init << diffusion(1);
-			lower_bound << 0.0;
+			lower_bound << 1e-3;
 			upper_bound << 1000.0;
 			periods << 0.0;
 

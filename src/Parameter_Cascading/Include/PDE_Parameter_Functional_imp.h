@@ -57,7 +57,7 @@ PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_K(const DiffType& DiffParam, 
 {
 	// Set parameter in RegressionData
 	set_K<DiffType>(DiffParam);
-	
+
 	// Solve the regression problem
 	// Use GCV_stochastic since it computes directly z_hat
 	Carrier<RegressionDataElliptic> carrier = CarrierBuilder<RegressionDataElliptic>::build_plain_carrier(model.getRegressionData(), model, model.getOptimizationData());

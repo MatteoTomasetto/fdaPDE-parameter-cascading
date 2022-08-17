@@ -34,26 +34,26 @@ namespace roptim {
 struct OptStruct {
   bool has_grad_ = false;
   bool has_hess_ = false;
-  VectorXr ndeps_;       // tolerances for numerical derivatives
+  VectorXr ndeps_;        // tolerances for numerical derivatives
   double fnscale_ = 1.0;  // scaling for objective
-  VectorXr parscale_;    // scaling for parameters
+  VectorXr parscale_;     // scaling for parameters
   int usebounds_ = 0;
   VectorXr lower_, upper_;
-  bool sann_use_custom_function_ = false;
 };
 
 class Functor {
  public:
-  Functor() {
-  }
+  Functor() {}
 
   virtual ~Functor() {}
 
   virtual double operator()(const VectorXr &par) = 0;
-  virtual void Gradient(const VectorXr &par, VectorXr &grad) {
+  virtual void Gradient(const VectorXr &par, VectorXr &grad)
+  {
     ApproximateGradient(par, grad);
   }
-  virtual void Hessian(const VectorXr &par, MatrixXr &hess) {
+  virtual void Hessian(const VectorXr &par, MatrixXr &hess)
+  {
     ApproximateHessian(par, hess);
   }
 
@@ -66,17 +66,20 @@ class Functor {
   OptStruct os;
 };
 
-inline void Functor::ApproximateGradient(const VectorXr &par,
-                                         VectorXr &grad) {
-  if (os.parscale_.size()==0) os.parscale_ = VectorXr::Constant(par.size(), 1.0);
-  if (os.ndeps_.size()==0)
+inline void Functor::ApproximateGradient(const VectorXr &par, VectorXr &grad)
+{
+  if(os.parscale_.size()==0)
+    os.parscale_ = VectorXr::Constant(par.size(), 1.0);
+  if(os.ndeps_.size()==0)
     os.ndeps_ = VectorXr::Constant(par.size(), 1e-3);
 
   grad = VectorXr::Zero(par.size());
   VectorXr x = par.array() * os.parscale_.array();
 
-  if (os.usebounds_ == 0) {
-    for (std::size_t i = 0; i != par.size(); ++i) {
+  if(os.usebounds_ == 0)
+  {
+    for(std::size_t i = 0; i != par.size(); ++i)
+    {
       double eps = os.ndeps_(i);
 
       x(i) = (par(i) + eps) * os.parscale_(i);
@@ -89,13 +92,17 @@ inline void Functor::ApproximateGradient(const VectorXr &par,
 
       x(i) = par(i) * os.parscale_(i);
     }
-  } else {  // use bounds
-    for (std::size_t i = 0; i != par.size(); ++i) {
+  }
+  else // use bounds
+  {
+    for(std::size_t i = 0; i != par.size(); ++i)
+    {
       double epsused = os.ndeps_(i);
       double eps = os.ndeps_(i);
 
       double tmp = par(i) + eps;
-      if (tmp > os.upper_(i)) {
+      if (tmp > os.upper_(i))
+      {
         tmp = os.upper_(i);
         epsused = tmp - par(i);
       }
@@ -104,7 +111,8 @@ inline void Functor::ApproximateGradient(const VectorXr &par,
       double val1 = operator()(x) / os.fnscale_;
 
       tmp = par(i) - eps;
-      if (tmp < os.lower_(i)) {
+      if (tmp < os.lower_(i))
+      {
         tmp = os.lower_(i);
         eps = par(i) - tmp;
       }
@@ -120,8 +128,9 @@ inline void Functor::ApproximateGradient(const VectorXr &par,
 }
 
 inline void Functor::ApproximateHessian(const VectorXr &par, MatrixXr &hess) {
-  if (os.parscale_.size()==0) os.parscale_ = VectorXr::Constant(par.size(), 1.0);
-  if (os.ndeps_.size()==0)
+  if(os.parscale_.size()==0)
+    os.parscale_ = VectorXr::Constant(par.size(), 1.0);
+  if(os.ndeps_.size()==0)
     os.ndeps_ = VectorXr::Constant(par.size(), 1e-3);
 
   hess = MatrixXr::Zero(par.size(), par.size());
@@ -129,21 +138,23 @@ inline void Functor::ApproximateHessian(const VectorXr &par, MatrixXr &hess) {
   VectorXr df1 = VectorXr::Zero(par.size());
   VectorXr df2 = VectorXr::Zero(par.size());
 
-  for (std::size_t i = 0; i != par.size(); ++i) {
+  for(std::size_t i = 0; i != par.size(); ++i)
+  {
     double eps = os.ndeps_(i) / os.parscale_(i);
     dpar(i) += eps;
     Gradient(dpar, df1);
     dpar(i) -= 2 * eps;
     Gradient(dpar, df2);
     for (std::size_t j = 0; j != par.size(); ++j)
-      hess(i, j) = os.fnscale_ * (df1(j) - df2(j)) /
-                   (2 * eps * os.parscale_(i) * os.parscale_(j));
+      hess(i, j) = os.fnscale_ * (df1(j) - df2(j)) / (2 * eps * os.parscale_(i) * os.parscale_(j));
     dpar(i) = dpar(i) + eps;
   }
 
   // now symmetrize
-  for (std::size_t i = 0; i != par.size(); ++i) {
-    for (std::size_t j = 0; j != par.size(); ++j) {
+  for(std::size_t i = 0; i != par.size(); ++i)
+  {
+    for(std::size_t j = 0; j != par.size(); ++j)
+    {
       double tmp = 0.5 * (hess(i, j) + hess(j, i));
 
       hess(i, j) = tmp;
@@ -156,7 +167,7 @@ inline double fminfn(int n, double *x, void *ex) {
   OptStruct os(static_cast<Functor *>(ex)->os);
 
   VectorXr par(n);
-  for(int i=0; i<n; ++i)
+  for(int i = 0; i != n; ++i)
     par(i) = x[i];
   par = par.array() * os.parscale_.array();
   return static_cast<Functor *>(ex)->operator()(par) / os.fnscale_;
@@ -166,7 +177,7 @@ inline void fmingr(int n, double *x, double *gr, void *ex) {
   OptStruct os(static_cast<Functor *>(ex)->os);
 
   VectorXr par(n);
-  for(int i=0; i<n; ++i)
+  for(int i = 0; i != n; ++i)
     par(i) = x[i];
 
   VectorXr grad;
@@ -205,63 +216,69 @@ class Roptim {
   std::string message_ = "NULL";
 
  public:
-  struct RoptimControl {
-    std::size_t trace = 0;
-    double fnscale = 1.0;
-    VectorXr parscale;
-    VectorXr ndeps;
-    std::size_t maxit = 100;
-    double abstol = std::numeric_limits<Real>::min();
-    double reltol = std::sqrt(2.220446e-16);
-    double alpha = 1.0;
-    double beta = 0.5;
-    double gamma = 2.0;
-    int REPORT = 10;
-    bool warn_1d_NelderMead = true;
-    int type = 1;
-    int lmm = 5;
-    double factr = 1e7;
-    double pgtol = 0.0;
-    double temp = 10.0;
-    int tmax = 10;
+  struct RoptimControl{
+   int trace = 0;
+   double fnscale = 1.0;
+   VectorXr parscale;
+   VectorXr ndeps;
+   int maxit = 100;
+   double abstol = 1e-6;
+   double reltol = 1e-6;
+   double alpha = 1.0;
+   double beta = 0.5;
+   double gamma = 2.0;
+   int REPORT = 10;
+   bool warn_1d_NelderMead = true;
+   int type = 1;
+   int lmm = 5;
+   double factr = 1e7;
+   double pgtol = 0.0;
+   double temp = 10.0;
+   int tmax = 10;
   } control;
 
-  Roptim(const std::string method = "Nelder-Mead") : method_(method) {
-    if (method_ != "Nelder-Mead" && method_ != "BFGS" && method_ != "CG" &&
-        method_ != "L-BFGS-B")
+  Roptim(const std::string method) : method_(method)
+  {
+    if(method_ != "Nelder-Mead" && method_ != "BFGS" && method_ != "CG" && method_ != "L-BFGS-B")
       Rf_error("Roptim::Roptim(): unknown 'method'");
 
     // Sets default value for maxit & REPORT (which depend on method)
-    if (method_ == "Nelder-Mead") {
+    if(method_ == "Nelder-Mead")
+    {
       control.maxit = 500;
     }
   }
 
-  void set_method(const std::string &method) {
-    if (method != "Nelder-Mead" && method != "BFGS" && method != "CG" &&
-        method != "L-BFGS-B")
+  void set_method(const std::string &method)
+  {
+    if(method != "Nelder-Mead" && method != "BFGS" && method != "CG" && method != "L-BFGS-B")
       Rf_error("Roptim::set_method(): unknown 'method'");
     else
       method_ = method;
 
     // Sets default value for maxit & REPORT (which depend on method)
-    if (method_ == "Nelder-Mead") {
+    if(method_ == "Nelder-Mead")
+    {
       control.maxit = 500;
       control.REPORT = 10;
-    } else {
+    }
+    else
+    {
       control.maxit = 100;
       control.REPORT = 10;
     }
   }
 
-  void set_lower(const VectorXr &lower) {
+  void set_lower(const VectorXr &lower)
+  {
     if (method_ != "L-BFGS-B")
       Rprintf("Roptim::set_lower(): bounds can only be used with method L-BFGS-B");
     method_ = "L-BFGS-B";
     lower_ = lower;
   }
 
-  void set_upper(const VectorXr &upper) {
+  void set_upper(const VectorXr &upper)
+  {
     if (method_ != "L-BFGS-B")
       Rprintf("Roptim::set_upper(): bounds can only be used with method L-BFGS-B");
     method_ = "L-BFGS-B";
@@ -278,7 +295,8 @@ inline void Roptim<Derived>::minimize(Derived &func, VectorXr &par) {
   // PART 1: optim()
 
   // Checks if lower and upper bounds is used
-  if ((lower_.size() != 0 || upper_.size() != 0) && method_ != "L-BFGS-B") {
+  if((lower_.size() != 0 || upper_.size() != 0) && method_ != "L-BFGS-B")
+  {
     Rprintf("Bounds can only be used with method L-BFGS-B");
     method_ = "L-BFGS-B";
   }
@@ -287,9 +305,9 @@ inline void Roptim<Derived>::minimize(Derived &func, VectorXr &par) {
   std::size_t npar = par.size();
 
   // Sets default value for parscale & ndeps (which depend on npar)
-  if (control.parscale.size() == 0)
+  if(control.parscale.size() == 0)
     control.parscale = VectorXr::Constant(npar, 1.0);
-  if (control.ndeps.size() == 0)
+  if(control.ndeps.size() == 0)
     control.ndeps = VectorXr::Constant(npar, 1e-3);
 
   // Note that "method L-BFGS-B uses 'factr' (and 'pgtol') instead of 'reltol'
@@ -298,15 +316,18 @@ inline void Roptim<Derived>::minimize(Derived &func, VectorXr &par) {
 
   // Gives warning of 1-dim optimization by Nelder-Mead
   if (npar == 1 && method_ == "Nelder-Mead" && control.warn_1d_NelderMead)
-    Rprintf("one-dimensional optimization by Nelder-Mead is unreliable");
+    Rprintf("One-dimensional optimization by Nelder-Mead is unreliable");
 
   // Sets default value for lower_
-  if (method_ == "L-BFGS-B" && lower_.size()==0) {
-    lower_ = VectorXr::Constant(npar, std::numeric_limits<Real>::min());
+  if(method_ == "L-BFGS-B" && lower_.size()==0)
+  {
+    lower_ = VectorXr::Constant(npar, -1e6);
   }
+
   // Sets default value for upper_
-  if (method_ == "L-BFGS-B" && upper_.size()==0) {
-    upper_ = VectorXr::Constant(npar, std::numeric_limits<Real>::max());
+  if(method_ == "L-BFGS-B" && upper_.size()==0)
+  {
+    upper_ = VectorXr::Constant(npar, 1e6);
   }
 
   // PART 2: C_optim()
@@ -325,34 +346,41 @@ inline void Roptim<Derived>::minimize(Derived &func, VectorXr &par) {
 
   dpar = par.array() / control.parscale.array();
 
-  if (method_ == "Nelder-Mead") {
+  if(method_ == "Nelder-Mead")
+  {
     nmmin(npar, dpar.data(), opar.data(), &val_, fminfn, &fail_,
-          control.abstol, control.reltol, &func, control.alpha, control.beta,
-          control.gamma, control.trace, &fncount_, control.maxit);
+          control.abstol, control.reltol, &func, control.alpha,
+          control.beta, control.gamma, control.trace, &fncount_, control.maxit);
 
     par = opar.array() * control.parscale.array();
     grcount_ = 0;
-
-  } else if (method_ == "BFGS") {
+  }
+  else if(method_ == "BFGS")
+  {
     Eigen::VectorXi mask = Eigen::VectorXi::Constant(npar, 1);
     vmmin(npar, dpar.data(), &val_, fminfn, fmingr, control.maxit,
           control.trace, mask.data(), control.abstol, control.reltol,
           control.REPORT, &func, &fncount_, &grcount_, &fail_);
 
     par = dpar.array() * control.parscale.array();
-  } else if (method_ == "CG") {
+  }
+  else if(method_ == "CG")
+  {
     cgmin(npar, dpar.data(), opar.data(), &val_, fminfn, fmingr, &fail_,
           control.abstol, control.reltol, &func, control.type, control.trace,
           &fncount_, &grcount_, control.maxit);
 
     par = opar.array() * control.parscale.array();
-  } else if (method_ == "L-BFGS-B") {
+  }
+  else if(method_ == "L-BFGS-B")
+  {
     VectorXr lower(npar);
     VectorXr upper(npar);
     Eigen::VectorXi nbd = Eigen::VectorXi::Zero(npar);
     char msg[60];
 
-    for (std::size_t i = 0; i != npar; ++i) {
+    for(int i = 0; i != npar; ++i)
+    {
       lower(i) = lower_(i) / func.os.parscale_(i);
       upper(i) = upper_(i) / func.os.parscale_(i);
       if (!std::isfinite(lower(i))) {
@@ -378,14 +406,16 @@ inline void Roptim<Derived>::minimize(Derived &func, VectorXr &par) {
            control.trace, control.REPORT);
 
     par = dpar.array() * control.parscale.array();
-    message_ = msg;
-  } else
+  }
+  else
     Rf_error("Roptim::minimize(): unknown 'method'");
 
   par_ = par;
   val_ *= func.os.fnscale_;
 
-  if (hessian_flag_) func.ApproximateHessian(par_, hessian_);
+  if(hessian_flag_)
+    func.ApproximateHessian(par_, hessian_);
+
 }
 
 }  // namespace roptim

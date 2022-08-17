@@ -60,6 +60,9 @@ class Parameter_Cascading
 			 Real GCV;
 			 Real lambda_opt; // Optimal lambda for GCV
 			 
+			 // Boolean to select which optimization procedure for GCV to use
+			 bool stochastic_GCV = false;
+
 			 // Function to compute the optimal lambda through GCV
 			 template <typename EvaluationType>
 			 std::pair<Real, Real> compute_GCV(Carrier<RegressionDataElliptic>& carrier,
@@ -140,6 +143,12 @@ class Parameter_Cascading
 
 				if(H.getModel().getRegressionData().get_parameter_cascading_reaction() == 1){
 					update_c = true;
+				}
+
+				OptimizationData& optr = H.getModel().getOptimizationData();
+				if(optr.get_loss_function() == "GCV" && (optr.get_DOF_evaluation() == "stochastic" || optr.get_DOF_evaluation() == "not_required"))
+				{
+					stochastic_GCV = true;
 				}
 			};
 			

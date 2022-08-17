@@ -24,7 +24,7 @@ class PDE_Parameter_Functional
 
 			 // Mesh needed to recompute R1 matrix every time the PDE parameters change
 			 const MeshHandler<ORDER, mydim, ndim> & mesh;
-			 
+
 	public: // Constructor to set the reference to the solver
 			PDE_Parameter_Functional(MixedFERegression<RegressionDataElliptic> & model_,
 									 const MeshHandler<ORDER, mydim, ndim> & mesh_)
