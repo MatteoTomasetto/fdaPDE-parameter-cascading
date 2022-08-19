@@ -198,23 +198,13 @@ void Gradient_Descent_fd::upgrade_best(void)
 	Real df_norm = df.squaredNorm();
 
 	// Update best
-	VectorXr new_best = best;
-	new_best -= alpha * df;
-
- 	// Check bounds
+	VectorXr new_best = best - alpha * df;
+	
+ 	// Check bounds for non-periodic variables (periodic ones are fixed at the end since they are less problematic)
  	for(unsigned int i = 0u; i < best.size(); ++i)
  	{
- 		// Exploit periodicity if present
- 		if(param_gradient_descent_fd.periods[i] != 0.0)
+ 		if(param_gradient_descent_fd.periods[i] == 0.0)
  		{
-			while(new_best[i] < param_gradient_descent_fd.lower_bound[i])
-					new_best[i] += param_gradient_descent_fd.periods[i];
-			while(new_best[i] > param_gradient_descent_fd.upper_bound[i])
-					new_best[i] -= param_gradient_descent_fd.periods[i];
- 		}
-
- 		else
- 		{	
 			// Check upper and lower bounds
  			while(new_best[i] < param_gradient_descent_fd.lower_bound[i] || new_best[i] > param_gradient_descent_fd.upper_bound[i])
  			{	
@@ -235,6 +225,18 @@ void Gradient_Descent_fd::upgrade_best(void)
 	}
 
 	best = new_best;
+
+	// Exploit periodicity if present
+ 	for(unsigned int i = 0u; i < best.size(); ++i)
+ 	{
+ 		if(param_gradient_descent_fd.periods[i] != 0.0)
+ 		{
+			while(best[i] < param_gradient_descent_fd.lower_bound[i])
+					best[i] += param_gradient_descent_fd.periods[i];
+			while(best[i] > param_gradient_descent_fd.upper_bound[i])
+					best[i] -= param_gradient_descent_fd.periods[i];
+ 		}
+ 	}
 
  	return;
 }

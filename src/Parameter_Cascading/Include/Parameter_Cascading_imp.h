@@ -317,7 +317,7 @@ Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim>::apply(void)
 		}
 		else if(ndim == 3)
 		{
-			lower_bound << 0.0, 0.0, 1.0, 1.0;
+			lower_bound << 0.0, 0.0, 1e-3, 1e-3;
 			upper_bound << EIGEN_PI, EIGEN_PI, 1000.0, 1000.0;
 			periods << EIGEN_PI, EIGEN_PI, 0.0, 0.0;
 		}
@@ -416,7 +416,7 @@ Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim>::apply(void)
 				VectorXr ub(4);
 			
 				param << x(0), x(1), this -> diffusion(2), this -> diffusion(3);
-				lb << lower_bound, 1.0, 1.0;
+				lb << lower_bound, 1e-3, 1e-3;
 				ub << upper_bound, 1000.0, 1000.0;
 
 				VectorXr grad(2);
@@ -498,7 +498,7 @@ Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim>::apply(void)
 		else if(ndim == 3)
 		{
 			init << diffusion(2), diffusion(3);
-			lower_bound << 1.0, 1.0;
+			lower_bound << 1e-3, 1e-3;
 			upper_bound << 1000.0, 1000.0;
 			periods << 0.0, 0.0;
 
