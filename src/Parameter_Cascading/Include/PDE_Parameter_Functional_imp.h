@@ -10,10 +10,10 @@
 #include "../../Lambda_Optimization/Include/Lambda_Optimizer.h"
 
 
-template <UInt ORDER, UInt mydim, UInt ndim>
+template <UInt ORDER, UInt mydim, UInt ndim, typename InputHandler>
 template <typename DiffType>
 typename std::enable_if<std::is_same<DiffType, VectorXr>::value || std::is_same<DiffType, MatrixXr>::value, void>::type
-PDE_Parameter_Functional<ORDER, mydim, ndim>::set_K(const DiffType& DiffParam) const
+PDE_Parameter_Functional<ORDER, mydim, ndim, InputHandler>::set_K(const DiffType& DiffParam) const
 {
 	// Set the diffusion in RegressionData
 	model.getRegressionData().getK().setDiffusion(DiffParam);
@@ -25,8 +25,8 @@ PDE_Parameter_Functional<ORDER, mydim, ndim>::set_K(const DiffType& DiffParam) c
 	return;
 }
 
-template <UInt ORDER, UInt mydim, UInt ndim>
-void PDE_Parameter_Functional<ORDER, mydim, ndim>::set_b(const VectorXr& AdvParam) const
+template <UInt ORDER, UInt mydim, UInt ndim, typename InputHandler>
+void PDE_Parameter_Functional<ORDER, mydim, ndim, InputHandler>::set_b(const VectorXr& AdvParam) const
 {
 	// Set the advection in RegressionData
 	model.getRegressionData().getB().setAdvection(AdvParam);
@@ -38,8 +38,8 @@ void PDE_Parameter_Functional<ORDER, mydim, ndim>::set_b(const VectorXr& AdvPara
 }
 
 
-template <UInt ORDER, UInt mydim, UInt ndim>
-void PDE_Parameter_Functional<ORDER, mydim, ndim>::set_c(const Real& c) const
+template <UInt ORDER, UInt mydim, UInt ndim, typename InputHandler>
+void PDE_Parameter_Functional<ORDER, mydim, ndim, InputHandler>::set_c(const Real& c) const
 {	
 	// Set the reaction in RegressionData
 	model.getRegressionData().getC().setReaction(c);
@@ -50,70 +50,108 @@ void PDE_Parameter_Functional<ORDER, mydim, ndim>::set_c(const Real& c) const
 	return;
 }
 
-template <UInt ORDER, UInt mydim, UInt ndim>
+
+template <UInt ORDER, UInt mydim, UInt ndim, typename InputHandler>
+void PDE_Parameter_Functional<ORDER, mydim, ndim, InputHandler>::compute_zhat(VectorXr& zhat, const lambda::type<1>& lambda) const
+{
+	if(model.isSV())
+	{
+		if(model.getRegressionData().getNumberOfRegions()>0)
+		{
+			Carrier<InputHandler,Forced,Areal>
+				carrier = CarrierBuilder<InputHandler>::build_forced_areal_carrier(model.getRegressionData(), model, model.getOptimizationData());
+			GCV_Stochastic<Carrier<InputHandler,Forced,Areal>, 1> solver(carrier, true);
+			solver.update_parameters(lambda); // solve the problem and compute z_hat
+			zhat = solver.get_z_hat();
+		}
+		else
+		{
+			Carrier<InputHandler,Forced>
+				carrier = CarrierBuilder<InputHandler>::build_forced_carrier(model.getRegressionData(), model, model.getOptimizationData());
+			GCV_Stochastic<Carrier<InputHandler,Forced>, 1> solver(carrier, true);
+			solver.update_parameters(lambda); // solve the problem and compute z_hat
+			zhat = solver.get_z_hat();
+		}
+	}
+	else
+	{
+		if(model.getRegressionData().getNumberOfRegions()>0)
+		{
+			Carrier<InputHandler,Areal>
+				carrier = CarrierBuilder<InputHandler>::build_areal_carrier(model.getRegressionData(), model, model.getOptimizationData());
+			GCV_Stochastic<Carrier<InputHandler,Areal>, 1> solver(carrier, true);
+			solver.update_parameters(lambda); // solve the problem and compute z_hat
+			zhat = solver.get_z_hat();
+		}
+		else
+		{
+			Carrier<InputHandler>
+				carrier = CarrierBuilder<InputHandler>::build_plain_carrier(model.getRegressionData(), model, model.getOptimizationData());
+			GCV_Stochastic<Carrier<InputHandler>, 1> solver(carrier, true);
+			solver.update_parameters(lambda); // solve the problem and compute z_hat
+			zhat = solver.get_z_hat();
+		}
+	}
+
+	return;		
+}
+
+
+template <UInt ORDER, UInt mydim, UInt ndim, typename InputHandler>
 template <typename DiffType>
 typename std::enable_if<std::is_same<DiffType, VectorXr>::value || std::is_same<DiffType, MatrixXr>::value, Real>::type
-PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_K(const DiffType& DiffParam, const lambda::type<1>& lambda) const
+PDE_Parameter_Functional<ORDER, mydim, ndim, InputHandler>::eval_K(const DiffType& DiffParam, const lambda::type<1>& lambda) const
 {
 	// Set parameter in RegressionData
 	set_K<DiffType>(DiffParam);
 
 	// Solve the regression problem
 	// Use GCV_stochastic since it computes directly z_hat
-	Carrier<RegressionDataElliptic> carrier = CarrierBuilder<RegressionDataElliptic>::build_plain_carrier(model.getRegressionData(), model, model.getOptimizationData());
-	GCV_Stochastic<Carrier<RegressionDataElliptic>, 1> solver(carrier, true);
-		
-	solver.update_parameters(lambda); // solve the problem and compute z_hat
-
-	VectorXr z_hat = solver.get_z_hat();
+	// Build the Carrier according to problem type
+	VectorXr zhat;
+	compute_zhat(zhat, lambda);
 	VectorXr zp = *(model.getRegressionData().getObservations());
-	Real res = (zp - z_hat).squaredNorm();
 
-	return res;
+	Rprintf("compare zhats0: %f - %f",zhat(0),zp(0));
+	Rprintf("compare zhats100: %f - %f",zhat(100),zp(100));
+
+	return (zp - zhat).squaredNorm();
 }
 
 
-template <UInt ORDER, UInt mydim, UInt ndim>
-Real PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_b(const VectorXr& AdvParam, const lambda::type<1>& lambda) const
+template <UInt ORDER, UInt mydim, UInt ndim, typename InputHandler>
+Real PDE_Parameter_Functional<ORDER, mydim, ndim, InputHandler>::eval_b(const VectorXr& AdvParam, const lambda::type<1>& lambda) const
 {
 	// Set parameter in RegressionData
 	set_b(AdvParam);
 	
 	// Solve the regression problem
 	// Use GCV_stochastic since it computes directly z_hat
-	Carrier<RegressionDataElliptic> carrier = CarrierBuilder<RegressionDataElliptic>::build_plain_carrier(model.getRegressionData(), model, model.getOptimizationData());
-	GCV_Stochastic<Carrier<RegressionDataElliptic>, 1> solver(carrier, true);
-		
-	solver.update_parameters(lambda); // solve the problem and compute z_hat
-
-	VectorXr z_hat = solver.get_z_hat();
+	VectorXr zhat;
+	compute_zhat(zhat, lambda);
 	VectorXr zp = *(model.getRegressionData().getObservations());
-
-	return (zp - z_hat).squaredNorm();
+	
+	return (zp - zhat).squaredNorm();
 }
 
 
-template <UInt ORDER, UInt mydim, UInt ndim>
-Real PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_c(const Real& c, const lambda::type<1>& lambda) const
+template <UInt ORDER, UInt mydim, UInt ndim, typename InputHandler>
+Real PDE_Parameter_Functional<ORDER, mydim, ndim, InputHandler>::eval_c(const Real& c, const lambda::type<1>& lambda) const
 {
 	// Set parameter in RegressionData
 	set_c(c);
 	
 	// Solve the regression problem
 	// Use GCV_stochastic since it computes directly z_hat
-	Carrier<RegressionDataElliptic> carrier = CarrierBuilder<RegressionDataElliptic>::build_plain_carrier(model.getRegressionData(), model, model.getOptimizationData());
-	GCV_Stochastic<Carrier<RegressionDataElliptic>, 1> solver(carrier, true);
-		
-	solver.update_parameters(lambda); // solve the problem and compute z_hat
-
-	VectorXr z_hat = solver.get_z_hat();
+	VectorXr zhat;
+	compute_zhat(zhat, lambda);
 	VectorXr zp = *(model.getRegressionData().getObservations());
-
-	return (zp - z_hat).squaredNorm();
+	
+	return (zp - zhat).squaredNorm();
 }
 
-template <UInt ORDER, UInt mydim, UInt ndim>
-VectorXr PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_grad_aniso_intensity(const MatrixXr& K, const Real& aniso_intensity, const lambda::type<1>& lambda, const Real& h) const
+template <UInt ORDER, UInt mydim, UInt ndim, typename InputHandler>
+VectorXr PDE_Parameter_Functional<ORDER, mydim, ndim, InputHandler>::eval_grad_aniso_intensity(const MatrixXr& K, const Real& aniso_intensity, const lambda::type<1>& lambda, const Real& h) const
 {
 	VectorXr res(1);
 	Real h_to_use = 2. * h;
@@ -133,8 +171,8 @@ VectorXr PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_grad_aniso_intensity
 	return res;
 }
 
-template <UInt ORDER, UInt mydim, UInt ndim>
-VectorXr PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_grad_K(const VectorXr& DiffParam, const VectorXr& LowerBound, const VectorXr& UpperBound, const lambda::type<1>& lambda, const Real& h) const
+template <UInt ORDER, UInt mydim, UInt ndim, typename InputHandler>
+VectorXr PDE_Parameter_Functional<ORDER, mydim, ndim, InputHandler>::eval_grad_K(const VectorXr& DiffParam, const VectorXr& LowerBound, const VectorXr& UpperBound, const lambda::type<1>& lambda, const Real& h) const
 {
 	UInt dim = (ndim == 2) ? 2 : 4;
 	VectorXr res(dim);
@@ -173,8 +211,8 @@ VectorXr PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_grad_K(const VectorX
 }
 
 
-template <UInt ORDER, UInt mydim, UInt ndim>
-VectorXr PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_grad_b(const VectorXr& AdvParam, const lambda::type<1>& lambda, const Real& h) const
+template <UInt ORDER, UInt mydim, UInt ndim, typename InputHandler>
+VectorXr PDE_Parameter_Functional<ORDER, mydim, ndim, InputHandler>::eval_grad_b(const VectorXr& AdvParam, const lambda::type<1>& lambda, const Real& h) const
 {
 	VectorXr res(ndim);
 
@@ -193,8 +231,8 @@ VectorXr PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_grad_b(const VectorX
 }
 
 
-template <UInt ORDER, UInt mydim, UInt ndim>
-VectorXr PDE_Parameter_Functional<ORDER, mydim, ndim>::eval_grad_c(const Real& c, const lambda::type<1>& lambda, const Real& h) const
+template <UInt ORDER, UInt mydim, UInt ndim, typename InputHandler>
+VectorXr PDE_Parameter_Functional<ORDER, mydim, ndim, InputHandler>::eval_grad_c(const Real& c, const lambda::type<1>& lambda, const Real& h) const
 {
 	VectorXr res(1);
 

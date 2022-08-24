@@ -18,30 +18,94 @@
 
 using namespace roptim;
 
-// Wrapper needed to use Roptim
-class optimWrapper : public Functor
-{
-	public:
-		optimWrapper(const std::function<Real (VectorXr)>& F_)
-		: F(F_) {};
 
-		double operator()(const VectorXr &par) override
+template <UInt ORDER, UInt mydim, UInt ndim, typename InputHandler>
+std::pair<Real, Real>
+Parameter_Cascading<ORDER, mydim, ndim, InputHandler>::select_and_compute_GCV(void) const
+{	
+	if(stochastic_GCV)
+	{
+		if(H.getModel().isSV())
 		{
-			return F(par);
-  		};
+			if(H.getModel().getRegressionData().getNumberOfRegions()>0)
+			{
+				Carrier<InputHandler,Forced,Areal>
+					carrier = CarrierBuilder<InputHandler>::build_forced_areal_carrier(H.getModel().getRegressionData(), H.getModel(), H.getModel().getOptimizationData());
+				GCV_Stochastic<Carrier<InputHandler,Forced,Areal>, 1> solver(carrier, true);
+				return compute_GCV<GCV_Stochastic<Carrier<InputHandler,Forced,Areal>, 1>>(solver);
+			}
+			else
+			{
+				Carrier<InputHandler,Forced>
+					carrier = CarrierBuilder<InputHandler>::build_forced_carrier(H.getModel().getRegressionData(), H.getModel(), H.getModel().getOptimizationData());
+				GCV_Stochastic<Carrier<InputHandler,Forced>, 1> solver(carrier, true);
+				return compute_GCV<GCV_Stochastic<Carrier<InputHandler,Forced>, 1>>(solver);
+			}
+		}
+		else
+		{
+			if(H.getModel().getRegressionData().getNumberOfRegions()>0)
+			{
+				Carrier<InputHandler,Areal>
+					carrier = CarrierBuilder<InputHandler>::build_areal_carrier(H.getModel().getRegressionData(), H.getModel(), H.getModel().getOptimizationData());
+				GCV_Stochastic<Carrier<InputHandler,Areal>, 1> solver(carrier, true);
+				return compute_GCV<GCV_Stochastic<Carrier<InputHandler,Areal>, 1>>(solver);
+			}
+			else
+			{
+				Carrier<InputHandler>
+					carrier = CarrierBuilder<InputHandler>::build_plain_carrier(H.getModel().getRegressionData(), H.getModel(), H.getModel().getOptimizationData());
+				GCV_Stochastic<Carrier<InputHandler>, 1> solver(carrier, true);
+				return compute_GCV<GCV_Stochastic<Carrier<InputHandler>, 1>>(solver);
+			}
+		}
+	}
+	else
+	{
+		if(H.getModel().isSV())
+		{
+			if(H.getModel().getRegressionData().getNumberOfRegions()>0)
+			{
+				Carrier<InputHandler,Forced,Areal>
+					carrier = CarrierBuilder<InputHandler>::build_forced_areal_carrier(H.getModel().getRegressionData(), H.getModel(), H.getModel().getOptimizationData());
+				GCV_Exact<Carrier<InputHandler,Forced,Areal>, 1> solver(carrier);
+				return compute_GCV<GCV_Exact<Carrier<InputHandler,Forced,Areal>, 1>>(solver);
+			}
+			else
+			{
+				Carrier<InputHandler,Forced>
+					carrier = CarrierBuilder<InputHandler>::build_forced_carrier(H.getModel().getRegressionData(), H.getModel(), H.getModel().getOptimizationData());
+				GCV_Exact<Carrier<InputHandler,Forced>, 1> solver(carrier);
+				return compute_GCV<GCV_Exact<Carrier<InputHandler,Forced>, 1>>(solver);
+			}
+		}
+		else
+		{
+			if(H.getModel().getRegressionData().getNumberOfRegions()>0)
+			{
+				Carrier<InputHandler,Areal>
+					carrier = CarrierBuilder<InputHandler>::build_areal_carrier(H.getModel().getRegressionData(), H.getModel(), H.getModel().getOptimizationData());
+				GCV_Exact<Carrier<InputHandler,Areal>, 1> solver(carrier);
+				return compute_GCV<GCV_Exact<Carrier<InputHandler,Areal>, 1>>(solver);
+			}
+			else
+			{
+				Carrier<InputHandler>
+					carrier = CarrierBuilder<InputHandler>::build_plain_carrier(H.getModel().getRegressionData(), H.getModel(), H.getModel().getOptimizationData());
+				GCV_Exact<Carrier<InputHandler>, 1> solver(carrier);
+				return compute_GCV<GCV_Exact<Carrier<InputHandler>, 1>>(solver);
+			}
+		}
+	}
+}
 
-	private:
-  		const std::function<Real (VectorXr)>& F;
-};
 
-
-template <UInt ORDER, UInt mydim, UInt ndim>
+template <UInt ORDER, UInt mydim, UInt ndim, typename InputHandler>
 template <typename EvaluationType>
 std::pair<Real, Real>
-Parameter_Cascading<ORDER, mydim, ndim>::compute_GCV(Carrier<RegressionDataElliptic>& carrier,
-													 EvaluationType& solver,
-													 Real lambda_init) const
+Parameter_Cascading<ORDER, mydim, ndim, InputHandler>::compute_GCV(EvaluationType& solver) const
 {	
+	Real lambda_init = lambda_opt; // Use the last lambda_opt as initialization to compute the GCV
 
 	Function_Wrapper<Real, Real, Real, Real, EvaluationType> Fun(solver);
 	const OptimizationData optr = H.getModel().getOptimizationData();
@@ -63,6 +127,7 @@ Parameter_Cascading<ORDER, mydim, ndim>::compute_GCV(Carrier<RegressionDataEllip
 			lambda_min = lambda_grid[i];
 		}
 	}
+	
 	// If lambda_init <= 0, use the one from the grid
 	if (lambda_init > lambda_min/4 || lambda_init <= 0)
 		lambda_init = lambda_min/8;
@@ -79,8 +144,8 @@ Parameter_Cascading<ORDER, mydim, ndim>::compute_GCV(Carrier<RegressionDataEllip
 	return {lambda_couple.first, GCV_values[GCV_values.size()-1]};
 }
 
-template <UInt ORDER, UInt mydim, UInt ndim>
-VectorXr Parameter_Cascading<ORDER, mydim, ndim>::step(VectorXr init, const UInt& opt_algo, const std::function<Real (VectorXr, Real)>& F, 
+template <UInt ORDER, UInt mydim, UInt ndim, typename InputHandler>
+VectorXr Parameter_Cascading<ORDER, mydim, ndim, InputHandler>::step(VectorXr init, const UInt& opt_algo, const std::function<Real (VectorXr, Real)>& F, 
 	const std::function<VectorXr (VectorXr, Real)>& dF, const std::function<void (VectorXr)>& set_param)
 {
 	UInt dim = init.size();
@@ -98,8 +163,8 @@ VectorXr Parameter_Cascading<ORDER, mydim, ndim>::step(VectorXr init, const UInt
 	return step(init, opt_algo, lower_bound, upper_bound, periods, F, dF, set_param);
 } 
 
-template <UInt ORDER, UInt mydim, UInt ndim>
-VectorXr Parameter_Cascading<ORDER, mydim, ndim>::step(VectorXr init, const UInt& opt_algo, const VectorXr& lower_bound, const VectorXr& upper_bound, 
+template <UInt ORDER, UInt mydim, UInt ndim, typename InputHandler>
+VectorXr Parameter_Cascading<ORDER, mydim, ndim, InputHandler>::step(VectorXr init, const UInt& opt_algo, const VectorXr& lower_bound, const VectorXr& upper_bound, 
 	const VectorXr& periods, const std::function<Real (VectorXr, Real)>& F, const std::function<VectorXr (VectorXr, Real)>& dF, 
 	const std::function<void (VectorXr)>& set_param, bool constraint)
 {
@@ -124,9 +189,6 @@ VectorXr Parameter_Cascading<ORDER, mydim, ndim>::step(VectorXr init, const UInt
 	UInt counter_GCV_increasing = 0; // Variable to count how many iterations present an increasing GCV
 	bool finer_grid = false;		 // Finer grid to activate when GCV is increasing
 	Real old_GCV = std::numeric_limits<Real>::max();
-
-	// Variables needed to compute the GCV
-	Carrier<RegressionDataElliptic> carrier = CarrierBuilder<RegressionDataElliptic>::build_plain_carrier(H.getModel().getRegressionData(), H.getModel(), H.getModel().getOptimizationData());
 
 	// For loop to explore the grid of lambdas
 	for (UInt iter = 0; iter < lambdas.size(); ++iter)
@@ -217,21 +279,10 @@ VectorXr Parameter_Cascading<ORDER, mydim, ndim>::step(VectorXr init, const UInt
 		// Compute GCV with the new parameters
 		// By default GCV_Exact is used; If user set GCV_Stochastic option in input, then it will be used
 		set_param(opt_sol);
-		std::pair<Real, Real> opt_sol_GCV;
-		
+				
 		Rprintf("Computing GCV with the optimal sol for lambda = %e\n", lambdas(iter));
-
-		if(stochastic_GCV)
-		{
-			GCV_Stochastic<Carrier<RegressionDataElliptic>, 1> solver(carrier, true);
-			opt_sol_GCV = compute_GCV<GCV_Stochastic<Carrier<RegressionDataElliptic>, 1>>(carrier, solver, lambda_opt); // Use the last optimal lambda found as initial lambda computing GCV
-		}
-		else
-		{
-			GCV_Exact<Carrier<RegressionDataElliptic>, 1> solver(carrier);
-			opt_sol_GCV = compute_GCV<GCV_Exact<Carrier<RegressionDataElliptic>, 1>>(carrier, solver, lambda_opt); // Use the last optimal lambda found as initial lambda computing GCV
-		}
-		
+		std::pair<Real, Real> opt_sol_GCV = select_and_compute_GCV();
+				
 		if(iter == 0 || opt_sol_GCV.second <= GCV)
 		{
 			lambda_opt = opt_sol_GCV.first;
@@ -292,8 +343,8 @@ VectorXr Parameter_Cascading<ORDER, mydim, ndim>::step(VectorXr init, const UInt
 }
 
 
-template <UInt ORDER, UInt mydim, UInt ndim>
-Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim>::apply(void)
+template <UInt ORDER, UInt mydim, UInt ndim, typename InputHandler>
+Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim, InputHandler>::apply(void)
 {
 	Rprintf("Start Parameter_Cascading Algorithm\n");
 
@@ -318,8 +369,8 @@ Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim>::apply(void)
 		else if(ndim == 3)
 		{
 			lower_bound << 0.0, 0.0, 1e-3, 1e-3;
-			upper_bound << EIGEN_PI, EIGEN_PI, 1000.0, 1000.0;
-			periods << EIGEN_PI, EIGEN_PI, 0.0, 0.0;
+			upper_bound << 2.0 * EIGEN_PI, 2.0 * EIGEN_PI, 1000.0, 1000.0;
+			periods << 2.0 * EIGEN_PI, 2.0 * EIGEN_PI, 0.0, 0.0;
 		}
 				
 		std::function<Real (VectorXr, Real)> F = [this](VectorXr x, Real lambda)
@@ -399,8 +450,8 @@ Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim>::apply(void)
 		{
 			init << diffusion(0), diffusion(1);
 			lower_bound << 0.0, 0.0;
-			upper_bound << EIGEN_PI, EIGEN_PI;
-			periods << EIGEN_PI, EIGEN_PI;
+			upper_bound << 2.0 * EIGEN_PI, 2.0 * EIGEN_PI;
+			periods << 2.0 * EIGEN_PI, 2.0 * EIGEN_PI;
 
 			F = [this](VectorXr x, Real lambda)
 			{
@@ -517,7 +568,7 @@ Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim>::apply(void)
 			
 				param << this -> diffusion(0), this -> diffusion(1), x(0), x(1);
 				lb << 0.0, 0.0, lower_bound;
-				ub << EIGEN_PI, EIGEN_PI, upper_bound;
+				ub << 2.0 * EIGEN_PI, 2.0 * EIGEN_PI, upper_bound;
 
 				VectorXr grad(2);
 				VectorXr tmp(4);

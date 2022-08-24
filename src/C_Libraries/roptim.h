@@ -66,6 +66,22 @@ class Functor {
   OptStruct os;
 };
 
+// Wrapper needed to use Roptim in fdapde
+class optimWrapper : public Functor
+{
+  public:
+    optimWrapper(const std::function<Real (VectorXr)>& F_)
+    : F(F_) {};
+
+    double operator()(const VectorXr &par) override
+    {
+      return F(par);
+      };
+
+  private:
+      const std::function<Real (VectorXr)>& F;
+};
+
 inline void Functor::ApproximateGradient(const VectorXr &par, VectorXr &grad)
 {
   if(os.parscale_.size()==0)

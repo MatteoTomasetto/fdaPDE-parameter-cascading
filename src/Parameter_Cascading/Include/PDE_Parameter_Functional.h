@@ -16,17 +16,17 @@
  *
 */
 
-template <UInt ORDER, UInt mydim, UInt ndim>
+template <UInt ORDER, UInt mydim, UInt ndim, typename InputHandler>
 class PDE_Parameter_Functional
 {
 	private: // MixedFERegression object with to solve the regression problem
-			 MixedFERegression<RegressionDataElliptic> & model;
+			 MixedFERegression<InputHandler> & model;
 
 			 // Mesh needed to recompute R1 matrix every time the PDE parameters change
 			 const MeshHandler<ORDER, mydim, ndim> & mesh;
 
 	public: // Constructor to set the reference to the solver
-			PDE_Parameter_Functional(MixedFERegression<RegressionDataElliptic> & model_,
+			PDE_Parameter_Functional(MixedFERegression<InputHandler> & model_,
 									 const MeshHandler<ORDER, mydim, ndim> & mesh_)
 			: model(model_), mesh(mesh_) {};
 
@@ -51,8 +51,11 @@ class PDE_Parameter_Functional
 			VectorXr eval_grad_c(const Real& c, const lambda::type<1>& lambda, const Real& h = 1e-3) const;
 			VectorXr eval_grad_aniso_intensity(const MatrixXr& K, const Real& aniso_intensity, const lambda::type<1>& lambda, const Real& h = 1e-3) const;
 
+			// Utility to compute z_hat
+			void compute_zhat(VectorXr& zhat, const lambda::type<1>& lambda) const;
+
 			// GETTERS
-			inline MixedFERegression<RegressionDataElliptic> & getModel(void) const { return model; };
+			inline MixedFERegression<InputHandler> & getModel(void) const { return model; };
 			inline const MeshHandler<ORDER, mydim, ndim> & getMesh(void) const { return mesh; };
 };
 

@@ -23,7 +23,7 @@ typename std::enable_if<size==1, std::pair<MatrixXr, output_Data<1>>>::type
 	optimizer_strategy_selection(EvaluationType & optim, CarrierType & carrier);
 
 template<typename InputHandler, UInt ORDER, UInt mydim, UInt ndim>
-typename std::enable_if<!std::is_same<InputHandler, RegressionDataElliptic>::value, SEXP>::type
+typename std::enable_if<!std::is_same<InputHandler, RegressionDataElliptic>::value && !std::is_same<InputHandler, RegressionDataEllipticSpaceVarying>::value, SEXP>::type
 regression_skeleton(InputHandler & regressionData, OptimizationData & optimizationData, SEXP Rmesh)
 {
 	MeshHandler<ORDER, mydim, ndim> mesh(Rmesh, regressionData.getSearch());	// Create the mesh
@@ -72,13 +72,12 @@ regression_skeleton(InputHandler & regressionData, OptimizationData & optimizati
  	return Solution_Builders::build_solution_plain_regression<InputHandler, ORDER, mydim, ndim>(solution_bricks.first, solution_bricks.second, mesh, regressionData, regression);
 }
 
-// Specialization for RegressionDataElliptic to allow parameter cascading algorithm in this case
-// So far, Parameter Cascading is implemented only non-space varying cases
+// Specialization for RegressionDataElliptic and RegressionDataEllipticSpaceVarying to allow parameter cascading algorithm in this case
 template<typename InputHandler, UInt ORDER, UInt mydim, UInt ndim>
-typename std::enable_if<std::is_same<InputHandler, RegressionDataElliptic>::value, SEXP>::type
+typename std::enable_if<std::is_same<InputHandler, RegressionDataElliptic>::value || std::is_same<InputHandler, RegressionDataEllipticSpaceVarying>::value, SEXP>::type
 regression_skeleton(InputHandler & regressionData, OptimizationData & optimizationData, SEXP Rmesh)
 {
-	MeshHandler<ORDER, mydim, ndim> mesh(Rmesh, regressionData.getSearch());	// Create the mesh
+	MeshHandler<ORDER, mydim, ndim> mesh(Rmesh, regressionData.getSearch()); // Create the mesh
 	
 	MixedFERegression<InputHandler> regression(regressionData, optimizationData, mesh.num_nodes()); // Define the mixed object
 
@@ -88,11 +87,14 @@ regression_skeleton(InputHandler & regressionData, OptimizationData & optimizati
 	Output_Parameter_Cascading parameter_cascading_result;
 	if(regressionData.ParameterCascadingOn())
 	{
+		// Set parameter dimension in regressionData to properly modify the PDE parameters in the Parameter Cascading algorithm
+		regressionData.template set_parameters_dim<ORDER, mydim, ndim>(mesh);
+
 		// Functional to optimize in the algorithm
-		PDE_Parameter_Functional<ORDER, mydim, ndim> H(regression, mesh);
+		PDE_Parameter_Functional<ORDER, mydim, ndim, InputHandler> H(regression, mesh);
 
 		// Object to perform the algorithm
-		Parameter_Cascading<ORDER, mydim, ndim> ParameterCascadingEngine(H);
+		Parameter_Cascading<ORDER, mydim, ndim, InputHandler> ParameterCascadingEngine(H);
 
 		parameter_cascading_result = ParameterCascadingEngine.apply(); // Parameter cascading algorithm applied
 
@@ -146,7 +148,6 @@ regression_skeleton(InputHandler & regressionData, OptimizationData & optimizati
 
  	return Solution_Builders::build_solution_plain_regression<InputHandler, ORDER, mydim, ndim>(solution_bricks.first, solution_bricks.second, mesh, regressionData, regression);
 }
-
 
 //! Function to select the right optimization method
 /*

@@ -202,7 +202,7 @@ SEXP Solution_Builders::build_solution_plain_regression(const MatrixXr & solutio
 
 
 template<typename InputHandler, UInt ORDER, UInt mydim, UInt ndim>
-typename std::enable_if<std::is_same<InputHandler, RegressionDataElliptic>::value, SEXP>::type
+typename std::enable_if<std::is_same<InputHandler, RegressionDataElliptic>::value || std::is_same<InputHandler, RegressionDataEllipticSpaceVarying>::value, SEXP>::type
 Solution_Builders::build_solution_plain_regression(const MatrixXr & solution, const output_Data<1> & output, const MeshHandler<ORDER, mydim, ndim> & mesh , const InputHandler & regressionData, const MixedFERegression<InputHandler>& regression,
     const Output_Parameter_Cascading& parameter_cascading_result){
 
@@ -407,7 +407,7 @@ Solution_Builders::build_solution_plain_regression(const MatrixXr & solution, co
             rans[0] = parameter_cascading_result.diffusion_opt(j);
         }
 
-        // Add optimal reaction coefficient in position 24+dim
+        // Add optimal anisotropy intensity in position 24+dim
         SET_VECTOR_ELT(result, 22+dim, Rf_allocVector(REALSXP, 1));
         rans= REAL(VECTOR_ELT(result, 22+dim));
         rans[0] = parameter_cascading_result.aniso_intensity_opt;

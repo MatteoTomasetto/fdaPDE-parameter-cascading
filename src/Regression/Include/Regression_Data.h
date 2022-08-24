@@ -4,6 +4,7 @@
 #include "../../FdaPDE.h"
 #include "../../Mesh/Include/Mesh_Objects.h"
 #include "../../FE_Assemblers_Solvers/Include/Param_Functors.h"
+#include "../../Mesh/Include/Mesh.h"
 
 //!  An IO handler class for objects passed from R
 /*!
@@ -248,6 +249,14 @@ class  RegressionDataElliptic:public RegressionData
 			parameter_cascading_reaction = 0;
 		}
 
+		template <UInt ORDER, UInt mydim, UInt ndim>
+		void set_parameters_dim(const MeshHandler<ORDER, mydim, ndim> & mesh_)
+		{
+			K_.set_dim(mesh_);
+			b_.set_dim(mesh_);
+			c_.set_dim(mesh_);
+		}
+
 		bool ParameterCascadingOn(void) const
 		{ 
 			return (parameter_cascading_diffusion != 0 || parameter_cascading_advection != 0 || parameter_cascading_reaction != 0);
@@ -329,9 +338,17 @@ class RegressionDataEllipticSpaceVarying:public RegressionData
 			parameter_cascading_reaction = 0;
 		}
 
+		template <UInt ORDER, UInt mydim, UInt ndim>
+		void set_parameters_dim(const MeshHandler<ORDER, mydim, ndim> & mesh_)
+		{
+			K_.set_dim(mesh_);
+			b_.set_dim(mesh_);
+			c_.set_dim(mesh_);
+		}
+
 		bool ParameterCascadingOn(void) const
 		{ 
-			return (parameter_cascading_diffusion != 0) || (parameter_cascading_advection != 0) || (parameter_cascading_reaction != 0);
+			return (parameter_cascading_diffusion != 0 || parameter_cascading_advection != 0 || parameter_cascading_reaction != 0);
 		} // return true if Parameter Cascading algorithm has to be done
 
 };

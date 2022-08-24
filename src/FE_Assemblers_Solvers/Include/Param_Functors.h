@@ -2,6 +2,8 @@
 #define __PARAM_FUNCTORS_H__
 
 #include "Pde_Expression_Templates.h"
+#include "../../FE_Assemblers_Solvers/Include/Finite_Element.h"
+#include "../../Mesh/Include/Mesh.h"
 #include <cmath>
 
 // Forward declaration!
@@ -22,37 +24,10 @@ public:
     K_ptr_(REAL(RGlobalVector)) {}
 
   template<UInt ORDER, UInt mydim, UInt ndim>
-  Real operator() (const FiniteElement<ORDER,mydim,ndim>& fe_, UInt iq, UInt i, UInt j) const{
-  using EigenMap2Diff_matr = Eigen::Map<const Eigen::Matrix<Real,ndim,ndim> >;
-
-  const UInt index = fe_.getGlobalIndex(iq) * EigenMap2Diff_matr::SizeAtCompileTime;
-  return fe_.stiff_impl(iq, i, j, EigenMap2Diff_matr(&K_ptr_[index]));
-  }
-
-  // Ad-hoc utilities for ParameterCascading in SpaceVarying cases not implemented yet
-
-private:
-  Real* const K_ptr_;
-};
-
-
-// Specialization for Constant case (ad hoc functions are needed for ParameterCascading)
-template<>
-class Diffusion<PDEParameterOptions::Constant>{
-public:
-
-  Diffusion(Real* const K_ptr) :
-    K_ptr_(K_ptr) {}
-
-  Diffusion(SEXP RGlobalVector) :
-    K_ptr_(REAL(RGlobalVector)) {}
+  Real operator() (const FiniteElement<ORDER,mydim,ndim>& fe_, UInt iq, UInt i, UInt j) const;
 
   template<UInt ORDER, UInt mydim, UInt ndim>
-  Real operator() (const FiniteElement<ORDER,mydim,ndim>& fe_, UInt iq, UInt i, UInt j) const{
-  using EigenMap2Diff_matr = Eigen::Map<const Eigen::Matrix<Real,ndim,ndim> >;
-
-  return fe_.stiff_impl(iq, i, j, EigenMap2Diff_matr(K_ptr_));
-  }
+  void set_dim(const MeshHandler<ORDER, mydim, ndim> & mesh);
 
   void setDiffusion(const MatrixXr & K) const
   { 
@@ -63,19 +38,23 @@ public:
     }
     else
     {
-      UInt dim = K.cols();
-
-      UInt counter = 0;
-
+      UInt Kdim = K.cols();
+      UInt counter;
+      
       // Fill the matrix in Param Functors with the input
-      for(UInt i = 0; i < dim; ++i)
+      for(UInt k = 0; k < dim; ++k)
       {
-        for(UInt j = 0; j < dim; ++j)
+        counter = 0;
+
+        for(UInt i = 0; i < Kdim; ++i)
         {
-          K_ptr_[i + j + counter] = K(j,i); // Col-wise ordering
-        }
+          for(UInt j = 0; j < Kdim; ++j)
+          {
+            K_ptr_[i + j + counter + k*Kdim*Kdim] = K(j,i); // Col-wise ordering
+          }
         
-        counter += dim - 1;
+          counter += Kdim - 1;
+        }
       }
     }
   }
@@ -120,9 +99,9 @@ public:
             0.0, 0.0, 1.0;
 
       MatrixXr Qy(3,3);
-      Qy << std::cos(DiffParam(1)), 0.0, -std::sin(DiffParam(1)),
+      Qy << std::cos(DiffParam(1)), 0.0, std::sin(DiffParam(1)),
             0.0, 1.0, 0.0,
-            std::sin(DiffParam(1)), 0.0, std::cos(DiffParam(1));
+            -std::sin(DiffParam(1)), 0.0, std::cos(DiffParam(1));
 
       MatrixXr Sigma(3,3);
       Sigma << std::cbrt(DiffParam(2) * DiffParam(2) / DiffParam(3)), 0.0, 0.0,
@@ -214,10 +193,10 @@ public:
       VectorXr v2 = K_eigen.eigenvectors().col(midpos).real();
       VectorXr v3 = K_eigen.eigenvectors().col(minpos).real();
 
-      if(v1(2) <= 0.0)
+      if(v1(2) >= 0.0)
         v1 *= (-1.0); // Change sign to have beta in [0, EIGEN_PI]
 
-      Real beta1 = std::asin(v1(2));
+      Real beta1 = std::asin(-v1(2));
       Real beta2 = EIGEN_PI - beta1;
 
       Real alpha1 = std::acos(v1(0)/std::cos(beta1));
@@ -237,10 +216,45 @@ public:
 
     return res;
   }
-   
+
 private:
   Real* const K_ptr_;
+
+  UInt dim = 1; // Number of pointed matrices
 };
+
+template<>
+template<UInt ORDER, UInt mydim, UInt ndim>
+Real Diffusion<PDEParameterOptions::Constant>::operator() (const FiniteElement<ORDER,mydim,ndim>& fe_, UInt iq, UInt i, UInt j) const
+{
+  using EigenMap2Diff_matr = Eigen::Map<const Eigen::Matrix<Real,ndim,ndim> >;
+
+  return fe_.stiff_impl(iq, i, j, EigenMap2Diff_matr(K_ptr_));
+}
+
+template<>
+template<UInt ORDER, UInt mydim, UInt ndim>
+Real Diffusion<PDEParameterOptions::SpaceVarying>::operator() (const FiniteElement<ORDER,mydim,ndim>& fe_, UInt iq, UInt i, UInt j) const
+{
+  using EigenMap2Diff_matr = Eigen::Map<const Eigen::Matrix<Real,ndim,ndim> >;
+
+  const UInt index = fe_.getGlobalIndex(iq) * EigenMap2Diff_matr::SizeAtCompileTime;
+  return fe_.stiff_impl(iq, i, j, EigenMap2Diff_matr(&K_ptr_[index]));
+}
+
+template<>
+template<UInt ORDER, UInt mydim, UInt ndim>
+void Diffusion<PDEParameterOptions::Constant>::set_dim(const MeshHandler<ORDER, mydim, ndim> & mesh)
+{
+  dim = 1;
+}
+
+template<>
+template<UInt ORDER, UInt mydim, UInt ndim>
+void Diffusion<PDEParameterOptions::SpaceVarying>::set_dim(const MeshHandler<ORDER, mydim, ndim> & mesh)
+{
+  dim = FiniteElement<ORDER, mydim, ndim>::Integrator::NNODES * mesh.num_elements();
+}
 
 
 template<PDEParameterOptions OPTION>
@@ -254,47 +268,16 @@ public:
     b_ptr_(REAL(RGlobalVector)) {}
     
   template<UInt ORDER, UInt mydim, UInt ndim>
-  Real operator() (const FiniteElement<ORDER,mydim,ndim>& fe_, UInt iq, UInt i, UInt j) const{
-  using EigenMap2Adv_vec = Eigen::Map<const Eigen::Matrix<Real,ndim,1> >;
+  Real operator() (const FiniteElement<ORDER,mydim,ndim>& fe_, UInt iq, UInt i, UInt j) const;
 
-  const UInt index = fe_.getGlobalIndex(iq) * EigenMap2Adv_vec::SizeAtCompileTime;
-  return fe_.grad_impl(iq, i, j, EigenMap2Adv_vec(&b_ptr_[index]));
-  }
-
-  EOExpr<const Advection&> dot(const EOExpr<Grad>& grad) const {
+  EOExpr<const Advection&> dot(const EOExpr<Grad>& grad) const
+  {
     typedef EOExpr<const Advection&> ExprT;
     return ExprT(*this);
   }
 
-  // Ad-hoc utilities for ParameterCascading in SpaceVarying cases not implemented yet
-
-private:
-  Real* const b_ptr_;
-};
-
-
-// Specialization for Constant case (ad hoc functions are needed for ParameterCascading)
-template<>
-class Advection<PDEParameterOptions::Constant>{
-public:
-
-  Advection(Real* const b_ptr) :
-    b_ptr_(b_ptr) {}
-
-  Advection(SEXP RGlobalVector) :
-    b_ptr_(REAL(RGlobalVector)) {}
-    
   template<UInt ORDER, UInt mydim, UInt ndim>
-  Real operator() (const FiniteElement<ORDER,mydim,ndim>& fe_, UInt iq, UInt i, UInt j) const{
-  using EigenMap2Adv_vec = Eigen::Map<const Eigen::Matrix<Real,ndim,1> >;
-
-  return fe_.grad_impl(iq, i, j, EigenMap2Adv_vec(b_ptr_));
-  }
-
-  EOExpr<const Advection&> dot(const EOExpr<Grad>& grad) const {
-    typedef EOExpr<const Advection&> ExprT;
-    return ExprT(*this);
-  }
+  void set_dim(const MeshHandler<ORDER, mydim, ndim> & mesh);
 
   void setAdvection(const VectorXr & b) const
   {
@@ -306,12 +289,14 @@ public:
     else
     {
       // Set advection vector equal to the input
-      for(UInt i = 0; i < b.size(); ++i)
-        b_ptr_[i] = b(i);
+      for(UInt j = 0; j < dim; ++j)
+        for(UInt i = 0; i < b.size(); ++i)
+          b_ptr_[i + j*b.size()] = b(i);
+      
     }
   }
 
-  // Get advection parameters: in Constant case they are simply the coefficients inside the advection vector
+  // Get advection parameters, that are simply the coefficients inside the advection vector
   template<UInt ndim>
   VectorXr getAdvectionParam(void) const 
   {
@@ -325,7 +310,42 @@ public:
 
 private:
   Real* const b_ptr_;
+
+  UInt dim = 1; // Number of pointed vectors
 };
+
+template<>
+template<UInt ORDER, UInt mydim, UInt ndim>
+Real Advection<PDEParameterOptions::Constant>::operator() (const FiniteElement<ORDER,mydim,ndim>& fe_, UInt iq, UInt i, UInt j) const
+{
+  using EigenMap2Adv_vec = Eigen::Map<const Eigen::Matrix<Real,ndim,1> >;
+
+  return fe_.grad_impl(iq, i, j, EigenMap2Adv_vec(b_ptr_));
+}
+
+template<>
+template<UInt ORDER, UInt mydim, UInt ndim>
+Real Advection<PDEParameterOptions::SpaceVarying>::operator() (const FiniteElement<ORDER,mydim,ndim>& fe_, UInt iq, UInt i, UInt j) const
+{
+  using EigenMap2Adv_vec = Eigen::Map<const Eigen::Matrix<Real,ndim,1> >;
+
+  const UInt index = fe_.getGlobalIndex(iq) * EigenMap2Adv_vec::SizeAtCompileTime;
+  return fe_.grad_impl(iq, i, j, EigenMap2Adv_vec(&b_ptr_[index]));
+}
+
+template<>
+template<UInt ORDER, UInt mydim, UInt ndim>
+void Advection<PDEParameterOptions::Constant>::set_dim(const MeshHandler<ORDER, mydim, ndim> & mesh)
+{
+  dim = 1;
+}
+
+template<>
+template<UInt ORDER, UInt mydim, UInt ndim>
+void Advection<PDEParameterOptions::SpaceVarying>::set_dim(const MeshHandler<ORDER, mydim, ndim> & mesh)
+{
+  dim = FiniteElement<ORDER, mydim, ndim>::Integrator::NNODES * mesh.num_elements();
+}
 
 
 template<PDEParameterOptions OPTION>
@@ -339,55 +359,63 @@ public:
     c_ptr_(REAL(RGlobalVector)) {}
 
   template<UInt ORDER, UInt mydim, UInt ndim>
-  Real operator() (const FiniteElement<ORDER, mydim, ndim>& fe_, UInt iq, UInt i, UInt j) const{
-  const UInt index = fe_.getGlobalIndex(iq);
-  return c_ptr_[index]*fe_.mass_impl(iq, i, j);
-  }
+  Real operator() (const FiniteElement<ORDER, mydim, ndim>& fe_, UInt iq, UInt i, UInt j) const;
 
-  EOExpr<const Reaction&> operator* (const EOExpr<Mass>&  mass) const {
+  EOExpr<const Reaction&> operator* (const EOExpr<Mass>&  mass) const
+  {
       typedef EOExpr<const Reaction&> ExprT;
       return ExprT(*this);
   }
-
-  // Ad-hoc utilities for ParameterCascading in SpaceVarying cases not implemented yet
-
-private:
-  Real* const c_ptr_;
-};
-
-
-// Specialization for Constant case (ad hoc functions are needed for ParameterCascading)
-template<>
-class Reaction<PDEParameterOptions::Constant>{
-public:
-
-  Reaction(Real* const c_ptr) :
-    c_ptr_(c_ptr) {}
-
-  Reaction(SEXP RGlobalVector) :
-    c_ptr_(REAL(RGlobalVector)) {}
 
   template<UInt ORDER, UInt mydim, UInt ndim>
-  Real operator() (const FiniteElement<ORDER, mydim, ndim>& fe_, UInt iq, UInt i, UInt j) const{
-  return c_ptr_[0]*fe_.mass_impl(iq, i, j);
+  void set_dim(const MeshHandler<ORDER, mydim, ndim> & mesh);
+
+  void setReaction(const Real & c) const
+  {
+    for(UInt i = 0; i < dim; ++i)
+      c_ptr_[i] = c;
   }
 
-  EOExpr<const Reaction&> operator* (const EOExpr<Mass>&  mass) const {
-      typedef EOExpr<const Reaction&> ExprT;
-      return ExprT(*this);
-  }
-
-  void setReaction(const Real & c) const { c_ptr_[0] = c;}
-
-  // Get reaction parameter: in Constant case, it is direclty the reaction coefficient c
+  // Get reaction parameter, that is direclty the reaction coefficient c
   Real getReactionParam(void) const
   { 
-    return *c_ptr_;
+    return c_ptr_[0];
   }
 
 private:
   Real* const c_ptr_;
+
+  UInt dim = 1; // Number of pointed numbers
 };
+
+template<>
+template<UInt ORDER, UInt mydim, UInt ndim>
+Real Reaction<PDEParameterOptions::Constant>::operator() (const FiniteElement<ORDER,mydim,ndim>& fe_, UInt iq, UInt i, UInt j) const
+{
+  return c_ptr_[0]*fe_.mass_impl(iq, i, j);
+}
+
+template<>
+template<UInt ORDER, UInt mydim, UInt ndim>
+Real Reaction<PDEParameterOptions::SpaceVarying>::operator() (const FiniteElement<ORDER,mydim,ndim>& fe_, UInt iq, UInt i, UInt j) const
+{
+  const UInt index = fe_.getGlobalIndex(iq);
+  return c_ptr_[index]*fe_.mass_impl(iq, i, j);
+}
+
+template<>
+template<UInt ORDER, UInt mydim, UInt ndim>
+void Reaction<PDEParameterOptions::Constant>::set_dim(const MeshHandler<ORDER, mydim, ndim> & mesh)
+{
+  dim = 1;
+}
+
+template<>
+template<UInt ORDER, UInt mydim, UInt ndim>
+void Reaction<PDEParameterOptions::SpaceVarying>::set_dim(const MeshHandler<ORDER, mydim, ndim> & mesh)
+{
+  dim = FiniteElement<ORDER, mydim, ndim>::Integrator::NNODES * mesh.num_elements();
+}
 
 
 class ForcingTerm{

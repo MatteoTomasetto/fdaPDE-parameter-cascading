@@ -13,11 +13,11 @@
  *
 */
 
-template <UInt ORDER, UInt mydim, UInt ndim>
+template <UInt ORDER, UInt mydim, UInt ndim, typename InputHandler>
 class Parameter_Cascading
 {
 	private: // Functional to optimize in the Parameter Cascading algorithm (mean squared error)
-			 PDE_Parameter_Functional<ORDER, mydim, ndim> & H;
+			 PDE_Parameter_Functional<ORDER, mydim, ndim, InputHandler> & H;
 
 			 // Booleans to keep track of the wanted parameters to optimize
 			 bool update_K;
@@ -30,30 +30,26 @@ class Parameter_Cascading
 			 MatrixXr K;
 			 
 			 // Diffusion parameters
-			 // with 2D non-space varying cases the diffusion parameters are:
+			 // with 2D stationary cases the diffusion parameters are:
        		 //       1) the diffusion angle, i.e. the main eigenvector direction of K
     		 //       2) the diffusion intensity, i.e. the ratio between the second and the first eigenvalue of K
-			 // with 3D non-space varying cases the diffusion parameters are:
+			 // with 3D stationary cases the diffusion parameters are:
 			 //       1) the angle wrt z-axis
     		 //       2) the angle wrt y-axis
     		 //       3) the ratio between the first (biggest) and the third (smallest) eigenvalue of K
     		 //       4) the ratio between the second and the third (smallest) eigenvalue of K
-    		 // SpaceVarying case not implemented yet
 			 VectorXr diffusion;
 			 
 			 // Advection parameters
-			 // 2D or 3D non-space varying case: the advection parameters are the components of advection vector
-			 // SpaceVarying case not implemented yet
+			 // 2D or 3D stationary case: the advection parameters are the components of advection vector
 			 VectorXr b;
 			 
 			 // Reaction coefficient
-			 // 2D or 3D non-space varying case: reaction parameter is the reaction coefficient
-			 // space-varying case not implemented yet
+			 // 2D or 3D stationary case: reaction parameter is the reaction coefficient
 			 Real c;
 
 			 // Anisotropy intensity
-			 // 2D or 3D non-space varying case: coefficient that multiply the diffusion matrix K (it gives the intensity of anisotropy wrt advection / reaction)
-			 // space-varying case not implemented yet
+			 // 2D or 3D stationary case: coefficient that multiply the diffusion matrix K (it gives the intensity of anisotropy wrt advection / reaction)
 			 Real aniso_intensity;
 
 			 VectorXr lambdas; // lambdas used to search the optimal PDE parameters
@@ -63,12 +59,12 @@ class Parameter_Cascading
 			 // Boolean to select which optimization procedure for GCV to use
 			 bool stochastic_GCV = false;
 
-			 // Function to compute the optimal lambda through GCV
-			 template <typename EvaluationType>
-			 std::pair<Real, Real> compute_GCV(Carrier<RegressionDataElliptic>& carrier,
-			 								   EvaluationType& solver,
-			 								   Real lambda_init) const;
+			 // Functions to select and compute the optimal lambda and the GCV
+			 std::pair<Real, Real> select_and_compute_GCV(void) const;
 			 
+			 template <typename EvaluationType>
+			 std::pair<Real, Real> compute_GCV(EvaluationType& solver) const;
+			 			 
 			 // Main function of the algorithm; inputs are
 			 // init -> starting point for optimization algorithm
 			 // Optimization algorithm to use: 0 for L-BFGS-B, 1 for Gradient Descent, 2 for Genetic algorithm,
@@ -88,7 +84,7 @@ class Parameter_Cascading
 			 				const std::function<void (VectorXr)>& set_param); 
 
 	public: // Constructor that computes the vector of lambdas from the vector of rhos presented in \cite{Bernardi}
-			Parameter_Cascading(PDE_Parameter_Functional<ORDER, mydim, ndim>& H_)
+			Parameter_Cascading(PDE_Parameter_Functional<ORDER, mydim, ndim, InputHandler>& H_)
 			: H(H_) 
 			{
 				// Compute the lambdas for the parameter cascading algorithm from the rhos introduced in \cite{Bernardi}
