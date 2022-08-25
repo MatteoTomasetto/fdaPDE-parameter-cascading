@@ -60,7 +60,7 @@ void PDE_Parameter_Functional<ORDER, mydim, ndim, InputHandler>::compute_zhat(Ve
 		{
 			Carrier<InputHandler,Forced,Areal>
 				carrier = CarrierBuilder<InputHandler>::build_forced_areal_carrier(model.getRegressionData(), model, model.getOptimizationData());
-			GCV_Stochastic<Carrier<InputHandler,Forced,Areal>, 1> solver(carrier, true);
+			GCV_Stochastic<Carrier<InputHandler,Forced,Areal>, 1> solver(carrier, false);
 			solver.update_parameters(lambda); // solve the problem and compute z_hat
 			zhat = solver.get_z_hat();
 		}
@@ -68,7 +68,7 @@ void PDE_Parameter_Functional<ORDER, mydim, ndim, InputHandler>::compute_zhat(Ve
 		{
 			Carrier<InputHandler,Forced>
 				carrier = CarrierBuilder<InputHandler>::build_forced_carrier(model.getRegressionData(), model, model.getOptimizationData());
-			GCV_Stochastic<Carrier<InputHandler,Forced>, 1> solver(carrier, true);
+			GCV_Stochastic<Carrier<InputHandler,Forced>, 1> solver(carrier, false);
 			solver.update_parameters(lambda); // solve the problem and compute z_hat
 			zhat = solver.get_z_hat();
 		}
@@ -79,7 +79,7 @@ void PDE_Parameter_Functional<ORDER, mydim, ndim, InputHandler>::compute_zhat(Ve
 		{
 			Carrier<InputHandler,Areal>
 				carrier = CarrierBuilder<InputHandler>::build_areal_carrier(model.getRegressionData(), model, model.getOptimizationData());
-			GCV_Stochastic<Carrier<InputHandler,Areal>, 1> solver(carrier, true);
+			GCV_Stochastic<Carrier<InputHandler,Areal>, 1> solver(carrier, false);
 			solver.update_parameters(lambda); // solve the problem and compute z_hat
 			zhat = solver.get_z_hat();
 		}
@@ -87,7 +87,8 @@ void PDE_Parameter_Functional<ORDER, mydim, ndim, InputHandler>::compute_zhat(Ve
 		{
 			Carrier<InputHandler>
 				carrier = CarrierBuilder<InputHandler>::build_plain_carrier(model.getRegressionData(), model, model.getOptimizationData());
-			GCV_Stochastic<Carrier<InputHandler>, 1> solver(carrier, true);
+			GCV_Stochastic<Carrier<InputHandler>, 1> solver(carrier, false);
+
 			solver.update_parameters(lambda); // solve the problem and compute z_hat
 			zhat = solver.get_z_hat();
 		}
@@ -112,10 +113,9 @@ PDE_Parameter_Functional<ORDER, mydim, ndim, InputHandler>::eval_K(const DiffTyp
 	compute_zhat(zhat, lambda);
 	VectorXr zp = *(model.getRegressionData().getObservations());
 
-	Rprintf("compare zhats0: %f - %f",zhat(0),zp(0));
-	Rprintf("compare zhats100: %f - %f",zhat(100),zp(100));
+	Real res = (zp - zhat).squaredNorm();
 
-	return (zp - zhat).squaredNorm();
+	return res;
 }
 
 

@@ -270,7 +270,7 @@ VectorXr Parameter_Cascading<ORDER, mydim, ndim, InputHandler>::step(VectorXr in
 			init = opt_sol; // init modified to initialize the next iteration with the actual optimal solution
 		}
 		
-		Rprintf("Optimal sol for lambda = %e found\n", lambdas(iter));
+		Rprintf("Optimal sol for lambda = %e found\n", lambda);
 		Rprintf("Optimal sol: ");
 		for(unsigned int i = 0u; i < opt_sol.size(); ++i)
 			Rprintf("%f ", opt_sol[i]);
@@ -280,7 +280,7 @@ VectorXr Parameter_Cascading<ORDER, mydim, ndim, InputHandler>::step(VectorXr in
 		// By default GCV_Exact is used; If user set GCV_Stochastic option in input, then it will be used
 		set_param(opt_sol);
 				
-		Rprintf("Computing GCV with the optimal sol for lambda = %e\n", lambdas(iter));
+		Rprintf("Computing GCV with the optimal sol for lambda = %e\n", lambda);
 		std::pair<Real, Real> opt_sol_GCV = select_and_compute_GCV();
 				
 		if(iter == 0 || opt_sol_GCV.second <= GCV)
@@ -297,30 +297,7 @@ VectorXr Parameter_Cascading<ORDER, mydim, ndim, InputHandler>::step(VectorXr in
 		// DEBUGGING
 		Rprintf("GCV found: %f\n", opt_sol_GCV.second);
 		Rprintf("Best GCV: %f\n", GCV);
-		
-		// Check increasing GCV
-		if(!finer_grid)
-		{
-			if(old_GCV < opt_sol_GCV.second)
-			{
-				counter_GCV_increasing++;
-
-				// Build a finer grid of lambdas if GCV is increasing for 3 iterations in a row
-				if(counter_GCV_increasing == 3)
-				{
-					Rprintf("Increasing GCV, restart Parameter Cascading algortihm with finer grid of lambdas\n");
-					UInt start_finer_grid = (best_iter < 2) ? 0 : best_iter - 1;
-					lambdas = VectorXr::LinSpaced(6, lambdas(start_finer_grid), lambdas(best_iter + 1));
-					lambdas.resize(6, 1);
-					iter = lambdas.size();
-					init = best_sol;
-					finer_grid = true;
-				}
-			}
-		else
-			counter_GCV_increasing = 0;
-		}
-		
+				
 		old_GCV = opt_sol_GCV.second;
 
 	}

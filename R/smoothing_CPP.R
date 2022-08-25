@@ -139,6 +139,8 @@ CPP_smooth.FEM.PDE.basis<-function(locations, observations, FEMbasis, covariates
     lambda<-as.vector(lambda)
   }
   
+  if(parameter_cascading_option[1]==4 & (all(PDE_parameters$b==0) | PDE_parameters$c==0))
+    stop("Not possible to estimate anisotropy_intensity with null b and c")
 
   ## Set propr type for correct C++ reading
 
@@ -240,6 +242,9 @@ CPP_smooth.FEM.PDE.sv.basis<-function(locations, observations, FEMbasis, covaria
   PDE_param_eval$b = (PDE_parameters$b)(points_eval)
   PDE_param_eval$c = (PDE_parameters$c)(points_eval)
   PDE_param_eval$u = (PDE_parameters$u)(points_eval)
+
+  if(parameter_cascading_option[1]==4 & (all(PDE_param_eval$b==0) | all(PDE_param_eval$c==0)))
+    stop("Not possible to estimate anisotropy_intensity with null b and c")
 
   ## Set propr type for correct C++ reading
   locations <- as.matrix(locations)
