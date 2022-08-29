@@ -200,10 +200,10 @@ void Gradient_Descent_fd::upgrade_best(void)
 	// Update best
 	VectorXr new_best = best - alpha * df;
 	
- 	// Check bounds for non-periodic variables (periodic ones are fixed at the end since they are less problematic)
+ 	// Check bounds for non-periodic variables and for variables with domain smaller than the period
  	for(unsigned int i = 0u; i < best.size(); ++i)
  	{
- 		if(param_gradient_descent_fd.periods[i] == 0.0)
+ 		if(param_gradient_descent_fd.periods[i] == 0.0 || std::abs(param_gradient_descent_fd.upper_bound[i] - param_gradient_descent_fd.lower_bound[i]) < param_gradient_descent_fd.periods[i])
  		{
 			// Check upper and lower bounds
  			while(new_best[i] < param_gradient_descent_fd.lower_bound[i] || new_best[i] > param_gradient_descent_fd.upper_bound[i])
@@ -229,7 +229,7 @@ void Gradient_Descent_fd::upgrade_best(void)
 	// Exploit periodicity if present
  	for(unsigned int i = 0u; i < best.size(); ++i)
  	{
- 		if(param_gradient_descent_fd.periods[i] != 0.0)
+ 		if(param_gradient_descent_fd.periods[i] != 0.0 && std::abs(param_gradient_descent_fd.upper_bound[i] - param_gradient_descent_fd.lower_bound[i]) < param_gradient_descent_fd.periods[i])
  		{
 			while(best[i] < param_gradient_descent_fd.lower_bound[i])
 					best[i] += param_gradient_descent_fd.periods[i];
