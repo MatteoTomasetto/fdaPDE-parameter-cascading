@@ -433,7 +433,7 @@ Solution_Builders::build_solution_plain_regression(const MatrixXr & solution, co
             // Add optimal advection parameters
             SET_VECTOR_ELT(result, idx, Rf_allocVector(REALSXP, 1));
             rans= REAL(VECTOR_ELT(result, idx));
-            rans[0] = parameter_cascading_result.diffusion_opt(j);
+            rans[0] = parameter_cascading_result.advection_opt(j);
             idx++;
         }
        
