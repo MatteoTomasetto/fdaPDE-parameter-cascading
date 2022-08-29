@@ -294,6 +294,42 @@ public:
           b_ptr_[i + j*b.size()] = b(i);
       
     }
+
+    return;
+  }
+
+  void setAdvectionParam(const VectorXr& AdvectionParam) const 
+  {
+    VectorXr b(AdvectionParam.size());
+
+    if(AdvectionParam.size() == 2)
+    {
+      b(0) = AdvectionParam(1) * std::cos(AdvectionParam(0));
+      b(1) = AdvectionParam(1) * std::sin(AdvectionParam(0));
+    }
+
+    if(AdvectionParam.size() == 3)
+    {
+      b(0) = AdvectionParam(2) * std::cos(AdvectionParam(0)) * std::sin(AdvectionParam(1));
+      b(1) = AdvectionParam(2) * std::sin(AdvectionParam(0)) * std::sin(AdvectionParam(1));
+      b(2) = AdvectionParam(2) * std::cos(AdvectionParam(1));
+    }
+
+    setAdvection(b);
+
+    return;
+  }
+
+  // Get advection parameters, that are simply the coefficients inside the advection vector
+  template<UInt ndim>
+  VectorXr getAdvectionVector(void) const 
+  {
+    VectorXr res(ndim);
+
+    for(UInt i = 0; i < ndim; ++i)
+        res(i) = b_ptr_[i];
+
+    return res;
   }
 
   // Get advection parameters, that are simply the coefficients inside the advection vector
@@ -302,8 +338,33 @@ public:
   {
     VectorXr res(ndim);
 
-    for(UInt i = 0; i < ndim; ++i)
-        res(i) = b_ptr_[i];
+    if(ndim == 2)
+    {
+      res(1) = std::sqrt(b_ptr_[0]*b_ptr_[0] + b_ptr_[1]*b_ptr_[1]);
+
+      res(0) = std::atan2(b_ptr_[1],b_ptr_[0]);
+
+      if(res(0) < 0.0)
+        res(0) += 2.0 * EIGEN_PI;
+    }
+
+    if(ndim == 3)
+    {
+      res(2) = std::sqrt(b_ptr_[0]*b_ptr_[0] + b_ptr_[1]*b_ptr_[1] + b_ptr_[2]*b_ptr_[2]);
+
+      res(0) = std::atan2(b_ptr_[1],b_ptr_[0]);
+
+      if(res(0) < 0.0)
+        res(0) += 2.0 * EIGEN_PI;
+
+      if(std::abs(res(2)) < 1e-6)
+        res(1) = 0;
+      else
+      {
+        res(1) = std::acos(b_ptr_[2] / res(2));
+      }
+      
+    }
 
     return res;
   }

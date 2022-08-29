@@ -1801,6 +1801,7 @@ class MixedFERegression<RegressionDataElliptic>: public MixedFERegressionBase<Re
 
 		}
 
+		// Set matrix R1 (the only matrix dependent on PDE parameters)
 		template<UInt ORDER, UInt mydim, UInt ndim>
 		void setR1(const MeshHandler<ORDER,mydim,ndim> & mesh)
 		{
@@ -1847,6 +1848,7 @@ class MixedFERegression<RegressionDataEllipticSpaceVarying> : public MixedFERegr
 
 		}
 
+		// Set matrix R1 (the only matrix dependent on PDE parameters)
 		template<UInt ORDER, UInt mydim, UInt ndim>
 		void setR1(const MeshHandler<ORDER,mydim,ndim> & mesh)
 		{

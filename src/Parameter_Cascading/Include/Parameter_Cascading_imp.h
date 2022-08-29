@@ -172,35 +172,26 @@ VectorXr Parameter_Cascading<ORDER, mydim, ndim, InputHandler>::step(VectorXr in
 	VectorXr opt_sol = init;
 	VectorXr best_sol(init.size());
 
-	// Variable to store the best iteration
-	UInt best_iter;
-
 	// Variable to avoid boundary problems exploiting periodicity
 	Real eps = 1e-3;
 
 	// Print initial solution
-	Rprintf("Initial sol: ");
+	Rprintf("Initialization: ");
 	for(unsigned int i = 0u; i < init.size(); ++i)
 		Rprintf("%f ", init[i]);
 	Rprintf("\n");
 
-	// Initialize GCV and variables to check if GCV is increasing
-	GCV = -1.0;
-	UInt counter_GCV_increasing = 0; // Variable to count how many iterations present an increasing GCV
-	bool finer_grid = false;		 // Finer grid to activate when GCV is increasing
-	Real old_GCV = std::numeric_limits<Real>::max();
-
 	// For loop to explore the grid of lambdas
 	for (UInt iter = 0; iter < lambdas.size(); ++iter)
 	{
-		Rprintf("Finding optimal sol for lambda = %e\n", lambdas(iter));
-
 		Real lambda = lambdas(iter);
+
+		Rprintf("Finding optimal solution for lambda = %e\n", lambda);
 
 		std::function<Real (VectorXr)> F_ = [&F, lambda](VectorXr x){return F(x, lambda);}; // Fix lambda in F
 		std::function<VectorXr (VectorXr)> dF_ = [&dF, lambda](VectorXr x){return dF(x, lambda);}; // Fix lambda in dF
 
-		if(opt_algo == 0) // L-BFGS-B
+		if(opt_algo == 0 && constraint) // L-BFGS-B
 		{
 			Rprintf("Start L-BFGS-B algortihm\n");
 	   		optimWrapper function_to_optimize(F_);
@@ -253,7 +244,7 @@ VectorXr Parameter_Cascading<ORDER, mydim, ndim, InputHandler>::step(VectorXr in
   			solver.minimize(function_to_optimize, opt_sol);
   			Rprintf("End Nelder-Mead algorithm\n");
 		}
-		else if(opt_algo == 4) // Gradient
+		else if(opt_algo == 4 && constraint) // Gradient
 		{
 			Parameter_Gradient_Descent_fd param = {lower_bound, upper_bound, periods};
 			Gradient_Descent_fd opt(F_, dF_, init, param);
@@ -261,7 +252,7 @@ VectorXr Parameter_Cascading<ORDER, mydim, ndim, InputHandler>::step(VectorXr in
 			opt_sol = opt.get_solution();
 			init = opt_sol; // init modified to initialize the next iteration with the actual optimal solution
 		}
-		else if(opt_algo == 5) // Genetic
+		else if(opt_algo == 5 && constraint) // Genetic
 		{
 			Parameter_Genetic_Algorithm param = {100, lower_bound, upper_bound};
 			Genetic_Algorithm opt(F_, init, param);
@@ -270,51 +261,41 @@ VectorXr Parameter_Cascading<ORDER, mydim, ndim, InputHandler>::step(VectorXr in
 			init = opt_sol; // init modified to initialize the next iteration with the actual optimal solution
 		}
 		
-		Rprintf("Optimal sol for lambda = %e found\n", lambda);
-		Rprintf("Optimal sol: ");
+		Rprintf("Optimal solution for lambda = %e found\n", lambda);
+		Rprintf("Optimal solution: ");
 		for(unsigned int i = 0u; i < opt_sol.size(); ++i)
 			Rprintf("%f ", opt_sol[i]);
 		Rprintf("\n");
 
 		// Compute GCV with the new parameters
-		// By default GCV_Exact is used; If user set GCV_Stochastic option in input, then it will be used
 		set_param(opt_sol);
 				
-		Rprintf("Computing GCV with the optimal sol for lambda = %e\n", lambda);
+		Rprintf("Computing GCV with the optimal solution for lambda = %e\n", lambda);
 		std::pair<Real, Real> opt_sol_GCV = select_and_compute_GCV();
 				
+		// Save the results when the GCV found is lower than the previous one or if it is the first iteration
 		if(iter == 0 || opt_sol_GCV.second <= GCV)
 		{
 			lambda_opt = opt_sol_GCV.first;
 			GCV = opt_sol_GCV.second;
 			best_sol = opt_sol;
-			best_iter = iter;
 		}
 
-		if(iter == 0)
-			old_GCV = GCV;
-
-		// DEBUGGING
-		Rprintf("GCV found: %f\n", opt_sol_GCV.second);
-		Rprintf("Best GCV: %f\n", GCV);
-				
-		old_GCV = opt_sol_GCV.second;
-
+		Rprintf("GCV: %f\n", opt_sol_GCV.second);
+		Rprintf("Current lowest GCV: %f\n", GCV);
 	}
 
-	// Set the new parameter in RegressionData
+	// Set the new optimal parameter in RegressionData
 	set_param(best_sol);
 
-	Rprintf("Final optimal sol found\n");
-	Rprintf("Optimal sol: ");
+	Rprintf("Final optimal solution found\n");
+	Rprintf("Final optimal solution: ");
 	for(unsigned int i = 0u; i < best_sol.size(); ++i)
 		Rprintf("%f ", best_sol[i]);
 	Rprintf("\n");
 
-	// DEBUGGING
-	Rprintf("best iter = %d\n", best_iter);
 	Rprintf("Final GCV: %f\n", GCV);
-	Rprintf("Final optimal lambda for GCV: %e\n", lambda_opt);
+	Rprintf("Final optimal lambda: %e\n", lambda_opt);
 	
 	return best_sol;
 }
@@ -325,7 +306,7 @@ Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim, InputHandler>
 {
 	Rprintf("Start Parameter_Cascading Algorithm\n");
 
-	if(update_K)
+	if(update_K) // Update the diffusion matrix K
 	{	
 		Rprintf("Finding diffusion matrix K\n");
 		VectorXr init = diffusion;
@@ -568,9 +549,15 @@ Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim, InputHandler>
 		}
 	}
 
-	if(update_anisotropy_intensity)
+	if(update_anisotropy_intensity) // Update the anisotropy intensity coefficient
 	{
 		Rprintf("Finding anisotropy intensity\n");
+
+		// Save and set the normalized diffusion matrix in RegressionData;
+		// in this way, aniso_intensity will multiply the normalized K instead of the initial K (it has a clearer meaning)
+		K /= aniso_intensity;
+		H.template set_K<MatrixXr>(K);
+
 		VectorXr init(1);
 		VectorXr lower_bound(1);
 		VectorXr upper_bound(1);
@@ -598,30 +585,241 @@ Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim, InputHandler>
 		
 		aniso_intensity = step(init, opt_algo, lower_bound, upper_bound, periods, F, dF, set_param, true)(0);
 	}
+
+	K = H.getModel().getRegressionData().getK().template getDiffusionMatrix<ndim>();
 	
-	if(update_b)
+	if(update_b) // Update the advection vector
 	{
 		Rprintf("Finding advection vector b\n");
-		VectorXr init = b;
+		VectorXr init = advection;
 		UInt opt_algo = H.getModel().getRegressionData().get_parameter_cascading_advection_opt();
-				
+		
+		VectorXr lower_bound(ndim);
+		VectorXr upper_bound(ndim);
+		VectorXr periods(ndim); // periods for each diffusion parameter (if variable not periodic then period = 0.0)
+
+		if(ndim == 2)
+		{
+			lower_bound << 0.0,  0.0;
+			upper_bound << 2.0 * EIGEN_PI, 1000.0;
+			periods << 2.0 * EIGEN_PI, 0.0;
+		}
+		else if(ndim == 3)
+		{
+			lower_bound << 0.0, 0.0, 0.0;
+			upper_bound << 2.0 * EIGEN_PI, EIGEN_PI, 1000.0;
+			periods << 2.0 * EIGEN_PI, EIGEN_PI, 0.0;
+		}
+
 		std::function<Real (VectorXr, Real)> F = [this](VectorXr x, Real lambda)
 		{
 			return this -> H.eval_b(x, lambda);
 		};
-		std::function<VectorXr (VectorXr, Real)> dF = [this](VectorXr x, Real lambda)
+		std::function<VectorXr (VectorXr, Real)> dF = [this, &upper_bound, &lower_bound](VectorXr x, Real lambda)
 		{
-			return this -> H.eval_grad_b(x, lambda);
+			return this -> H.eval_grad_b(x, lower_bound, upper_bound, lambda);
 		};
 		std::function<void (VectorXr)> set_param = [this](VectorXr x)
 		{
 			this -> H.set_b(x);
 		};
 
-		b = step(init, opt_algo, F, dF, set_param);
+		advection = step(init, opt_algo, lower_bound, upper_bound, periods, F, dF, set_param, true);
 	}
+
+	if(update_b_direction) // Update only the advection vector angle parameters (the first in 2D case, the first two in 3D case)
+	{
+		Rprintf("Finding advection direction\n");
+		UInt angle_dim = (ndim == 2) ? 1 : 2;
+		VectorXr init(angle_dim);
+		UInt opt_algo = H.getModel().getRegressionData().get_parameter_cascading_advection_opt();
+		VectorXr lower_bound(angle_dim);
+		VectorXr upper_bound(angle_dim);
+		VectorXr periods(angle_dim);
+
+		std::function<Real (VectorXr, Real)> F;
+		std::function<VectorXr (VectorXr, Real)> dF;
+		std::function<void (VectorXr)> set_param;
+
+		if(ndim == 2)
+		{
+			init << advection(0);
+			lower_bound << 0.0;
+			upper_bound << 2.0 * EIGEN_PI;
+			periods << EIGEN_PI;
+
+			F = [this](VectorXr x, Real lambda)
+			{
+				VectorXr param(2);
+				param << x(0), this -> advection(1);
+				return this -> H.eval_b(param, lambda);
+			};
 			
-	if(update_c)
+			dF = [this, &upper_bound, &lower_bound](VectorXr x, Real lambda)
+			{
+				VectorXr param(2);
+				VectorXr lb(2);
+				VectorXr ub(2);
+
+				param << x(0), this -> advection(1);
+				lb << lower_bound, 0.0;
+				ub << upper_bound, 1000.0;
+				
+				VectorXr grad(1);
+				grad << this -> H.eval_grad_b(param, lb, ub, lambda)(0);
+				return grad;
+			};
+
+
+			set_param = [this](VectorXr x)
+			{
+				VectorXr param(2);
+				param << x(0), this -> advection(1);
+				this -> H.set_b(param);
+			};
+
+			advection(0) = step(init, opt_algo, lower_bound, upper_bound, periods, F, dF, set_param, true)(0);
+		}
+		else if(ndim == 3)
+		{
+			init << advection(0), advection(1);
+			lower_bound << 0.0, 0.0;
+			upper_bound << 2.0 * EIGEN_PI, EIGEN_PI;
+			periods << 2.0 * EIGEN_PI, EIGEN_PI;
+
+			F = [this](VectorXr x, Real lambda)
+			{
+				VectorXr param(3);
+				param << x(0), x(1), this -> advection(2);
+				return this -> H.eval_b(param, lambda);
+			};
+
+			dF = [this, &upper_bound, &lower_bound](VectorXr x, Real lambda)
+			{
+				VectorXr param(3);
+				VectorXr lb(3);
+				VectorXr ub(3);
+			
+				param << x(0), x(1), this -> advection(2);
+
+				lb << lower_bound, 0.0;
+				ub << upper_bound, 1000.0;
+				
+				VectorXr grad(2);
+				VectorXr tmp(3);
+				tmp = this -> H.eval_grad_b(param, lb, ub, lambda);
+				grad << tmp(0), tmp(1);
+				return grad;
+			};
+			
+			set_param = [this](VectorXr x)
+			{
+				VectorXr param(3);
+				param << x(0), x(1), this -> advection(2);
+				this -> H.set_b(param);
+			};
+
+			VectorXr res = step(init, opt_algo, lower_bound, upper_bound, periods, F, dF, set_param, true);
+			advection(0) = res(0);
+			advection(1) = res(1);
+		}
+	}
+
+	if(update_b_intensity) // Update only the advection intensity parameter (the second in 2D case, the third in 3D case)
+	{
+		Rprintf("Finding advection intensity\n");
+
+		VectorXr init(1);
+		UInt opt_algo = H.getModel().getRegressionData().get_parameter_cascading_advection_opt();
+		VectorXr lower_bound(1);
+		VectorXr upper_bound(1);
+		VectorXr periods(1);
+
+		std::function<Real (VectorXr, Real)> F;
+		std::function<VectorXr (VectorXr, Real)> dF;
+		std::function<void (VectorXr)> set_param;
+
+		lower_bound << 0.0;
+		upper_bound << 1000.0;
+		periods << 0.0;
+
+		if(ndim == 2)
+		{
+			init << advection(1);
+
+			F = [this](VectorXr x, Real lambda)
+			{
+				VectorXr param(2);
+				param << this -> advection(0), x(0);
+				return this -> H.eval_b(param, lambda);
+			};
+
+			dF = [this, &upper_bound, &lower_bound](VectorXr x, Real lambda)
+			{
+				VectorXr param(2);
+				VectorXr lb(2);
+				VectorXr ub(2);
+
+				param << this -> advection(0), x(0);
+				lb << 0.0, lower_bound;
+				ub << 2.0 * EIGEN_PI, upper_bound;
+				
+				VectorXr grad(1);
+				grad << this -> H.eval_grad_b(param, lb, ub, lambda)(1);
+				return grad;
+			};
+
+			set_param = [this](VectorXr x)
+			{
+				VectorXr param(2);
+				param << this -> advection(0), x(0);
+				this -> H.set_b(param);
+			};
+
+			advection(1) = step(init, opt_algo, lower_bound, upper_bound, periods, F, dF, set_param, true)(0);
+		}
+		else if(ndim == 3)
+		{
+			init << advection(2);
+
+			F = [this](VectorXr x, Real lambda)
+			{
+				VectorXr param(3);
+				param << this -> advection(0), this -> advection(1), x(0);
+				return this -> H.eval_b(param, lambda);
+			};
+
+			dF = [this, &upper_bound, &lower_bound](VectorXr x, Real lambda)
+			{
+				VectorXr param(3);
+				VectorXr lb(3);
+				VectorXr ub(3);
+				
+				param << this -> advection(0), this -> advection(1), x(0);
+				lb << 0.0, 0.0, lower_bound;
+				ub << 2.0 * EIGEN_PI, EIGEN_PI, upper_bound;				
+				
+				VectorXr grad(1);
+				VectorXr tmp(3);
+				tmp = this -> H.eval_grad_b(param, lb, ub, lambda);
+				grad << tmp(2);
+				return grad;
+			};
+
+			set_param = [this](VectorXr x)
+			{
+				VectorXr param(3);
+				param << this -> advection(0), this -> advection(1), x(0);
+				this -> H.set_b(param);
+			};
+
+			advection(2) = step(init, opt_algo, lower_bound, upper_bound, periods, F, dF, set_param, true)(0);
+		}
+	}
+
+	b = H.getModel().getRegressionData().getB().template getAdvectionVector<ndim>();
+			
+	if(update_c) // Update reaction coefficient
 	{
 		Rprintf("Finding reaction coefficient c\n");
 		VectorXr init(1);
@@ -646,9 +844,7 @@ Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim, InputHandler>
 
 	Rprintf("End Parameter Cascading Algorithm\n");
 
-	MatrixXr K_opt = H.getModel().getRegressionData().getK().template getDiffusionMatrix<ndim>();
-
-	return {diffusion, aniso_intensity, K_opt, b, c, lambda_opt};
+	return {K, diffusion, aniso_intensity, b, advection, c, lambda_opt};
 }
 
 #endif

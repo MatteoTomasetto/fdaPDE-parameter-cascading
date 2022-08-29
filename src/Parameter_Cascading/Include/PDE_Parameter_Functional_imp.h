@@ -29,7 +29,7 @@ template <UInt ORDER, UInt mydim, UInt ndim, typename InputHandler>
 void PDE_Parameter_Functional<ORDER, mydim, ndim, InputHandler>::set_b(const VectorXr& AdvParam) const
 {
 	// Set the advection in RegressionData
-	model.getRegressionData().getB().setAdvection(AdvParam);
+	model.getRegressionData().getB().setAdvectionParam(AdvParam);
 
 	// Recompute R1 matrix with new data
 	model.template setR1<ORDER, mydim, ndim>(mesh);
@@ -54,6 +54,8 @@ void PDE_Parameter_Functional<ORDER, mydim, ndim, InputHandler>::set_c(const Rea
 template <UInt ORDER, UInt mydim, UInt ndim, typename InputHandler>
 void PDE_Parameter_Functional<ORDER, mydim, ndim, InputHandler>::compute_zhat(VectorXr& zhat, const lambda::type<1>& lambda) const
 {
+	// Solve the estimation problem and compute z_hat with the right Carrier object
+	// GCV_Stochastic is exploited since it computes directly z_hat
 	if(model.isSV())
 	{
 		if(model.getRegressionData().getNumberOfRegions()>0)
@@ -107,15 +109,11 @@ PDE_Parameter_Functional<ORDER, mydim, ndim, InputHandler>::eval_K(const DiffTyp
 	set_K<DiffType>(DiffParam);
 
 	// Solve the regression problem
-	// Use GCV_stochastic since it computes directly z_hat
-	// Build the Carrier according to problem type
 	VectorXr zhat;
 	compute_zhat(zhat, lambda);
 	VectorXr zp = *(model.getRegressionData().getObservations());
 
-	Real res = (zp - zhat).squaredNorm();
-
-	return res;
+	return (zp - zhat).squaredNorm();
 }
 
 
@@ -126,7 +124,6 @@ Real PDE_Parameter_Functional<ORDER, mydim, ndim, InputHandler>::eval_b(const Ve
 	set_b(AdvParam);
 	
 	// Solve the regression problem
-	// Use GCV_stochastic since it computes directly z_hat
 	VectorXr zhat;
 	compute_zhat(zhat, lambda);
 	VectorXr zp = *(model.getRegressionData().getObservations());
@@ -142,7 +139,6 @@ Real PDE_Parameter_Functional<ORDER, mydim, ndim, InputHandler>::eval_c(const Re
 	set_c(c);
 	
 	// Solve the regression problem
-	// Use GCV_stochastic since it computes directly z_hat
 	VectorXr zhat;
 	compute_zhat(zhat, lambda);
 	VectorXr zp = *(model.getRegressionData().getObservations());
@@ -158,7 +154,7 @@ VectorXr PDE_Parameter_Functional<ORDER, mydim, ndim, InputHandler>::eval_grad_a
 	
 	MatrixXr KUpper = K * (aniso_intensity + h);
 	MatrixXr KLower;
-	if(aniso_intensity - h > 0.0) // Check if the lower aniso_intensity is positive
+	if(aniso_intensity - h > 0.0) // Check if aniso_intensity is always positive
 		KLower = K * (aniso_intensity - h);
 	else
 	{
@@ -212,24 +208,42 @@ VectorXr PDE_Parameter_Functional<ORDER, mydim, ndim, InputHandler>::eval_grad_K
 
 
 template <UInt ORDER, UInt mydim, UInt ndim, typename InputHandler>
-VectorXr PDE_Parameter_Functional<ORDER, mydim, ndim, InputHandler>::eval_grad_b(const VectorXr& AdvParam, const lambda::type<1>& lambda, const Real& h) const
+VectorXr PDE_Parameter_Functional<ORDER, mydim, ndim, InputHandler>::eval_grad_b(const VectorXr& AdvParam, const VectorXr& LowerBound, const VectorXr& UpperBound, const lambda::type<1>& lambda, const Real& h) const
 {
 	VectorXr res(ndim);
 
+	// Check if angle remain in a proper range after finite difference schemes
+	VectorXr AdvParamLower(ndim);
+	VectorXr AdvParamUpper(ndim);
+	Real hLower;
+	Real hUpper;
+
 	for(UInt i = 0; i < ndim; ++i)
-	{
-		VectorXr bUpper = AdvParam;
-		bUpper(i) += h;
-		VectorXr bLower = AdvParam;
-		bLower(i) -= h;
+	{	
+		AdvParamLower = AdvParam;
+		AdvParamUpper = AdvParam;
 
-		res(i) = (eval_b(bUpper, lambda) - eval_b(bLower, lambda)) / (2. * h);
+		if(AdvParam(i) - h < LowerBound(i))
+			hLower = h;
+		else
+		{
+			AdvParamLower(i) -= h;
+			hLower = 2. * h;
+		}
+
+		if(AdvParam(i) + h > UpperBound(i))
+			hUpper = h;
+		else
+		{
+			AdvParamUpper(i) += h;
+			hUpper = 2. * h;
+		}
+
+		res(i) = (eval_b(AdvParamUpper, lambda) - eval_b(AdvParamLower, lambda)) / std::min(hUpper,hLower);
 	}
-		
+	
 	return res;
-
 }
-
 
 template <UInt ORDER, UInt mydim, UInt ndim, typename InputHandler>
 VectorXr PDE_Parameter_Functional<ORDER, mydim, ndim, InputHandler>::eval_grad_c(const Real& c, const lambda::type<1>& lambda, const Real& h) const

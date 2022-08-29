@@ -238,10 +238,12 @@ Solution_Builders::build_solution_plain_regression(const MatrixXr & solution, co
         const MatrixXr & barycenters = (regressionData.isLocationsByBarycenter()) ? regressionData.getBarycenters() : regression.getBarycenters();
         const VectorXi & elementIds = (regressionData.isLocationsByBarycenter()) ? regressionData.getElementIds() : regression.getElementIds();
 
-        UInt dim = (ndim == 2) ? 2 : 4; // Number of Parameter Cascading Outputs changes wrt the problem dimension  
+        UInt diffusion_dim = (ndim == 2) ? 2 : 4; // Number of diffusion parameters changes wrt the problem dimension  
+        UInt advection_dim = ndim; // Number of advection parameters changes wrt the problem dimension  
+        UInt dim = diffusion_dim + advection_dim;
 
         // ---- Copy results in R memory ----
-        SEXP result = NILSXP;  // Define emty term --> never pass to R empty or is "R session aborted"
+        SEXP result = NILSXP;  // Define empty term --> never pass to R empty or is "R session aborted"
         result = PROTECT(Rf_allocVector(VECSXP, 26+dim));
 
         // Add solution matrix in position 0
@@ -399,40 +401,54 @@ Solution_Builders::build_solution_plain_regression(const MatrixXr & solution, co
                         rans11[i + barycenters.rows()*j] = barycenters(i,j);
         }
 
-        for(UInt j = 0; j < dim; ++j)
+        UInt idx = 22;
+
+        for(UInt j = 0; j < diffusion_dim; ++j)
         {
             // Add optimal diffusion parameters
-            SET_VECTOR_ELT(result, 22 + j, Rf_allocVector(REALSXP, 1));
-            rans= REAL(VECTOR_ELT(result, 22 + j));
+            SET_VECTOR_ELT(result, idx, Rf_allocVector(REALSXP, 1));
+            rans= REAL(VECTOR_ELT(result, idx));
             rans[0] = parameter_cascading_result.diffusion_opt(j);
+            idx++;
         }
 
         // Add optimal anisotropy intensity in position 24+dim
-        SET_VECTOR_ELT(result, 22+dim, Rf_allocVector(REALSXP, 1));
-        rans= REAL(VECTOR_ELT(result, 22+dim));
+        SET_VECTOR_ELT(result, idx, Rf_allocVector(REALSXP, 1));
+        rans= REAL(VECTOR_ELT(result, idx));
         rans[0] = parameter_cascading_result.aniso_intensity_opt;
+        idx++;
 
         // Add optimal diffusion matrix in position 22+dim
-        SET_VECTOR_ELT(result, 23+dim, Rf_allocMatrix(REALSXP, parameter_cascading_result.K_opt.rows(), parameter_cascading_result.K_opt.cols()));
-        rans = REAL(VECTOR_ELT(result, 23+dim));
+        SET_VECTOR_ELT(result, idx, Rf_allocMatrix(REALSXP, parameter_cascading_result.K_opt.rows(), parameter_cascading_result.K_opt.cols()));
+        rans = REAL(VECTOR_ELT(result, idx));
         for(UInt j = 0; j < parameter_cascading_result.K_opt.cols(); j++)
         {
             for(UInt i = 0; i < parameter_cascading_result.K_opt.rows(); i++)
                 rans[i + parameter_cascading_result.K_opt.rows()*j] = parameter_cascading_result.K_opt(i,j);
         }
+        idx++;
 
+        for(UInt j = 0; j < advection_dim; ++j)
+        {
+            // Add optimal advection parameters
+            SET_VECTOR_ELT(result, idx, Rf_allocVector(REALSXP, 1));
+            rans= REAL(VECTOR_ELT(result, idx));
+            rans[0] = parameter_cascading_result.diffusion_opt(j);
+            idx++;
+        }
        
         // Add optimal advection vector in position 23+dim
-        SET_VECTOR_ELT(result, 24+dim, Rf_allocVector(REALSXP, parameter_cascading_result.b_opt.size()));
-        rans = REAL(VECTOR_ELT(result, 24+dim));
+        SET_VECTOR_ELT(result, idx, Rf_allocVector(REALSXP, parameter_cascading_result.b_opt.size()));
+        rans = REAL(VECTOR_ELT(result, idx));
         for(UInt j = 0; j < parameter_cascading_result.b_opt.size(); j++)
         {
             rans[j] = parameter_cascading_result.b_opt(j);
         }
+        idx++;
 
         // Add optimal reaction coefficient in position 24+dim
-        SET_VECTOR_ELT(result, 25+dim, Rf_allocVector(REALSXP, 1));
-        rans= REAL(VECTOR_ELT(result, 25+dim));
+        SET_VECTOR_ELT(result, idx, Rf_allocVector(REALSXP, 1));
+        rans= REAL(VECTOR_ELT(result, idx));
         rans[0] = parameter_cascading_result.c_opt;
 
         UNPROTECT(1);

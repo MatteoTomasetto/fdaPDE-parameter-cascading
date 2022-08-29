@@ -72,7 +72,7 @@ regression_skeleton(InputHandler & regressionData, OptimizationData & optimizati
  	return Solution_Builders::build_solution_plain_regression<InputHandler, ORDER, mydim, ndim>(solution_bricks.first, solution_bricks.second, mesh, regressionData, regression);
 }
 
-// Specialization for RegressionDataElliptic and RegressionDataEllipticSpaceVarying to allow parameter cascading algorithm in this case
+// Specialization for RegressionDataElliptic and RegressionDataEllipticSpaceVarying to allow Parameter Cascading algorithm
 template<typename InputHandler, UInt ORDER, UInt mydim, UInt ndim>
 typename std::enable_if<std::is_same<InputHandler, RegressionDataElliptic>::value || std::is_same<InputHandler, RegressionDataEllipticSpaceVarying>::value, SEXP>::type
 regression_skeleton(InputHandler & regressionData, OptimizationData & optimizationData, SEXP Rmesh)
@@ -85,9 +85,10 @@ regression_skeleton(InputHandler & regressionData, OptimizationData & optimizati
 
 	// Parameter cascading algorithm to estimate the PDE_parameters optimally
 	Output_Parameter_Cascading parameter_cascading_result;
+	bool ParamCascadingDone = false;
 	if(regressionData.ParameterCascadingOn())
 	{
-		// Set parameter dimension in regressionData to properly modify the PDE parameters in the Parameter Cascading algorithm
+		// Set parameter dimension in regressionData to properly modify the PDE parameters in space-varying cases
 		regressionData.template set_parameters_dim<ORDER, mydim, ndim>(mesh);
 
 		// Functional to optimize in the algorithm
@@ -98,11 +99,16 @@ regression_skeleton(InputHandler & regressionData, OptimizationData & optimizati
 
 		parameter_cascading_result = ParameterCascadingEngine.apply(); // Parameter cascading algorithm applied
 
+		// Reset the Parameter Cascading options in RegressionData
+		regressionData.reset_parameter_cascading_option();
+
 		// Reset the last lambdaS used in OptimizationData
 		optimizationData.set_last_lS_used(std::numeric_limits<Real>::infinity());
 
 		// Set initial lambdaS in OptimizationData (better initialization for future computations)
 		optimizationData.set_initial_lambda_S(parameter_cascading_result.lambda_opt);
+
+		ParamCascadingDone = true;
 	}
 
 	std::pair<MatrixXr, output_Data<1>> solution_bricks; // Prepare solution to be filled
@@ -143,7 +149,7 @@ regression_skeleton(InputHandler & regressionData, OptimizationData & optimizati
 		}
 	}
 
-	if(regressionData.ParameterCascadingOn())
+	if(ParamCascadingDone)
 		return Solution_Builders::build_solution_plain_regression<InputHandler, ORDER, mydim, ndim>(solution_bricks.first, solution_bricks.second, mesh, regressionData, regression, parameter_cascading_result);
 
  	return Solution_Builders::build_solution_plain_regression<InputHandler, ORDER, mydim, ndim>(solution_bricks.first, solution_bricks.second, mesh, regressionData, regression);
