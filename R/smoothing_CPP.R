@@ -141,6 +141,18 @@ CPP_smooth.FEM.PDE.basis<-function(locations, observations, FEMbasis, covariates
   
   if(parameter_cascading_option[1]==4 & all(PDE_parameters$b==0) & PDE_parameters$c==0)
     stop("Not possible to estimate anisotropy_intensity with null b and c")
+  if(parameter_cascading_option[1]==5 & all(PDE_parameters$b==0) & PDE_parameters$c==0){
+    message("Not possible to estimate anisotropy_intensity with null b and c; 'K' will be used");
+    parameter_cascading_option[1] = 1
+  }
+  if(parameter_cascading_option[1]==6 & all(PDE_parameters$b==0) & PDE_parameters$c==0){
+    message("Not possible to estimate anisotropy_intensity with null b and c; 'K_direction' will be used");
+    parameter_cascading_option[1] = 2
+  }
+  if(parameter_cascading_option[1]==7 & all(PDE_parameters$b==0) & PDE_parameters$c==0){
+    message("Not possible to estimate anisotropy_intensity with null b and c; 'K_eigenval_ratio' will be used");
+    parameter_cascading_option[1] = 3
+  }
 
   ## Set propr type for correct C++ reading
 
@@ -245,6 +257,18 @@ CPP_smooth.FEM.PDE.sv.basis<-function(locations, observations, FEMbasis, covaria
 
   if(parameter_cascading_option[1]==4 & all(PDE_param_eval$b==0) & all(PDE_param_eval$c==0))
     stop("Not possible to estimate anisotropy_intensity with null b and c")
+  if(parameter_cascading_option[1]==5 & all(PDE_param_eval$b==0) & all(PDE_param_eval$c==0)){
+    message("Not possible to estimate anisotropy_intensity with null b and c; 'K' will be used");
+    parameter_cascading_option[1] = 1
+  }
+  if(parameter_cascading_option[1]==6 & all(PDE_param_eval$b==0) & all(PDE_param_eval$c==0)){
+    message("Not possible to estimate anisotropy_intensity with null b and c; 'K_direction' will be used");
+    parameter_cascading_option[1] = 2
+  }
+  if(parameter_cascading_option[1]==7 & all(PDE_param_eval$b==0) & all(PDE_param_eval$c==0)){
+    message("Not possible to estimate anisotropy_intensity with null b and c; 'K_eigenval_ratio' will be used");
+    parameter_cascading_option[1] = 3
+  }
 
   ## Set propr type for correct C++ reading
   locations <- as.matrix(locations)

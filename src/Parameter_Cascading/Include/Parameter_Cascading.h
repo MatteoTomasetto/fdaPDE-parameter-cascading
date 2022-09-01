@@ -107,13 +107,18 @@ class Parameter_Cascading
 
 				lambdas = rhos.array() / (1 - rhos.array()) * n / area;
 
-				// Initialize the parameters with the values in RegressionData and OptimizationData
+				// Save and set the normalized diffusion matrix in RegressionData;
+				// in this way, aniso_intensity will multiply the normalized K instead of the initial K (it has a clearer meaning)
 				K = H.getModel().getRegressionData().getK().template getDiffusionMatrix<ndim>();
+				aniso_intensity = (ndim == 2) ? std::sqrt(K.determinant()) : std::cbrt(K.determinant());
+				K /= aniso_intensity;
+				H.template set_K<MatrixXr>(K);
+
+				// Initialize the parameters with the values in RegressionData and OptimizationData
 				diffusion = H.getModel().getRegressionData().getK().template getDiffusionParam<ndim>();
 				b = H.getModel().getRegressionData().getB().template getAdvectionVector<ndim>();
 				advection = H.getModel().getRegressionData().getB().template getAdvectionParam<ndim>();
 				c = H.getModel().getRegressionData().getC().getReactionParam();
-				aniso_intensity = (ndim == 2) ? std::sqrt(K.determinant()) : std::cbrt(K.determinant());
 				lambda_opt = H.getModel().getOptimizationData().get_initial_lambda_S();
 
 				// Set which parameters to update
@@ -133,6 +138,21 @@ class Parameter_Cascading
 				}
 
 				if(parameter_cascading_diffusion_option == 4){
+					update_anisotropy_intensity = true;
+				}
+
+				if(parameter_cascading_diffusion_option == 5){
+					update_K = true;
+					update_anisotropy_intensity = true;
+				}
+
+				if(parameter_cascading_diffusion_option == 6){
+					update_K_direction = true;
+					update_anisotropy_intensity = true;
+				}
+
+				if(parameter_cascading_diffusion_option == 7){
+					update_K_eigenval_ratio = true;
 					update_anisotropy_intensity = true;
 				}
 

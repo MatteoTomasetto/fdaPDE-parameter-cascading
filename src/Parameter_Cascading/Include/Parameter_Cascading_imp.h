@@ -549,14 +549,11 @@ Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim, InputHandler>
 		}
 	}
 
+	K = H.getModel().getRegressionData().getK().template getDiffusionMatrix<ndim>();
+
 	if(update_anisotropy_intensity) // Update the anisotropy intensity coefficient
 	{
 		Rprintf("Finding anisotropy intensity\n");
-
-		// Save and set the normalized diffusion matrix in RegressionData;
-		// in this way, aniso_intensity will multiply the normalized K instead of the initial K (it has a clearer meaning)
-		K /= aniso_intensity;
-		H.template set_K<MatrixXr>(K);
 
 		VectorXr init(1);
 		VectorXr lower_bound(1);
@@ -584,10 +581,15 @@ Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim, InputHandler>
 		};
 		
 		aniso_intensity = step(init, opt_algo, lower_bound, upper_bound, periods, F, dF, set_param, true)(0);
+		K = H.getModel().getRegressionData().getK().template getDiffusionMatrix<ndim>();
+	}
+	else
+	{
+		// Recompute the matrix K (not normalized)
+		K *= aniso_intensity;
+		H.template set_K<MatrixXr>(K);
 	}
 
-	K = H.getModel().getRegressionData().getK().template getDiffusionMatrix<ndim>();
-	
 	if(update_b) // Update the advection vector
 	{
 		Rprintf("Finding advection vector b\n");

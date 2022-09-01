@@ -530,6 +530,12 @@ smooth.FEM<-function(locations = NULL, observations, FEMbasis,
    		parameter_cascading_option = 3
    	}else if(PDE_parameters$parameter_cascading$diffusion[1] == 'anisotropy_intensity'){
    		parameter_cascading_option = 4
+   	}else if(PDE_parameters$parameter_cascading$diffusion[1] == 'K_anisotropy_intensity'){
+   		parameter_cascading_option = 5
+   	}else if(PDE_parameters$parameter_cascading$diffusion[1] == 'K_direction_anisotropy_intensity'){
+   		parameter_cascading_option = 6
+   	}else if(PDE_parameters$parameter_cascading$diffusion[1] == 'K_eigenval_ratio_anisotropy_intensity'){
+   		parameter_cascading_option = 7
    	}else{
     	stop("Invalid input for Parameter Cascading algorithm in PDE_parameters")
    	}
