@@ -46,13 +46,17 @@
 #' In addition, it is possible to add a further not mandatory list in PDE_parameters called 'parameter_cascading' in order to estimate
 #' the stationary PDE_parameters via Parameter Cascading Algorithm minimizing the mean squared error.
 #' 'parameter_cascading' must be a list with 3 entries, each one is a vector containing the parameter to optimize and the optimization algorithm to use for that parameter:
-#' 		1) the first option 'diffusion' admits the following parameter possibilities: NULL (default option), 'K', 'K_direction', 'K_eigenval_ratio', 'anisotropy_intensity'.
+#' 		1) the first option 'diffusion' admits the following parameter possibilities: NULL (default option), 'K', 'K_direction', 'K_eigenval_ratio', 'anisotropy_intensity',
+#'		   'K_anisotropy_intensity', 'K_direction_anisotropy_intensity' and 'K_eigenval_ratio_anisotropy_intensity';
 #' 		   If NULL is selected, the Parameter Cascading algorithm is not enabled for the diffusion.
 #' 		   If 'K' is selected, the diffusion matrix K will be estimated via Parameter Cascading algorithm.
 #' 		   If 'K_direction' is selected, the angle identifying the direction of anisotropy will be estimated via Parameter Cascading algorithm.
 #' 		   If 'K_eigenval_ratio' is selected, the ratio of K eigenvalues identifying the anisotropy shape will be estimated via Parameter Cascading algorithm.
 #'		   If 'anisotropy_intensity' is selected, the anisotropy intensity (a coefficient that multiply K) will be estimated via Parameter Cascading algorithm;
 #'		   this option is available only if the advection or the reaction term are not zero.
+#'		   If 'K_anisotropy_intensity' is selected, either 'K' and the 'anisotropy_intensity' are considered;
+#'		   If 'K_direction_anisotropy_intensity' is selected, either 'K_direction' and 'anisotropy_intensity' are considered;
+#'		   If 'K_eigenval_ratio_anisotropy_intensity' is selected, either 'K_eigenval_ratio' and 'anisotropy_intensity' are considered;
 #'		2) the second option 'advection' admits the following parameter possibilities: NULL (default option), 'b' to estimate the advection vector, 'b_intensity' and 'b_direction' 
 #'		   to estimate the length and the direction of the advection vector respectively.
 #'		3) the third option 'reaction' admits the following parameter possibilities: NULL (default option), 'c' to estimate the reaction term.
