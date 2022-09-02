@@ -61,13 +61,13 @@ FPIRLS_Base<InputHandler,ORDER, mydim, ndim>::FPIRLS_Base(const MeshHandler<ORDE
 template <typename InputHandler, UInt ORDER, UInt mydim, UInt ndim>
 void FPIRLS_Base<InputHandler,ORDER, mydim, ndim>::apply( const ForcingTerm& u){
   // f-PRILS implementation
-  
+
   // Initialize the outputs. The temporal dimension is not implemented, for this reason the 2nd dimension is set to 1.
   if( this->inputData_.getCovariates()->rows() > 0 )_beta_hat.resize(lenS_, lenT_);
   _fn_hat.resize(lenS_, lenT_);
   _dof.resize(lenS_, lenT_);
   _solution.resize(lenS_,lenT_);
-  
+
   if(isSpaceVarying)
   {
     FiniteElement<ORDER, mydim, ndim> fe;
@@ -124,7 +124,6 @@ void FPIRLS_Base<InputHandler,ORDER, mydim, ndim>::apply( const ForcingTerm& u){
             _GCV[i][j] = std::numeric_limits<double>::quiet_NaN();
 
         }else{
-    
       	   compute_GCV(i, j);
         }
         
@@ -145,12 +144,13 @@ void FPIRLS_Base<InputHandler,ORDER, mydim, ndim>::update_solution(const UInt& l
   regression_.recomputeWTW(); // at each iteration of FPIRLS W is updated, so WTW has to be recomputed as well.
   regression_.preapply(this->mesh_);
   regression_.apply();
-  
+
   // if the system matrix is correctly factorized
   if( regression_.isMatrixNoCov_factorized() ) {
   	const SpMat * Psi = regression_.getpsi_(); // get Psi matrix. It is used for the computation of fn_hat.
 
   	// get the solutions from the regression object.
+
   	_solution(lambdaS_index,lambdaT_index) = regression_.getSolution()(0,0);
  	_dof(lambdaS_index, lambdaT_index) = regression_.getDOF()(0,0);
 
@@ -221,7 +221,6 @@ void FPIRLS_Base<InputHandler,ORDER, mydim, ndim>::compute_mu(const UInt& lambda
   if(inputData_.getCovariates()->rows()>0)
     W_beta = (*(inputData_.getCovariates()))*_beta_hat(lambdaS_index,lambdaT_index);
 
-
   for(UInt j=0; j < W_beta.size(); j++){
       mu_[lambdaS_index][lambdaT_index](j) = inv_link(W_beta[j] + _fn_hat(lambdaS_index,lambdaT_index)(j));
   }
@@ -268,7 +267,9 @@ std::array<Real,2> FPIRLS_Base<InputHandler,ORDER, mydim, ndim>::compute_J(const
 
   Lf.resize(_solution(lambdaS_index,lambdaT_index).size()/2);
   for(UInt i=0; i< Lf.size(); i++){
+
     Lf(i) = _solution(lambdaS_index,lambdaT_index)(Lf.size() + i);
+
   }
 
   if(isSpaceVarying)

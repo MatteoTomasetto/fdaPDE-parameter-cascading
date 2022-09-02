@@ -144,3 +144,10 @@ Journal of the Royal Statistical Society: Series B (Statistical Methodology), 83
    \item{Arnone, E., Ferraccioli, F., Pigolotti, C., Sangalli, L.M. (2021), A roughness penalty approach to estimate densities over two-dimensional manifolds, Computational Statistics and Data Analysis, to appear.}
 }
 }
+\references{
+\itemize{
+   \item{Ferraccioli, F., Arnone, E., Finos, L., Ramsay, J. O., Sangalli, L. M. (2021). Nonparametric density estimation over complicated domains.
+Journal of the Royal Statistical Society: Series B (Statistical Methodology), 83(2), 346-368.}
+   \item{Arnone, E., Ferraccioli, F., Pigolotti, C., Sangalli, L.M. (2021), A roughness penalty approach to estimate densities over two-dimensional manifolds, Computational Statistics and Data Analysis, to appear.}
+}
+}

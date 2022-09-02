@@ -37,6 +37,7 @@ Box<NDIMP>::Box(std::vector<Real> const & coord) {
             x_[4] = std::max(coord[1],coord[4]);
             x_[5] = std::max(coord[2],coord[5]);
     }
+
 	else if(NDIMP==2 && coord.size()==6) {
 			x_.resize(2*NDIMP); //4
 			x_[0] = std::min(std::min(coord[0], coord[2]), coord[4]); //min x
@@ -100,6 +101,8 @@ Box<NDIMP>::Box(Element<NNODES,NDIME,NDIMPP> const & element) {
 		x_[4] = std::max(std::max(std::max(element[0][1], element[1][1]), element[2][1]), element[3][1]); //max y
 		x_[5] = std::max(std::max(std::max(element[0][2], element[1][2]), element[2][2]), element[3][2]); //max z
   }else if( NDIME == 1 && NDIMPP == 2 ){
+
+
         x_.resize(2*NDIMP); //4
         x_[0] = std::min(element[0][0], element[1][0]);
         x_[1] = std::min(element[0][1], element[1][1]);
@@ -107,6 +110,7 @@ Box<NDIMP>::Box(Element<NNODES,NDIME,NDIMPP> const & element) {
         x_[3] = std::max(element[0][1], element[1][1]);
 
     }
+
 }
 
 

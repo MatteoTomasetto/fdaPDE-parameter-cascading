@@ -860,4 +860,3 @@ CPP_smooth.graph.GAM.FEM.basis<-function(locations, observations, FEMbasis, cova
   return(bigsol)
   
 }
-

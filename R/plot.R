@@ -443,7 +443,6 @@ plot.mesh.1.5D<-function(x, ...)
 
    nodes <- FEM$FEMbasis$mesh$nodes
    triangles <- as.vector(t(FEM$FEMbasis$mesh$triangles))
-
    colormap <- match.fun(colormap)
    heat <- colormap(100)
    # How many plots are needed?

@@ -94,6 +94,7 @@ class FPIRLS_Base {
   FPIRLS_Base(const MeshHandler<ORDER,mydim,ndim>& mesh, InputHandler& inputData, OptimizationData & optimizationData, VectorXr mu0, bool scale_parameter_flag, Real scale_param); // Constructor
   
   FPIRLS_Base(const MeshHandler<ORDER,mydim,ndim>& mesh, const std::vector<Real>& mesh_time,
+
     InputHandler& inputData, OptimizationData & optimizationData, VectorXr mu0, bool scale_parameter_flag, Real scale_param); // Constructor
 
     //! A virutal destructor
@@ -144,6 +145,7 @@ class FPIRLS: public FPIRLS_Base< InputHandler, ORDER,  mydim,  ndim>{
   FPIRLS(const MeshHandler<ORDER,mydim,ndim>& mesh, const std::vector<Real>& mesh_time,
     InputHandler& inputData, OptimizationData & optimizationData, VectorXr mu0, bool scale_parameter_flag, Real scale_param):
       FPIRLS_Base<InputHandler, ORDER, mydim, ndim>(mesh, mesh_time, inputData, optimizationData, mu0, scale_parameter_flag, scale_param){};
+
      //! A virtual destructor
    virtual ~FPIRLS(){};
 
@@ -216,6 +218,7 @@ class FPIRLS_Poisson : public FPIRLS <InputHandler, ORDER, mydim, ndim> {
     public:
 
     FPIRLS_Poisson(const MeshHandler<ORDER,mydim,ndim>& mesh, InputHandler& inputData, OptimizationData & optimizationData, VectorXr mu0):
+
     FPIRLS<InputHandler, ORDER, mydim, ndim>(mesh, inputData, optimizationData, mu0, false, 1){};
     
     FPIRLS_Poisson(const MeshHandler<ORDER,mydim,ndim>& mesh, const std::vector<Real>& mesh_time,
@@ -247,6 +250,10 @@ class FPIRLS_Exponential : public FPIRLS <InputHandler, ORDER, mydim, ndim>
      FPIRLS<InputHandler, ORDER, mydim, ndim>(mesh, inputData, optimizationData, mu0, false, 1){};
      
      FPIRLS_Exponential(const MeshHandler<ORDER,mydim,ndim>& mesh, const std::vector<Real>& mesh_time,
+    InputHandler& inputData, OptimizationData & optimizationData, VectorXr mu0):
+      FPIRLS<InputHandler, ORDER, mydim, ndim>(mesh, mesh_time, inputData, optimizationData, mu0, false, 1){};
+
+    FPIRLS_Exponential(const MeshHandler<ORDER,mydim,ndim>& mesh, const std::vector<Real>& mesh_time,
     InputHandler& inputData, OptimizationData & optimizationData, VectorXr mu0):
       FPIRLS<InputHandler, ORDER, mydim, ndim>(mesh, mesh_time, inputData, optimizationData, mu0, false, 1){};
 

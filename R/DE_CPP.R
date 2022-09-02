@@ -243,4 +243,3 @@ CPP_FEM.graph.DE <- function(data, FEMbasis, lambda, fvec, heatStep, heatIter, n
   
   return(bigsol)
 }
-

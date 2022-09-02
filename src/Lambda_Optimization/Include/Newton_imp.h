@@ -78,7 +78,7 @@ std::pair<lambda::type<1>, UInt> Newton_ex<lambda::type<1>, Real, Extensions...>
                        
                        GCV_v.push_back(fx);
                        lambda_v.push_back(x);
-                       
+
                        return {x, n_iter};
                }
 
@@ -167,7 +167,7 @@ std::pair<lambda::type<2>, UInt> Newton_ex<lambda::type<2>, MatrixXr, Extensions
                        
                        GCV_v.push_back(fx);
                        lambda_v.push_back(x);
-                       
+
                        return {x, n_iter};
                }
 
@@ -269,7 +269,7 @@ std::pair<lambda::type<1>, UInt> Newton_fd<lambda::type<1>, Real, Extensions...>
                         
                         GCV_v.push_back(fx);
                         lambda_v.push_back(x);
-                       
+
                         return {x, n_iter};
                 }
 

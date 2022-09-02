@@ -279,8 +279,6 @@ class Carrier: public Extensions...
 				return (this->model->apply())(0,0);
                 }
 
-
-
                 //! Method to take advantage of simplified multiplication by Q
                 /*!
                  \param u the vector or matrix onto which to perform multiplication
@@ -480,6 +478,7 @@ class CarrierBuilder
 
                         return car;
                 }
+
 
                 //! Areal Carrier static builder
                 /*!

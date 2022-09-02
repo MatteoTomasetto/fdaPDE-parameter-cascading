@@ -95,7 +95,6 @@ FPCA.FEM<-function(locations = NULL, datamatrix, FEMbasis, lambda, nPC = 1, vali
                    GCVmethod = "Stochastic", nrealizations = 100, search = "tree", bary.locations = NULL)
 {
   incidence_matrix=NULL # if areal fpca will be included in release, this should be put in the input
-  
  if(is(FEMbasis$mesh, "mesh.2D")){
  	ndim = 2
  	mydim = 2

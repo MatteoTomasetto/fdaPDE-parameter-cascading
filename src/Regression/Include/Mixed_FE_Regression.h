@@ -28,7 +28,7 @@ class MixedFERegressionBase
 
 		const std::vector<Real> mesh_time_;
 		const UInt N_; 			//!< Number of spatial basis functions
-		const UInt M_;			//!< Number of temporal nodes
+		const UInt M_;  		//!< Number of temporal nodes
 
 		const InputHandler & regressionData_;
 
@@ -212,6 +212,10 @@ class MixedFERegressionBase
 		void recomputeWTW(void){ this->isWTWfactorized_ = false;}
 
 		// -- GETTERS --
+		//! A function returning the regression data
+		InputHandler const & getRegressionData(void) const {return this->regressionData_;}
+		//! A function returning the optimization data
+		OptimizationData & getOptimizationData(void) const {return this->optimizationData_;}
 		//! A function returning the computed barycenters of the locationss
 		MatrixXr const & getBarycenters(void) const {return barycenters_;}; //returns a const reference as in rergressionData
 		//! A function returning the element ids of the locations
@@ -257,10 +261,10 @@ class MixedFERegressionBase
 		UInt getM_(void) const {return this->M_;}
 		bool isSV(void) const {return this->isSpaceVarying;}
 		bool isIter(void) const {return this->isIterative;}
-
-		 //! A method checking the correct LU factorization of the system matrix
-        	bool isMatrixNoCov_factorized() const{return this->matrixNoCovdec_.info() == Eigen::ComputationInfo::Success;}		
 		
+		//! A method checking the correct LU factorization of the system matrix
+        	bool isMatrixNoCov_factorized() const{return this->matrixNoCovdec_.info() == Eigen::ComputationInfo::Success;}	
+        	
 		//! A function that given a vector u, performs Q*u efficiently
 		MatrixXr LeftMultiplybyQ(const MatrixXr & u);
 

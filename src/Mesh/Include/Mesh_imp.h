@@ -148,6 +148,7 @@ void MeshHandler<ORDER,mydim,ndim>::printTree(std::ostream & os) const
 		os << "No tree!" <<std::endl;
 }
 
+
 //Graph partial specialization
 template<UInt ORDER>
 MeshHandler<ORDER,1,2>::MeshHandler(SEXP Rmesh, UInt search) :

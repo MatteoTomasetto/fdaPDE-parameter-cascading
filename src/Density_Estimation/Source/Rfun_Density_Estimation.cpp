@@ -115,5 +115,4 @@ SEXP Density_Initialization(SEXP Rdata, SEXP Rmesh, SEXP Rorder, SEXP Rmydim, SE
        return(NILSXP);
 }
 
-
 }

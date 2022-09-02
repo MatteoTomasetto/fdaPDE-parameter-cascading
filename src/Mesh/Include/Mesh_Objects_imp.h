@@ -424,4 +424,5 @@ inline Real Element<NNODES,1,2>::integrate(const Eigen::Matrix<Real,NNODES,1>& c
     return getMeasure() * integral;
 
 }
+
 #endif

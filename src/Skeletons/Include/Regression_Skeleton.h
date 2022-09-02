@@ -11,6 +11,8 @@
 #include "../../Lambda_Optimization/Include/Solution_Builders.h"
 #include "../../Mesh/Include/Mesh.h"
 #include "../../Regression/Include/Mixed_FE_Regression.h"
+#include "../../Parameter_Cascading/Include/PDE_Parameter_Functional.h"
+#include "../../Parameter_Cascading/Include/Parameter_Cascading.h"
 
 template<typename CarrierType>
 typename std::enable_if<std::is_same<multi_bool_type<std::is_base_of<Temporal, CarrierType>::value>, f_type>::value,
@@ -21,14 +23,15 @@ typename std::enable_if<size==1, std::pair<MatrixXr, output_Data<1>>>::type
 	optimizer_strategy_selection(EvaluationType & optim, CarrierType & carrier);
 
 template<typename InputHandler, UInt ORDER, UInt mydim, UInt ndim>
-SEXP regression_skeleton(InputHandler & regressionData, OptimizationData & optimizationData, SEXP Rmesh)
+typename std::enable_if<!std::is_same<InputHandler, RegressionDataElliptic>::value && !std::is_same<InputHandler, RegressionDataEllipticSpaceVarying>::value, SEXP>::type
+regression_skeleton(InputHandler & regressionData, OptimizationData & optimizationData, SEXP Rmesh)
 {
 	MeshHandler<ORDER, mydim, ndim> mesh(Rmesh, regressionData.getSearch());	// Create the mesh
 	MixedFERegression<InputHandler> regression(regressionData, optimizationData, mesh.num_nodes()); // Define the mixed object
 
 	regression.preapply(mesh); // preliminary apply (preapply) to store all problem matrices
 
-    std::pair<MatrixXr, output_Data<1>> solution_bricks;	// Prepare solution to be filled
+	std::pair<MatrixXr, output_Data<1>> solution_bricks; // Prepare solution to be filled
 
 	// Build the Carrier according to problem type
 	if(regression.isSV())
@@ -65,6 +68,89 @@ SEXP regression_skeleton(InputHandler & regressionData, OptimizationData & optim
 			solution_bricks = optimizer_method_selection<Carrier<InputHandler>>(carrier);
 		}
 	}
+
+ 	return Solution_Builders::build_solution_plain_regression<InputHandler, ORDER, mydim, ndim>(solution_bricks.first, solution_bricks.second, mesh, regressionData, regression);
+}
+
+// Specialization for RegressionDataElliptic and RegressionDataEllipticSpaceVarying to allow Parameter Cascading algorithm
+template<typename InputHandler, UInt ORDER, UInt mydim, UInt ndim>
+typename std::enable_if<std::is_same<InputHandler, RegressionDataElliptic>::value || std::is_same<InputHandler, RegressionDataEllipticSpaceVarying>::value, SEXP>::type
+regression_skeleton(InputHandler & regressionData, OptimizationData & optimizationData, SEXP Rmesh)
+{
+	MeshHandler<ORDER, mydim, ndim> mesh(Rmesh, regressionData.getSearch()); // Create the mesh
+	
+	MixedFERegression<InputHandler> regression(regressionData, optimizationData, mesh.num_nodes()); // Define the mixed object
+
+	regression.preapply(mesh); // preliminary apply (preapply) to store all problem matrices
+
+	// Parameter cascading algorithm to estimate the PDE_parameters optimally
+	Output_Parameter_Cascading parameter_cascading_result;
+	bool ParamCascadingDone = false;
+	if(regressionData.ParameterCascadingOn())
+	{
+		// Set parameter dimension in regressionData to properly modify the PDE parameters in space-varying cases
+		regressionData.template set_parameters_dim<ORDER, mydim, ndim>(mesh);
+
+		// Functional to optimize in the algorithm
+		PDE_Parameter_Functional<ORDER, mydim, ndim, InputHandler> H(regression, mesh);
+
+		// Object to perform the algorithm
+		Parameter_Cascading<ORDER, mydim, ndim, InputHandler> ParameterCascadingEngine(H);
+
+		parameter_cascading_result = ParameterCascadingEngine.apply(); // Parameter cascading algorithm applied
+
+		// Reset the Parameter Cascading options in RegressionData
+		regressionData.reset_parameter_cascading_option();
+
+		// Reset the last lambdaS used in OptimizationData
+		optimizationData.set_last_lS_used(std::numeric_limits<Real>::infinity());
+
+		// Set initial lambdaS in OptimizationData (better initialization for future computations)
+		optimizationData.set_initial_lambda_S(parameter_cascading_result.lambda_opt);
+
+		ParamCascadingDone = true;
+	}
+
+	std::pair<MatrixXr, output_Data<1>> solution_bricks; // Prepare solution to be filled
+
+	// Build the Carrier according to problem type
+	if(regression.isSV())
+	{
+		if(regressionData.getNumberOfRegions()>0)
+		{
+			//Rprintf("Areal-forced\n");
+			Carrier<InputHandler,Forced,Areal>
+				carrier = CarrierBuilder<InputHandler>::build_forced_areal_carrier(regressionData, regression, optimizationData);
+			solution_bricks = optimizer_method_selection<Carrier<InputHandler, Forced,Areal>>(carrier);
+		}
+		else
+		{
+			//Rprintf("Pointwise-forced\n");
+			Carrier<InputHandler,Forced>
+				carrier = CarrierBuilder<InputHandler>::build_forced_carrier(regressionData, regression, optimizationData);
+			solution_bricks = optimizer_method_selection<Carrier<InputHandler,Forced>>(carrier);
+		}
+	}
+	else
+	{
+		if(regressionData.getNumberOfRegions()>0)
+		{
+			//Rprintf("Areal\n");
+			Carrier<InputHandler,Areal>
+				carrier = CarrierBuilder<InputHandler>::build_areal_carrier(regressionData, regression, optimizationData);
+			solution_bricks = optimizer_method_selection<Carrier<InputHandler,Areal>>(carrier);
+		}
+		else
+		{
+			//Rprintf("Pointwise\n");
+			Carrier<InputHandler>
+				carrier = CarrierBuilder<InputHandler>::build_plain_carrier(regressionData, regression, optimizationData);
+			solution_bricks = optimizer_method_selection<Carrier<InputHandler>>(carrier);
+		}
+	}
+
+	if(ParamCascadingDone)
+		return Solution_Builders::build_solution_plain_regression<InputHandler, ORDER, mydim, ndim>(solution_bricks.first, solution_bricks.second, mesh, regressionData, regression, parameter_cascading_result);
 
  	return Solution_Builders::build_solution_plain_regression<InputHandler, ORDER, mydim, ndim>(solution_bricks.first, solution_bricks.second, mesh, regressionData, regression);
 }
@@ -107,8 +193,7 @@ std::pair<MatrixXr, output_Data<1>> >::type optimizer_method_selection(CarrierTy
 		output.z_hat.resize(carrier.get_psip()->rows(),carrier.get_opt_data()->get_size_S());
 		output.lambda_vec = carrier.get_opt_data()->get_lambda_S();
 		MatrixXr solution;
-		MatrixXv betas;
-
+ 		MatrixXv betas;
 		betas.resize(carrier.get_opt_data()->get_size_S(),1);
 
 		for(UInt j=0; j<carrier.get_opt_data()->get_size_S(); j++)
@@ -133,10 +218,10 @@ std::pair<MatrixXr, output_Data<1>> >::type optimizer_method_selection(CarrierTy
 
 		output.time_partial = T.tv_sec + 1e-9*T.tv_nsec;
 
-                // postponed after apply in order to have betas computed
-                output.betas = betas;
+        // postponed after apply in order to have betas computed
+        output.betas = betas;
 
-                return {solution, output};
+        return {solution, output};
 	}
 }
 
@@ -217,7 +302,6 @@ typename std::enable_if<size==1, std::pair<MatrixXr, output_Data<1>>>::type
 		Checker ch;
 		std::vector<Real> lambda_v_;
 		std::vector<Real> GCV_v_;
-		
 
 		timer Time_partial; // Of the sole optimization
 		Time_partial.start();

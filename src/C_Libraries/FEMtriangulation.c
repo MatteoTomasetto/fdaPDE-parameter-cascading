@@ -220,7 +220,7 @@ SEXP R_triangulate_native(SEXP P, SEXP PB, SEXP PA, SEXP S, SEXP SB, SEXP(H), SE
 
   //char flags[200];
   //strcpy(flags, inputflags);
-	
+
   char* flags_ptr = strdup(flags);
   triangulate(flags_ptr, &in, &mid, &vorout);
 

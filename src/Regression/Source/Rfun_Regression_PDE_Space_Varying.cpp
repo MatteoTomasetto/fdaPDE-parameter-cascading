@@ -24,9 +24,10 @@ extern "C"
                 \param Rmydim an R-integer specifying if the mesh nodes lie in R^2 or R^3
                 \param Rndim  an R-integer specifying if the "local dimension" is 2 or 3
                 \param RK an R object representing the diffusivity tensor of the model
-                \param Rbeta an R object representing the advection function of the model
+                \param Rb an R object representing the advection function of the model
                 \param Rc an R object representing the reaction function of the model
                 \param Ru an R object representing the forcing function of the model
+                \param RparameterCascading an R-integer representing the option for parameter cascading algorithm
                 \param Rcovariates an R-matrix of covariates for the regression model
                 \param RBCIndices an R-integer containing the indexes of the nodes the user want to apply a Dirichlet Condition,
                                 the other are automatically considered in Neumann Condition.
@@ -44,11 +45,11 @@ extern "C"
                 \return R-vectors containg the coefficients of the solution, prediction of the values, optimization data and much more
         */
         SEXP regression_PDE_space_varying(SEXP Rlocations, SEXP RbaryLocations, SEXP Robservations, SEXP Rmesh, SEXP Rorder, SEXP Rmydim, SEXP Rndim,
-                SEXP RK, SEXP Rbeta, SEXP Rc, SEXP Ru, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues, SEXP RincidenceMatrix, SEXP RarealDataAvg,
+                SEXP RK, SEXP Rb, SEXP Rc, SEXP Ru, SEXP RparameterCascading, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues, SEXP RincidenceMatrix, SEXP RarealDataAvg,
                 SEXP Rsearch, SEXP Roptim, SEXP Rlambda, SEXP Rnrealizations, SEXP Rseed, SEXP RDOF_matrix, SEXP Rtune, SEXP Rsct)
         {
                 //Set data
-        	RegressionDataEllipticSpaceVarying regressionData(Rlocations, RbaryLocations, Robservations, Rorder, RK, Rbeta, Rc, Ru, Rcovariates, RBCIndices, RBCValues, RincidenceMatrix, RarealDataAvg, Rsearch);
+        	RegressionDataEllipticSpaceVarying regressionData(Rlocations, RbaryLocations, Robservations, Rorder, RK, Rb, Rc, Ru, RparameterCascading, Rcovariates, RBCIndices, RBCValues, RincidenceMatrix, RarealDataAvg, Rsearch);
                 OptimizationData optimizationData(Roptim, Rlambda, Rnrealizations, Rseed, RDOF_matrix, Rtune, Rsct);
 
         	UInt mydim = INTEGER(Rmydim)[0];
@@ -87,9 +88,10 @@ extern "C"
 		\param Rmydim an R-integer specifying if the mesh nodes lie in R^2 or R^3
 		\param Rndim  an R-integer specifying if the "local dimension" is 2 or 3
                 \param RK an R object representing the diffusivity tensor of the model
-                \param Rbeta an R object representing the advection function of the model
+                \param Rb an R object representing the advection function of the model
                 \param Rc an R object representing the reaction function of the model
                 \param Ru an R object representing the forcing function of the model
+                \param RparameterCascading an R-integer representing the option for parameter cascading algorithm
 		\param Rcovariates an R-matrix of covariates for the regression model
 		\param RBCIndices an R-integer containing the indexes of the nodes the user want to apply a Dirichlet Condition,
 				the other are automatically considered in Neumann Condition.
@@ -114,11 +116,11 @@ extern "C"
 		\return R-vectors containg the coefficients of the solution, prediction of the values, optimization data and much more
 	*/
         SEXP regression_PDE_space_varying_time(SEXP Rlocations, SEXP RbaryLocations, SEXP Rtime_locations, SEXP Robservations, SEXP Rmesh, SEXP Rmesh_time, SEXP Rorder, SEXP Rmydim, SEXP Rndim,
-		SEXP RK, SEXP Rbeta, SEXP Rc, SEXP Ru, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues,  SEXP RincidenceMatrix, SEXP RarealDataAvg,
+		SEXP RK, SEXP Rb, SEXP Rc, SEXP Ru, SEXP RparameterCascading, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues,  SEXP RincidenceMatrix, SEXP RarealDataAvg,
                 SEXP Rflag_mass, SEXP Rflag_parabolic,SEXP Rflag_iterative, SEXP Rmax_num_iteration, SEXP Rtreshold, SEXP Ric, SEXP Rsearch, SEXP Roptim, SEXP Rlambda_S, SEXP Rlambda_T, SEXP Rnrealizations, SEXP Rseed, SEXP RDOF_matrix, SEXP Rtune, SEXP Rsct)
         {
                 //Set data
-                RegressionDataEllipticSpaceVarying regressionData(Rlocations, RbaryLocations, Rtime_locations, Robservations, Rorder, RK, Rbeta, Rc, Ru,
+                RegressionDataEllipticSpaceVarying regressionData(Rlocations, RbaryLocations, Rtime_locations, Robservations, Rorder, RK, Rb, Rc, Ru, RparameterCascading,
                          Rcovariates, RBCIndices, RBCValues, RincidenceMatrix, RarealDataAvg, Rflag_mass, Rflag_parabolic,Rflag_iterative, Rmax_num_iteration, Rtreshold, Ric, Rsearch);
                 OptimizationData optimizationData(Roptim, Rlambda_S, Rlambda_T, Rflag_parabolic, Rnrealizations, Rseed, RDOF_matrix, Rtune, Rsct);
 
@@ -155,7 +157,7 @@ extern "C"
 		\param Rmydim an R-integer specifying if the mesh nodes lie in R^2 or R^3
 		\param Rndim  an R-integer specifying if the "local dimension" is 2 or 3
                 \param RK an R object representing the diffusivity tensor of the model
-                \param Rbeta an R object representing the advection function of the model
+                \param Rb an R object representing the advection function of the model
                 \param Rc an R object representing the reaction function of the model
                 \param Ru an R object representing the forcing function of the model
 		\param Rcovariates an R-matrix of covariates for the regression model
@@ -181,11 +183,11 @@ extern "C"
 		\return R-vectors containg the coefficients of the solution, prediction of the values, optimization data and much more
 	*/
           SEXP gam_PDE_space_varying(SEXP Rlocations, SEXP RbaryLocations, SEXP Robservations, SEXP Rmesh, SEXP Rorder,SEXP Rmydim, SEXP Rndim,
-          	SEXP RK, SEXP Rbeta, SEXP Rc, SEXP Ru, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues, SEXP RincidenceMatrix, SEXP RarealDataAvg,
+          	SEXP RK, SEXP Rb, SEXP Rc, SEXP Ru, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues, SEXP RincidenceMatrix, SEXP RarealDataAvg,
           	SEXP Rfamily, SEXP Rmax_num_iteration, SEXP Rtreshold, SEXP Rmu0, SEXP RscaleParam, SEXP Rsearch,
                 SEXP Roptim, SEXP Rlambda, SEXP Rnrealizations, SEXP Rseed, SEXP RDOF_matrix, SEXP Rtune, SEXP Rsct)
         {
-        	GAMDataEllipticSpaceVarying regressionData(Rlocations, RbaryLocations, Robservations, Rorder, RK, Rbeta, Rc, Ru, Rcovariates, RBCIndices, RBCValues, RincidenceMatrix, RarealDataAvg, Rsearch, Rmax_num_iteration, Rtreshold);
+        	GAMDataEllipticSpaceVarying regressionData(Rlocations, RbaryLocations, Robservations, Rorder, RK, Rb, Rc, Ru, Rcovariates, RBCIndices, RBCValues, RincidenceMatrix, RarealDataAvg, Rsearch, Rmax_num_iteration, Rtreshold);
                 OptimizationData optimizationData(Roptim, Rlambda, Rnrealizations, Rseed, RDOF_matrix, Rtune, Rsct);
 
         	UInt mydim = INTEGER(Rmydim)[0];
@@ -225,9 +227,9 @@ extern "C"
 		\param Rmydim an R-integer specifying if the mesh nodes lie in R^2 or R^3
 		\param Rndim  an R-integer specifying if the "local dimension" is 2 or 3
 		\param RK an R-matrix representing the diffusivity matrix of the model
-		\param Rbeta an R-vector representing the advection term of the model
-                \param Rc an R-double representing the reaction term of the model
-                \param Ru an R object representing the forcing function of the model
+		\param Rb an R-vector representing the advection term of the model
+        \param Rc an R-double representing the reaction term of the model
+        \param Ru an R object representing the forcing function of the model
 		\param Rcovariates an R-matrix of covariates for the regression model
 		\param RBCIndices an R-integer containing the indexes of the nodes the user want to apply a Dirichlet Condition,
 				the other are automatically considered in Neumann Condition.
@@ -256,14 +258,14 @@ extern "C"
 		\return R-vectors containg the coefficients of the solution, prediction of the values, optimization data and much more
 	*/
         SEXP gam_PDE_space_varying_time(SEXP Rlocations, SEXP RbaryLocations, SEXP Rtime_locations, SEXP Robservations, SEXP Rmesh, 
-        	SEXP Rmesh_time, SEXP Rorder, SEXP Rmydim, SEXP Rndim, SEXP RK, SEXP Rbeta, SEXP Rc, SEXP Ru, SEXP Rcovariates, SEXP RBCIndices,
+        	SEXP Rmesh_time, SEXP Rorder, SEXP Rmydim, SEXP Rndim, SEXP RK, SEXP Rb, SEXP Rc, SEXP Ru, SEXP Rcovariates, SEXP RBCIndices,
         	SEXP RBCValues,  SEXP RincidenceMatrix, SEXP RarealDataAvg, SEXP Rflag_mass, SEXP Rflag_parabolic,SEXP Rflag_iterative, 
         	SEXP Rmax_num_iteration, SEXP Rthreshold, SEXP Ric,SEXP Rfamily, SEXP Rmax_num_iteration_pirls, SEXP Rthreshold_pirls, 
         	SEXP Rmu0, SEXP RscaleParam, SEXP Rsearch, SEXP Roptim, SEXP Rlambda_S, SEXP Rlambda_T, SEXP Rnrealizations, SEXP Rseed, 
         	SEXP RDOF_matrix, SEXP Rtune, SEXP Rsct)
         {
                 //Set data
-                GAMDataEllipticSpaceVarying regressionData(Rlocations, RbaryLocations, Rtime_locations, Robservations, Rorder, RK, Rbeta, Rc, Ru,
+                GAMDataEllipticSpaceVarying regressionData(Rlocations, RbaryLocations, Rtime_locations, Robservations, Rorder, RK, Rb, Rc, Ru,
                          Rcovariates, RBCIndices, RBCValues, RincidenceMatrix, RarealDataAvg, Rflag_mass, Rflag_parabolic, Rflag_iterative, Rmax_num_iteration, Rthreshold, Ric, Rsearch, Rmax_num_iteration_pirls, Rthreshold_pirls );
                 OptimizationData optimizationData(Roptim, Rlambda_S, Rlambda_T, Rflag_parabolic, Rnrealizations, Rseed, RDOF_matrix, Rtune, Rsct);
 
@@ -284,7 +286,6 @@ extern "C"
                 return(NILSXP);
         }
 
-
         //! A utility, not used for system solution, may be used for debugging
         /*!
                 This function is then called from R code.
@@ -299,7 +300,7 @@ extern "C"
                 \param Rmydim an R-integer specifying if the mesh nodes lie in R^2 or R^3
                 \param Rndim  an R-integer specifying if the "local dimension" is 2 or 3
                 \param RK an R-matrix representing the diffusivity matrix of the model
-                \param Rbeta an R-vector representing the advection term of the model
+                \param Rb an R-vector representing the advection term of the model
                 \param Rc an R-double representing the reaction term of the model
                 \param Rcovariates an R-matrix of covariates for the regression model
                 \param RBCIndices an R-integer containing the indexes of the nodes the user want to apply a Dirichlet Condition,
@@ -310,10 +311,10 @@ extern "C"
                 \param Rsearch an R-integer to decide the search algorithm type (tree or naive search algorithm).
                 \return R matrix produced by FEM skeleton
         */
-        SEXP get_FEM_PDE_space_varying_matrix(SEXP Rlocations, SEXP RbaryLocations, SEXP Robservations, SEXP Rmesh, SEXP Rorder, SEXP Rmydim, SEXP Rndim, SEXP RK, SEXP Rbeta, SEXP Rc, SEXP Ru,
+        SEXP get_FEM_PDE_space_varying_matrix(SEXP Rlocations, SEXP RbaryLocations, SEXP Robservations, SEXP Rmesh, SEXP Rorder, SEXP Rmydim, SEXP Rndim, SEXP RK, SEXP Rb, SEXP Rc, SEXP Ru,
                            SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues, SEXP RincidenceMatrix, SEXP RarealDataAvg, SEXP Rsearch)
         {
-                RegressionDataEllipticSpaceVarying regressionData(Rlocations, RbaryLocations, Robservations, Rorder, RK, Rbeta, Rc, Ru, Rcovariates, RBCIndices, RBCValues, RincidenceMatrix, RarealDataAvg, Rsearch);
+                RegressionDataEllipticSpaceVarying regressionData(Rlocations, RbaryLocations, Robservations, Rorder, RK, Rb, Rc, Ru, Rcovariates, RBCIndices, RBCValues, RincidenceMatrix, RarealDataAvg, Rsearch);
 
                 UInt mydim = INTEGER(Rmydim)[0];
                 UInt ndim = INTEGER(Rndim)[0];
@@ -322,19 +323,19 @@ extern "C"
                 typedef EOExpr<Stiff> ETStiff; Stiff EStiff; ETStiff stiff(EStiff);
                 typedef EOExpr<Grad>  ETGrad;  Grad  EGrad;  ETGrad  grad(EGrad);
 
-                const Reaction& c = regressionData.getC();
                 const Diffusion<PDEParameterOptions::SpaceVarying>& K = regressionData.getK();
-                const Advection<PDEParameterOptions::SpaceVarying>& beta = regressionData.getBeta();
+                const Advection<PDEParameterOptions::SpaceVarying>& b = regressionData.getB();
+                const Reaction<PDEParameterOptions::SpaceVarying>& c = regressionData.getC();
 
                 if(regressionData.getOrder()==1 && ndim==2 && mydim==2)
-                        return(get_FEM_Matrix_skeleton<1,2,2>(Rmesh, c*mass+stiff[K]+beta.dot(grad)));
+                        return(get_FEM_Matrix_skeleton<1,2,2>(Rmesh, c*mass+stiff[K]+b.dot(grad)));
                 else if(regressionData.getOrder()==2 && ndim==2 && mydim==2)
-                        return(get_FEM_Matrix_skeleton<2,2,2>(Rmesh, c*mass+stiff[K]+beta.dot(grad)));
+                        return(get_FEM_Matrix_skeleton<2,2,2>(Rmesh, c*mass+stiff[K]+b.dot(grad)));
                 else if(regressionData.getOrder()==1 && ndim==3 && mydim==3)
-                        return(get_FEM_Matrix_skeleton<1,3,3>(Rmesh, c*mass+stiff[K]+beta.dot(grad)));
+                        return(get_FEM_Matrix_skeleton<1,3,3>(Rmesh, c*mass+stiff[K]+b.dot(grad)));
                 else if(regressionData.getOrder()==2 && ndim==3 && mydim==3)
-                        return(get_FEM_Matrix_skeleton<2,3,3>(Rmesh, c*mass+stiff[K]+beta.dot(grad)));
-                
+                        return(get_FEM_Matrix_skeleton<2,3,3>(Rmesh, c*mass+stiff[K]+b.dot(grad)));
+                        
                 return(NILSXP);
         }
 }

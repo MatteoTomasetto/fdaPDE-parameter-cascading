@@ -43,8 +43,7 @@ class Lambda_optimizer
                 */
         virtual void update_parameters(lambda::type<size> lambda) = 0;
 
-        public:
-                //! Virtual Destuctor
+        public: //! Virtual Destuctor
                 virtual ~Lambda_optimizer(){};
 };
 
@@ -129,6 +128,12 @@ class GCV_Family: Lambda_optimizer<InputCarrier, size>
                 output_Data<size> get_output_full(void);
                 void set_output_partial(void);
                 void combine_output_prediction(const VectorXr & f_hat, output_Data<size> & outp, UInt cols);
+                
+                // GETTERS
+                inline InputCarrier & get_carrier(void) const {return this -> the_carrier;};
+                inline const VectorXr & get_z_hat(void) const { return this -> z_hat;};
+                inline const UInt & get_s(void) const { return this -> s;};
+                
                 //! Virtual Destuctor
         virtual ~GCV_Family(){};
 };
@@ -355,7 +360,7 @@ class GCV_Stochastic: public GCV_Family<InputCarrier, size>
 
                 // INTERNAL DATA STRUCTURES
                 MatrixXr US_;           //!< binary{+1/-1} random matrix used for stochastic gcv computations [size s x #realizations]
-                MatrixXr USTpsi ;       //!< US^T*Psi
+                MatrixXr USTpsi;       //!< US^T*Psi
                 MatrixXr b;             //! Right hand side o solution
                 bool     us = false;    //!< keeps track of US_ matrix being already computed or not
 
@@ -376,7 +381,7 @@ class GCV_Stochastic: public GCV_Family<InputCarrier, size>
                  \param the_carrier the structure from which to take all the data for the derived classes
                  \sa set_US_()
                 */
-		GCV_Stochastic(InputCarrier & the_carrier_, bool flag_used):
+                GCV_Stochastic(InputCarrier & the_carrier_, bool flag_used):
                         GCV_Family<InputCarrier, size>(the_carrier_)
                         {
                                 MatrixXr m = this->the_carrier.get_opt_data()->get_DOF_matrix();
