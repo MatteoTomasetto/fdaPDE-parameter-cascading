@@ -571,7 +571,7 @@ Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim, InputHandler>
 		lower_bound << 0.0;
 		upper_bound << 1000.0;
 		periods << 0.0;
-		UInt opt_algo = H.getModel().getRegressionData().get_parameter_cascading_diffusion_opt();
+		UInt opt_algo = H.getModel().getRegressionData().get_parameter_cascading_aniso_intensity_opt();
 
 		std::function<Real (VectorXr, Real)> F = [this](VectorXr x, Real lambda)
 		{	

@@ -137,22 +137,7 @@ class Parameter_Cascading
 					update_K_eigenval_ratio = true;
 				}
 
-				if(parameter_cascading_diffusion_option == 4){
-					update_anisotropy_intensity = true;
-				}
-
-				if(parameter_cascading_diffusion_option == 5){
-					update_K = true;
-					update_anisotropy_intensity = true;
-				}
-
-				if(parameter_cascading_diffusion_option == 6){
-					update_K_direction = true;
-					update_anisotropy_intensity = true;
-				}
-
-				if(parameter_cascading_diffusion_option == 7){
-					update_K_eigenval_ratio = true;
+				if(H.getModel().getRegressionData().get_parameter_cascading_aniso_intensity() == 1){
 					update_anisotropy_intensity = true;
 				}
 
