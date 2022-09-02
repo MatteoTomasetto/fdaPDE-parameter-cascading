@@ -867,14 +867,6 @@ Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim, InputHandler>
 
 	Rprintf("End Parameter Cascading Algorithm\n");
 
-	// Set all the optimal PDE parameters estimated in RegressionData
-	if(update_K || update_K_direction || update_K_eigenval_ratio || update_anisotropy_intensity)
-		H.template set_K<MatrixXr>(K);
-	if(update_b || update_b_direction || update_b_intensity)
-		H.set_b(b);
-	if(update_c)
-		H.set_c(c);
-
 	return {K, diffusion, aniso_intensity, b, advection, c, lambda_opt};
 }
 
