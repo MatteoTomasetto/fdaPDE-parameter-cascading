@@ -309,6 +309,7 @@ Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim, InputHandler>
 	if(update_K) // Update the diffusion matrix K
 	{	
 		Rprintf("Finding diffusion matrix K\n");
+		
 		VectorXr init = diffusion;
 		UInt opt_algo = H.getModel().getRegressionData().get_parameter_cascading_diffusion_opt();
 
@@ -347,12 +348,15 @@ Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim, InputHandler>
 		};
 
 		diffusion = step(init, opt_algo, lower_bound, upper_bound, periods, F, dF, set_param, true);
-	}
 
+		// Save the result in K
+		K = H.getModel().getRegressionData().getK().template getDiffusionMatrix<ndim>();
+	}
+	
 	if(update_K_direction) // Update only the diffusion angles parameter (the first in 2D case, the first two in 3D case)
 	{	
 		Rprintf("Finding K direction\n");
-
+		
 		UInt angle_dim = (ndim == 2) ? 1 : 2;
 
 		VectorXr init(angle_dim);
@@ -447,12 +451,15 @@ Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim, InputHandler>
 			diffusion(0) = res(0);
 			diffusion(1) = res(1);
 		}
-	}
 
+		// Save the result in K
+		K = H.getModel().getRegressionData().getK().template getDiffusionMatrix<ndim>();
+	}
+	
 	if(update_K_eigenval_ratio) // Update only the intensities in diffusion (the last parameter in 2D, the last two in 3D)
 	{
 		Rprintf("Finding K eigenval ratio\n");
-
+		
 		UInt intensity_dim = (ndim == 2) ? 1 : 2;
 
 		VectorXr init(intensity_dim);
@@ -547,10 +554,11 @@ Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim, InputHandler>
 			diffusion(2) = res(0);
 			diffusion(3) = res(1);
 		}
+
+		// Save the result in K
+		K = H.getModel().getRegressionData().getK().template getDiffusionMatrix<ndim>();
 	}
-
-	K = H.getModel().getRegressionData().getK().template getDiffusionMatrix<ndim>();
-
+	
 	if(update_anisotropy_intensity) // Update the anisotropy intensity coefficient
 	{
 		Rprintf("Finding anisotropy intensity\n");
@@ -579,13 +587,15 @@ Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim, InputHandler>
 			MatrixXr new_K = this -> K * x(0);
 			this -> H.template set_K<MatrixXr>(new_K);
 		};
-		
+
 		aniso_intensity = step(init, opt_algo, lower_bound, upper_bound, periods, F, dF, set_param, true)(0);
+
+		// Save the result in K
 		K = H.getModel().getRegressionData().getK().template getDiffusionMatrix<ndim>();
 	}
 	else
 	{
-		// Recompute the matrix K (not normalized)
+		// Recompute the matrix K (not normalized) if anisotropy intensity estimation is not done
 		K *= aniso_intensity;
 		H.template set_K<MatrixXr>(K);
 	}
@@ -593,6 +603,7 @@ Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim, InputHandler>
 	if(update_b) // Update the advection vector
 	{
 		Rprintf("Finding advection vector b\n");
+
 		VectorXr init = advection;
 		UInt opt_algo = H.getModel().getRegressionData().get_parameter_cascading_advection_opt();
 		
@@ -627,11 +638,15 @@ Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim, InputHandler>
 		};
 
 		advection = step(init, opt_algo, lower_bound, upper_bound, periods, F, dF, set_param, true);
+
+		// Save the result in b
+		b = H.getModel().getRegressionData().getB().template getAdvectionVector<ndim>();
 	}
 
 	if(update_b_direction) // Update only the advection vector angle parameters (the first in 2D case, the first two in 3D case)
 	{
 		Rprintf("Finding advection direction\n");
+
 		UInt angle_dim = (ndim == 2) ? 1 : 2;
 		VectorXr init(angle_dim);
 		UInt opt_algo = H.getModel().getRegressionData().get_parameter_cascading_advection_opt();
@@ -725,6 +740,10 @@ Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim, InputHandler>
 			advection(0) = res(0);
 			advection(1) = res(1);
 		}
+
+		// Save the result in b
+		b = H.getModel().getRegressionData().getB().template getAdvectionVector<ndim>();
+
 	}
 
 	if(update_b_intensity) // Update only the advection intensity parameter (the second in 2D case, the third in 3D case)
@@ -817,13 +836,15 @@ Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim, InputHandler>
 
 			advection(2) = step(init, opt_algo, lower_bound, upper_bound, periods, F, dF, set_param, true)(0);
 		}
+
+		// Save the result in b
+		b = H.getModel().getRegressionData().getB().template getAdvectionVector<ndim>();
 	}
 
-	b = H.getModel().getRegressionData().getB().template getAdvectionVector<ndim>();
-			
 	if(update_c) // Update reaction coefficient
 	{
 		Rprintf("Finding reaction coefficient c\n");
+
 		VectorXr init(1);
 		init << c;
 		UInt opt_algo = H.getModel().getRegressionData().get_parameter_cascading_reaction_opt();
@@ -845,6 +866,14 @@ Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim, InputHandler>
 	}
 
 	Rprintf("End Parameter Cascading Algorithm\n");
+
+	// Set all the optimal PDE parameters estimated in RegressionData
+	if(update_K || update_K_direction || update_K_eigenval_ratio || update_anisotropy_intensity)
+		H.template set_K<MatrixXr>(K);
+	if(update_b || update_b_direction || update_b_intensity)
+		H.set_b(b);
+	if(update_c)
+		H.set_c(c);
 
 	return {K, diffusion, aniso_intensity, b, advection, c, lambda_opt};
 }

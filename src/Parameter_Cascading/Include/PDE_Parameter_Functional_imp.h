@@ -50,7 +50,6 @@ void PDE_Parameter_Functional<ORDER, mydim, ndim, InputHandler>::set_c(const Rea
 	return;
 }
 
-
 template <UInt ORDER, UInt mydim, UInt ndim, typename InputHandler>
 void PDE_Parameter_Functional<ORDER, mydim, ndim, InputHandler>::compute_zhat(VectorXr& zhat, const lambda::type<1>& lambda) const
 {
