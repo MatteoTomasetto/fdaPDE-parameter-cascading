@@ -32,8 +32,8 @@ If the observations are observed only on a subset of the mesh nodes, fill with \
 \item{covariates}{A #observations-by-#covariates matrix where each row represents the covariates associated with
 the corresponding observed data value in \code{observations} and each column is a different covariate.}
 
-\item{PDE_parameters}{A list specifying the parameters of the PDE in the regularizing term. Default is NULL, i.e.
-regularization is by means of the Laplacian (stationary, isotropic case).
+\item{PDE_parameters}{A list specifying the parameters of the PDE in the regularizing term and the Parameter Cascading algorithm options.
+Default is NULL, i.e. regularization is by means of the Laplacian (stationary, isotropic case).
 If the coefficients of the PDE are constant over the domain \code{PDE_parameters} must contain:
 \itemize{
    \item{\code{K}, a 2-by-2 matrix of diffusion coefficients. This induces an anisotropic
@@ -60,7 +60,73 @@ a vector with length #points;}
 parameter is a #point-by-2 matrix, the output should be
 a vector with length #points.}
 }
-For 2.5D and 3D, only the Laplacian is available (\code{PDE_parameters=NULL}).}
+For 2.5D and 3D, only the Laplacian is available (\code{PDE_parameters=NULL}).
+
+In addition, \code{PDE_parameters} can contain also the \code{parameter_cascading} option to estimate
+the wanted stationary PDE_parameters via Parameter Cascading Algorithm minimizing the mean squared error.
+\code{parameter_cascading} is a list with 4 possible entries:
+\itemize{
+   \item{\code{diffusion}, a vector of length 2 with the diffusion option and the optimization algorithm to use.
+        The following diffusion options are available:
+        \itemize{
+        \item{NULL: Parameter Cascading not enabled for the diffusion;}
+        \item{'K': the diffusion matrix will be estimated;}
+        \item{'K_direction': the angle identifying the direction of anisotropy will be estimated;}
+        \item{'K_eigenval_ratio': the ratio of K eigenvalues identifying the anisotropy shape will be estimated;}
+        }
+        The following optimization algorithms are available:
+        \itemize{
+        \item{'L-BFGS-B': L-BFGS-B algorithm will be used;}
+        \item{'Gradient': Gradient Descent algorithm will be used;}
+        \item{'Genetic': Genetic algorithm will be used;}
+        }
+    }
+   \item{\code{anisotropy_intensity}, a vector of length 2 with the anisotropy intensity option and the optimization algorithm to use.
+        This option is available only if the advection or the reaction is not null.
+        The following anisotropy intensity options are available:
+        \itemize{
+        \item{NULL: Parameter Cascading not enabled for the anisotropy intensity;}
+        \item{'anisotropy_intensity': a coefficient that pre-multiplies the diffusion matrix will be estimated;}
+        }
+        The following optimization algorithms are available:
+        \itemize{
+        \item{'L-BFGS-B': L-BFGS-B algorithm will be used;}
+        \item{'Gradient': Gradient Descent algorithm will be used;}
+        \item{'Genetic': Genetic algorithm will be used;}
+        }
+    }
+   \item{\code{advection}, a vector of length 2 with the advection option and the optimization algorithm to use.
+        The following advection options are available:
+        \itemize{
+        \item{NULL: Parameter Cascading not enabled for the advection;}
+        \item{'b': the advection vector will be estimated;}
+        \item{'b_direction': the angle identifying the direction of the advection vector will be estimated;}
+        \item{'b_intensity': the module of the advection vector will be estimated;}
+        }
+        The following optimization algorithms are available:
+        \itemize{
+        \item{'L-BFGS-B': L-BFGS-B algorithm will be used;}
+        \item{'Gradient': Gradient Descent algorithm will be used;}
+        \item{'Genetic': Genetic algorithm will be used;}
+        }
+    }       
+   \item{\code{reaction}, a vector of length 2 with the reaction option and the optimization algorithm to use.
+        The following reaction options are available:
+        \itemize{
+        \item{NULL: Parameter Cascading not enabled for the diffusion;}
+        \item{'c': the reaction coefficient will be estimated;}
+        }
+        The following optimization algorithms are available:
+        \itemize{
+        \item{'BFGS': BFGS algorithm will be used;}
+        \item{'CG': Conjugate Gradient method will be used;}
+        \item{'Nelder-Mead': Nelder-Mead algorithm will be used;}
+        }
+    }
+}
+If an entry of parameter_cascading is not explicitly added, it will be considered as NULL.
+\code{K}, \code{b} or \code{c} values provided in \code{PDE_parameters} are exploited as initializations if Parameter Cascading is applied;
+otherwise, if a parameter is not provided, it will be automatically initialized with default values.}
 
 \item{BC}{A list with two vectors:
 \code{BC_indices}, a vector with the indices in \code{nodes} of boundary nodes where a Dirichlet Boundary Condition should be applied;
@@ -219,7 +285,6 @@ solution = smooth.FEM(observations = data,
                             DOF.evaluation = 'stochastic', lambda.selection.lossfunction = 'GCV')
 bestLambda = solution$optimization$lambda_solution
 
-
 #### Smoothing with prior information about anysotropy/non-stationarity and boundary conditions ####
 # See Azzimonti et al. for reference to the current exemple
 data(quasicircle2D)
@@ -290,6 +355,39 @@ solution = smooth.FEM(observations = dataNA,
                             BC = BC)
 plot(solution$fit.FEM)
 image(solution$fit.FEM)
+
+#### Parameter Cascading Algorithm ####
+# Create locations
+x = y = seq(0,1, length.out = 11)
+locations = expand.grid(x,y)
+
+# Build mesh and FEM object
+mesh = create.mesh.2D(locations, order = 1)
+FEMbasis=create.FEM.basis(mesh)
+
+# Simulate data
+a1=1
+a2=4
+z<-function(p){a1*sin(2*pi*p[,1])*cos(2*pi*p[,2])+a2*sin(3*pi*p[,1])}
+data = z(locations)
+ndati = length(data)
+
+# Add error to the simulated data
+set.seed(7893475)
+ran=range(data)
+data = data + rnorm(ndati, mean=0, sd=0.05*abs(ran[2]-ran[1]))
+
+# Set PDE parameters
+K = matrix(c(1,0,0,1), nrow = 2)
+b = c(0,0)
+c = 0
+
+# Parameter Cascading Algorithm to estimate the diffusion matrix with 'L-BFGS-B' and GCV exact
+parameter_cascading = list(diffusion = c('K','L-BFGS-B'))
+PDE_parameters = list(K = K, b = b, c = c, parameter_cascading = parameter_cascading)
+
+smoothing_aniso <- smooth.FEM(observations=data, FEMbasis=FEMbasis, PDE_parameters=PDE_parameters,
+                             lambda.selection.criterion='newton', DOF.evaluation='exact', lambda.selection.lossfunction='GCV')
 
 #### Smoothing with areal data ####
 # See Azzimonti et al. for reference to the current exemple
