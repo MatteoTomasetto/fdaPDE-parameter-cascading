@@ -795,7 +795,10 @@ void MixedFERegressionBase<InputHandler>::computeDegreesOfFreedomExact(UInt outp
 
     if (isRcomputed_ == false)
     {
-        isRcomputed_ = true;
+    	// With Parameter Cascading algorithm, the matrix R can change in the procedure
+    	if(!regressionData_.ParameterCascadingOn())
+    		isRcomputed_ = true;
+        
         //take R0 from the final matrix since it has already applied the dirichlet boundary conditions
         SpMat R0 = matrixNoCov_.bottomRightCorner(nnodes,nnodes)/lambdaS;
 
@@ -1258,7 +1261,7 @@ MatrixXr MixedFERegressionBase<InputHandler>::apply_to_b(const MatrixXr & b)
 	const Real last_lambdaT = optimizationData_.get_last_lT_used();
 	const Real lambdaS = optimizationData_.get_current_lambdaS();
 	const Real lambdaT = optimizationData_.get_current_lambdaT();
-    if(lambdaS!=last_lambdaS || lambdaT!=last_lambdaT)
+    if(lambdaS!=last_lambdaS || lambdaT!=last_lambdaT || regressionData_.ParameterCascadingOn())
 	{
 		if(!regressionData_.isSpaceTime())
 			buildSystemMatrix(lambdaS);
@@ -1348,7 +1351,8 @@ MatrixXv  MixedFERegressionBase<InputHandler>::apply(void)
 			_rightHandSide = rhs;
 
 			if(isGAMData || optimizationData_.get_current_lambdaS()!=optimizationData_.get_last_lS_used() ||
-				optimizationData_.get_current_lambdaT()!=optimizationData_.get_last_lT_used())
+				optimizationData_.get_current_lambdaT()!=optimizationData_.get_last_lT_used() ||
+				regressionData_.ParameterCascadingOn()) // with Parameter Cascading, we need a new system even if lambdas do not change
 			{
 				if(!regressionData_.isSpaceTime())
 				{
@@ -1382,7 +1386,8 @@ MatrixXv  MixedFERegressionBase<InputHandler>::apply(void)
 
 			//f Factorization of the system for woodbury decomposition
 			if(isGAMData || optimizationData_.get_current_lambdaS()!=optimizationData_.get_last_lS_used() ||
-				optimizationData_.get_current_lambdaT()!=optimizationData_.get_last_lT_used())
+				optimizationData_.get_current_lambdaT()!=optimizationData_.get_last_lT_used() ||
+				regressionData_.ParameterCascadingOn())
 			{
 				system_factorize();
 			}
@@ -1788,14 +1793,32 @@ class MixedFERegression<RegressionDataElliptic>: public MixedFERegressionBase<Re
 			typedef EOExpr<Stiff> ETStiff; Stiff EStiff; ETStiff stiff(EStiff);
 			typedef EOExpr<Grad>  ETGrad;  Grad EGrad;   ETGrad grad(EGrad);
 
-	  		const Real& c = this->regressionData_.getC();
 	  		const Diffusion<PDEParameterOptions::Constant>& K = this->regressionData_.getK();
-	  		const Advection<PDEParameterOptions::Constant>& b = this->regressionData_.getBeta();
+	  		const Advection<PDEParameterOptions::Constant>& b = this->regressionData_.getB();
+	  		const Reaction<PDEParameterOptions::Constant>& c = this->regressionData_.getC();
 
-			MixedFERegressionBase<RegressionDataElliptic>::preapply(c*mass+stiff[K]+b.dot(grad), ForcingTerm(), mesh);
+	  		MixedFERegressionBase<RegressionDataElliptic>::preapply(c*mass+stiff[K]+b.dot(grad), ForcingTerm(), mesh);
 
 		}
+
+		// Set matrix R1 (the only matrix dependent on PDE parameters)
+		template<UInt ORDER, UInt mydim, UInt ndim>
+		void setR1(const MeshHandler<ORDER,mydim,ndim> & mesh)
+		{
+			typedef EOExpr<Mass>  ETMass;  Mass EMass;   ETMass mass(EMass);
+			typedef EOExpr<Stiff> ETStiff; Stiff EStiff; ETStiff stiff(EStiff);
+			typedef EOExpr<Grad>  ETGrad;  Grad EGrad;   ETGrad grad(EGrad);
+
+	  		const Diffusion<PDEParameterOptions::Constant>& K = this->regressionData_.getK();
+	  		const Advection<PDEParameterOptions::Constant>& b = this->regressionData_.getB();
+	  		const Reaction<PDEParameterOptions::Constant>& c = this->regressionData_.getC();
+
+	  		FiniteElement<ORDER, mydim, ndim> fe;
+
+			Assembler::operKernel(c*mass+stiff[K]+b.dot(grad), mesh, fe, R1_);
+		}
 };
+		
 
 template<>
 class MixedFERegression<RegressionDataEllipticSpaceVarying> : public MixedFERegressionBase<RegressionDataEllipticSpaceVarying>
@@ -1814,15 +1837,32 @@ class MixedFERegression<RegressionDataEllipticSpaceVarying> : public MixedFERegr
 			typedef EOExpr<Stiff> ETStiff; Stiff EStiff; ETStiff stiff(EStiff);
 			typedef EOExpr<Grad>  ETGrad;  Grad EGrad;   ETGrad grad(EGrad);
 
-			const Reaction& c = this->regressionData_.getC();
 			const Diffusion<PDEParameterOptions::SpaceVarying>& K = this->regressionData_.getK();
-			const Advection<PDEParameterOptions::SpaceVarying>& b = this->regressionData_.getBeta();
+			const Advection<PDEParameterOptions::SpaceVarying>& b = this->regressionData_.getB();
+			const Reaction<PDEParameterOptions::SpaceVarying>& c = this->regressionData_.getC();
 			const ForcingTerm& u= this->regressionData_.getU();
 
 			this->isSpaceVarying = TRUE;
 
 			MixedFERegressionBase<RegressionDataEllipticSpaceVarying>::preapply(c*mass+stiff[K]+b.dot(grad), u, mesh);
 
+		}
+
+		// Set matrix R1 (the only matrix dependent on PDE parameters)
+		template<UInt ORDER, UInt mydim, UInt ndim>
+		void setR1(const MeshHandler<ORDER,mydim,ndim> & mesh)
+		{
+			typedef EOExpr<Mass>  ETMass;  Mass EMass;   ETMass mass(EMass);
+			typedef EOExpr<Stiff> ETStiff; Stiff EStiff; ETStiff stiff(EStiff);
+			typedef EOExpr<Grad>  ETGrad;  Grad EGrad;   ETGrad grad(EGrad);
+
+			const Diffusion<PDEParameterOptions::SpaceVarying>& K = this->regressionData_.getK();
+			const Advection<PDEParameterOptions::SpaceVarying>& b = this->regressionData_.getB();
+			const Reaction<PDEParameterOptions::SpaceVarying>& c = this->regressionData_.getC();
+
+	  		FiniteElement<ORDER, mydim, ndim> fe;
+
+			Assembler::operKernel(c*mass+stiff[K]+b.dot(grad), mesh, fe, R1_);
 		}
 };
 
@@ -1930,9 +1970,9 @@ class MixedFERegression<GAMDataElliptic>: public MixedFERegressionBase<Regressio
 			typedef EOExpr<Stiff> ETStiff; Stiff EStiff; ETStiff stiff(EStiff);
 			typedef EOExpr<Grad>  ETGrad;  Grad EGrad;   ETGrad grad(EGrad);
 
-	  		const Real& c = this->regressionData_.getC();
 	  		const Diffusion<PDEParameterOptions::Constant>& K = this->regressionData_.getK();
-	  		const Advection<PDEParameterOptions::Constant>& b = this->regressionData_.getBeta();
+	  		const Advection<PDEParameterOptions::Constant>& b = this->regressionData_.getB();
+	  		const Reaction<PDEParameterOptions::Constant>& c = this->regressionData_.getC();
 
 			MixedFERegressionBase<RegressionDataElliptic>::preapply(c*mass+stiff[K]+b.dot(grad), ForcingTerm(), mesh);
 
@@ -1957,9 +1997,9 @@ class MixedFERegression<GAMDataEllipticSpaceVarying>: public MixedFERegressionBa
 			typedef EOExpr<Stiff> ETStiff; Stiff EStiff; ETStiff stiff(EStiff);
 			typedef EOExpr<Grad>  ETGrad;  Grad EGrad;   ETGrad grad(EGrad);
 
-			const Reaction& c = this->regressionData_.getC();
 			const Diffusion<PDEParameterOptions::SpaceVarying>& K = this->regressionData_.getK();
-			const Advection<PDEParameterOptions::SpaceVarying>& b = this->regressionData_.getBeta();
+			const Advection<PDEParameterOptions::SpaceVarying>& b = this->regressionData_.getB();
+			const Reaction<PDEParameterOptions::SpaceVarying>& c = this->regressionData_.getC();
 			const ForcingTerm& u= this->regressionData_.getU();
 
 			this->isSpaceVarying = TRUE;

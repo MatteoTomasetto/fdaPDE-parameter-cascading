@@ -4,6 +4,7 @@
 #include "../../FdaPDE.h"
 #include "../../Mesh/Include/Mesh_Objects.h"
 #include "../../FE_Assemblers_Solvers/Include/Param_Functors.h"
+#include "../../Mesh/Include/Mesh.h"
 
 //!  An IO handler class for objects passed from R
 /*!
@@ -21,7 +22,6 @@ class  RegressionData
 		bool 		   arealDataAvg_{}; 		//!< Is areal data averaged ?
 		VectorXr	   WeightsMatrix_; 		//!< Weighted regression.
 		bool           isGAM = false;
-
 
 	private:
 		std::vector<UInt> observations_indices_;
@@ -56,9 +56,9 @@ class  RegressionData
 		bool flag_SpaceTime_{}; 			// TRUE if space time smoothing
 		UInt search_ = 0; 				// search algorith type
 
-        	// Iterative method
-        	UInt max_num_iterations_ = 0; 			//!< Max number of iterations allowed
-        	Real threshold_ = 0.; 				//!< Limit in difference among J_k and J_k+1 for which we stop iterative method.
+        // Iterative method
+        UInt max_num_iterations_ = 0; 			//!< Max number of iterations allowed
+        Real threshold_ = 0.; 				//!< Limit in difference among J_k and J_k+1 for which we stop iterative method.
 
 		// -- SETTERS --
 		void setObservations(SEXP Robservations);
@@ -170,6 +170,7 @@ class  RegressionData
 		bool getFlagParabolic(void) const {return flag_parabolic_;}
         bool getFlagIterative(void) const {return flag_iterative_;}
 		bool getisGAM(void) const {return isGAM;}
+		bool ParameterCascadingOn(void) const { return false;} // It will be redefined in RegressionDataElliptic; needed here to skip some computations in preapply/apply functions 
 
 		// Search
 		//! A method returning the input search
@@ -181,8 +182,17 @@ class  RegressionDataElliptic:public RegressionData
 {
 	private:
 		Diffusion<PDEParameterOptions::Constant> K_;
-		Advection<PDEParameterOptions::Constant> beta_;
-		Real c_;
+		Advection<PDEParameterOptions::Constant> b_;
+		Reaction<PDEParameterOptions::Constant> c_;
+
+		UInt parameter_cascading_diffusion = 0;				// Option for the diffusion parameter in Parameter Cascading algortihm
+		UInt parameter_cascading_aniso_intensity = 0; 		// Option for the anisotropy intensity parameter in Parameter Cascading algortihm
+		UInt parameter_cascading_advection = 0;				// Option for the advection parameter in Parameter Cascading algortihm
+		UInt parameter_cascading_reaction = 0;				// Option for the reaction parameter in Parameter Cascading algortihm
+		UInt parameter_cascading_diffusion_opt = 0;			// Option for the optimization algorithm in Parameter Cascading algortihm
+		UInt parameter_cascading_aniso_intensity_opt = 0;	// Option for the optimization algorithm in Parameter Cascading algortihm
+		UInt parameter_cascading_advection_opt = 0;			// Option for the optimization algorithm in Parameter Cascading algortihm
+		UInt parameter_cascading_reaction_opt = 0;			// Option for the optimization algorithm in Parameter Cascading algortihm
 
 	public:
 		//! A complete version of the constructor.
@@ -193,8 +203,9 @@ class  RegressionDataElliptic:public RegressionData
 			\param Rorder an R-integer containing the order of the approximating basis.
 			\param RlambdaS an R-double containing the penalization term of the empirical evidence respect to the prior one.
 			\param RK an R-double 2X2 matrix containing the coefficients for a anisotropic DIFFUSION term.
-			\param Rbeta an R-double 2-dim vector that contains the coefficients for the TRANSPORT coefficients.
+			\param Rb an R-double 2-dim vector that contains the coefficients for the TRANSPORT coefficients.
 			\param Rc an R-double that contains the coefficient of the REACTION term
+			\param RparameterCascading an R-vector of integer that contain the options for Parameter Cascading algorithm
 			\param Rcovariates an R-matrix storing the covariates of the regression
 			\param RincidenceMatrix an R-matrix containing the incidence matrix defining the regions in the model with areal data
 			\param RBCIndices an R-integer containing the indexes of the nodes the user want to apply a Dirichlet Condition,
@@ -205,26 +216,75 @@ class  RegressionDataElliptic:public RegressionData
 		        \param Rnrealizations the number of random points used in the stochastic computation of the dofs
 		        \param Rsearch an R-integer to decide the search algorithm type (tree or naive or walking search algorithm).
 		*/
+		// Constructor that allows to set the options for Parameter Cascading
 		explicit RegressionDataElliptic(SEXP Rlocations, SEXP RbaryLocations, SEXP Robservations, SEXP Rorder,
-			 SEXP RK, SEXP Rbeta, SEXP Rc, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues,
+			 SEXP RK, SEXP Rb, SEXP Rc, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues,
+			 SEXP RincidenceMatrix, SEXP RarealDataAvg, SEXP Rsearch);
+		
+		explicit RegressionDataElliptic(SEXP Rlocations, SEXP RbaryLocations, SEXP Robservations, SEXP Rorder,
+			 SEXP RK, SEXP Rb, SEXP Rc, SEXP RparameterCascading, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues,
 			 SEXP RincidenceMatrix, SEXP RarealDataAvg, SEXP Rsearch);
 
 		explicit RegressionDataElliptic(SEXP Rlocations, SEXP RbaryLocations, SEXP Rtime_locations, SEXP Robservations, SEXP Rorder,
-			SEXP RK, SEXP Rbeta, SEXP Rc, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues,
+			SEXP RK, SEXP Rb, SEXP Rc, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues,
 			SEXP RincidenceMatrix, SEXP RarealDataAvg, SEXP Rflag_mass, SEXP Rflag_parabolic, SEXP Rflag_iterative, SEXP Rmax_num_iteration, SEXP Rthreshold, SEXP Ric, SEXP Rsearch);
 
-		Diffusion<PDEParameterOptions::Constant> const & getK() const {return K_;}
-		Advection<PDEParameterOptions::Constant> const & getBeta() const {return beta_;}
-		Real const getC() const {return c_;}
+		explicit RegressionDataElliptic(SEXP Rlocations, SEXP RbaryLocations, SEXP Rtime_locations, SEXP Robservations, SEXP Rorder,
+			SEXP RK, SEXP Rb, SEXP Rc, SEXP RparameterCascading, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues,
+			SEXP RincidenceMatrix, SEXP RarealDataAvg, SEXP Rflag_mass, SEXP Rflag_parabolic, SEXP Rflag_iterative, SEXP Rmax_num_iteration, SEXP Rthreshold, SEXP Ric, SEXP Rsearch);
+
+		const Diffusion<PDEParameterOptions::Constant> & getK() const {return K_;}
+		const Advection<PDEParameterOptions::Constant> & getB() const {return b_;}
+		const Reaction<PDEParameterOptions::Constant> & getC() const {return c_;}
+
+		const UInt get_parameter_cascading_diffusion() const {return parameter_cascading_diffusion;}
+		const UInt get_parameter_cascading_aniso_intensity() const {return parameter_cascading_aniso_intensity;}
+		const UInt get_parameter_cascading_advection() const {return parameter_cascading_advection;}
+		const UInt get_parameter_cascading_reaction() const {return parameter_cascading_reaction;}
+		const UInt get_parameter_cascading_diffusion_opt() const {return parameter_cascading_diffusion_opt;}
+		const UInt get_parameter_cascading_aniso_intensity_opt() const {return parameter_cascading_aniso_intensity_opt;}
+		const UInt get_parameter_cascading_advection_opt() const {return parameter_cascading_advection_opt;}
+		const UInt get_parameter_cascading_reaction_opt() const {return parameter_cascading_reaction_opt;}
+
+		void reset_parameter_cascading_option()
+		{
+			parameter_cascading_diffusion = 0;
+			parameter_cascading_aniso_intensity = 0;
+			parameter_cascading_advection = 0;
+			parameter_cascading_reaction = 0;
+		}
+
+		template <UInt ORDER, UInt mydim, UInt ndim>
+		void set_parameters_dim(const MeshHandler<ORDER, mydim, ndim> & mesh_)
+		{
+			K_.set_dim(mesh_);
+			b_.set_dim(mesh_);
+			c_.set_dim(mesh_);
+		}
+
+		bool ParameterCascadingOn(void) const
+		{ 
+			return (parameter_cascading_diffusion != 0 || parameter_cascading_aniso_intensity != 0 || parameter_cascading_advection != 0 || parameter_cascading_reaction != 0);
+		} // return true if Parameter Cascading algorithm has to be done
+
 };
 
 class RegressionDataEllipticSpaceVarying:public RegressionData
 {
 	private:
 		Diffusion<PDEParameterOptions::SpaceVarying> K_;
-		Advection<PDEParameterOptions::SpaceVarying> beta_;
-		Reaction c_;
+		Advection<PDEParameterOptions::SpaceVarying> b_;
+		Reaction<PDEParameterOptions::SpaceVarying> c_;
 		ForcingTerm u_;
+
+		UInt parameter_cascading_diffusion = 0;				// Option for the diffusion parameter in Parameter Cascading algortihm
+		UInt parameter_cascading_aniso_intensity = 0; 		// Option for the anisotropy intensity parameter in Parameter Cascading algortihm
+		UInt parameter_cascading_advection = 0;				// Option for the advection parameter in Parameter Cascading algortihm
+		UInt parameter_cascading_reaction = 0;				// Option for the reaction parameter in Parameter Cascading algortihm
+		UInt parameter_cascading_diffusion_opt = 0;			// Option for the optimization algorithm in Parameter Cascading algortihm
+		UInt parameter_cascading_aniso_intensity_opt = 0;	// Option for the optimization algorithm in Parameter Cascading algortihm
+		UInt parameter_cascading_advection_opt = 0;			// Option for the optimization algorithm in Parameter Cascading algortihm
+		UInt parameter_cascading_reaction_opt = 0;			// Option for the optimization algorithm in Parameter Cascading algortihm
 
 	public:
 
@@ -236,9 +296,10 @@ class RegressionDataEllipticSpaceVarying:public RegressionData
 			\param Rorder an R-integer containing the order of the approximating basis.
 			\param RlambdaS an R-double containing the penalization term of the empirical evidence respect to the prior one.
 			\param RK an R-double 2X2 matrix containing the coefficients for a anisotropic DIFFUSION term.
-			\param Rbeta an R-double 2-dim vector that contains the coefficients for the TRANSPORT coefficients.
+			\param Rb an R-double 2-dim vector that contains the coefficients for the TRANSPORT coefficients.
 			\param Rc an R-double that contains the coefficient of the REACTION term
-			\param  Ru an R-double vector of length #triangles that contaiins the forcing term integrals.
+			\param Ru an R-double vector of length #triangles that contaiins the forcing term integrals.
+			\param RparameterCascading an R-integer that contain the option for Parameter Cascading algorithm
 			\param Rcovariates an R-matrix storing the covariates of the regression
 			\param RincidenceMatrix an R-matrix containing the incidence matrix defining the regions in the model with areal data
 			\param RBCIndices an R-integer containing the indexes of the nodes the user want to apply a Dirichlet Condition,
@@ -250,17 +311,56 @@ class RegressionDataEllipticSpaceVarying:public RegressionData
 	        	\param Rsearch an R-integer to decide the search algorithm type (tree or naive or walking search algorithm).
 		*/
 		explicit RegressionDataEllipticSpaceVarying(SEXP Rlocations, SEXP RbaryLocations, SEXP Robservations, SEXP Rorder,
-			SEXP RK, SEXP Rbeta, SEXP Rc, SEXP Ru, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues,
+			SEXP RK, SEXP Rb, SEXP Rc, SEXP Ru, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues,
+			SEXP RincidenceMatrix, SEXP RarealDataAvg, SEXP Rsearch);
+
+		explicit RegressionDataEllipticSpaceVarying(SEXP Rlocations, SEXP RbaryLocations, SEXP Robservations, SEXP Rorder,
+			SEXP RK, SEXP Rb, SEXP Rc, SEXP Ru, SEXP RparameterCascading, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues,
 			SEXP RincidenceMatrix, SEXP RarealDataAvg, SEXP Rsearch);
 
 		explicit RegressionDataEllipticSpaceVarying(SEXP Rlocations, SEXP RbaryLocations, SEXP Rtime_locations, SEXP Robservations, SEXP Rorder,
-			SEXP RK, SEXP Rbeta, SEXP Rc, SEXP Ru, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues, SEXP RincidenceMatrix, SEXP RarealDataAvg,
+			SEXP RK, SEXP Rb, SEXP Rc, SEXP Ru, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues, SEXP RincidenceMatrix, SEXP RarealDataAvg,
 			SEXP Rflag_mass, SEXP Rflag_parabolic, SEXP Rflag_iterative, SEXP Rmax_num_iteration, SEXP Rthreshold, SEXP Ric, SEXP Rsearch);
 
-		Diffusion<PDEParameterOptions::SpaceVarying> const & getK() const {return K_;}
-		Advection<PDEParameterOptions::SpaceVarying> const & getBeta() const {return beta_;}
-		Reaction const & getC() const {return c_;}
-		ForcingTerm const & getU() const {return u_;}
+		explicit RegressionDataEllipticSpaceVarying(SEXP Rlocations, SEXP RbaryLocations, SEXP Rtime_locations, SEXP Robservations, SEXP Rorder,
+			SEXP RK, SEXP Rb, SEXP Rc, SEXP Ru, SEXP RparameterCascading, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues, SEXP RincidenceMatrix, SEXP RarealDataAvg,
+			SEXP Rflag_mass, SEXP Rflag_parabolic, SEXP Rflag_iterative, SEXP Rmax_num_iteration, SEXP Rthreshold, SEXP Ric, SEXP Rsearch);
+
+		const Diffusion<PDEParameterOptions::SpaceVarying> & getK() const {return K_;}
+		const Advection<PDEParameterOptions::SpaceVarying> & getB() const {return b_;}
+		const Reaction<PDEParameterOptions::SpaceVarying> & getC() const {return c_;}
+		const ForcingTerm & getU() const {return u_;}
+
+		const UInt get_parameter_cascading_diffusion() const {return parameter_cascading_diffusion;}
+		const UInt get_parameter_cascading_aniso_intensity() const {return parameter_cascading_aniso_intensity;}
+		const UInt get_parameter_cascading_advection() const {return parameter_cascading_advection;}
+		const UInt get_parameter_cascading_reaction() const {return parameter_cascading_reaction;}
+		const UInt get_parameter_cascading_diffusion_opt() const {return parameter_cascading_diffusion_opt;}
+		const UInt get_parameter_cascading_aniso_intensity_opt() const {return parameter_cascading_aniso_intensity_opt;}
+		const UInt get_parameter_cascading_advection_opt() const {return parameter_cascading_advection_opt;}
+		const UInt get_parameter_cascading_reaction_opt() const {return parameter_cascading_reaction_opt;}
+
+		void reset_parameter_cascading_option()
+		{
+			parameter_cascading_diffusion = 0;
+			parameter_cascading_aniso_intensity = 0;
+			parameter_cascading_advection = 0;
+			parameter_cascading_reaction = 0;
+		}
+
+		template <UInt ORDER, UInt mydim, UInt ndim>
+		void set_parameters_dim(const MeshHandler<ORDER, mydim, ndim> & mesh_)
+		{
+			K_.set_dim(mesh_);
+			b_.set_dim(mesh_);
+			c_.set_dim(mesh_);
+		}
+
+		bool ParameterCascadingOn(void) const
+		{ 
+			return (parameter_cascading_diffusion != 0 || parameter_cascading_aniso_intensity != 0 || parameter_cascading_advection != 0 || parameter_cascading_reaction != 0);
+		} // return true if Parameter Cascading algorithm has to be done
+
 };
 
 //----------------------------------------------------------------------------//
@@ -289,7 +389,7 @@ class  RegressionDataGAM : public RegressionHandler
 			\param Rorder an R-integer containing the order of the approximating basis.
 			\param RlambdaS an R-double containing the penalization term of the empirical evidence respect to the prior one.
 			\param RK an R-double 2X2 matrix containing the coefficients for a anisotropic DIFFUSION term.
-			\param Rbeta an R-double 2-dim vector that contains the coefficients for the TRANSPORT coefficients.
+			\param Rb an R-double 2-dim vector that contains the coefficients for the TRANSPORT coefficients.
 			\param Rc an R-double that contains the coefficient of the REACTION term
 			\param Rcovariates an R-matrix storing the covariates of the regression
 			\param RincidenceMatrix an R-matrix containing the incidence matrix defining the regions in the model with areal data
@@ -312,12 +412,12 @@ class  RegressionDataGAM : public RegressionHandler
 
 		// PDE
 		explicit RegressionDataGAM(SEXP Rlocations, SEXP RbaryLocations, SEXP Robservations, SEXP Rorder,
-			SEXP RK, SEXP Rbeta, SEXP Rc, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues,
+			SEXP RK, SEXP Rb, SEXP Rc, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues,
 			SEXP RincidenceMatrix, SEXP RarealDataAvg, SEXP Rsearch, SEXP Rmax_num_iteration, SEXP Rthreshold);
 
 		// PDE SpaceVarying
 		explicit RegressionDataGAM(SEXP Rlocations, SEXP RbaryLocations, SEXP Robservations, SEXP Rorder,
-			SEXP RK, SEXP Rbeta, SEXP Rc, SEXP Ru, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues,
+			SEXP RK, SEXP Rb, SEXP Rc, SEXP Ru, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues,
 			SEXP RincidenceMatrix, SEXP RarealDataAvg, SEXP Rsearch, SEXP Rmax_num_iteration, SEXP Rthreshold);
 
 		//Laplace time
@@ -328,13 +428,13 @@ class  RegressionDataGAM : public RegressionHandler
 		
 		// PDE time
 		explicit RegressionDataGAM(SEXP Rlocations, SEXP RbaryLocations, SEXP Rtime_locations, SEXP Robservations, SEXP Rorder,
-			SEXP RK, SEXP Rbeta, SEXP Rc, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues, SEXP RincidenceMatrix, SEXP RarealDataAvg,
+			SEXP RK, SEXP Rb, SEXP Rc, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues, SEXP RincidenceMatrix, SEXP RarealDataAvg,
 			SEXP Rflag_mass, SEXP Rflag_parabolic, SEXP Rflag_iterative, SEXP Rmax_num_iteration, SEXP Rthreshold, SEXP Ric, SEXP Rsearch, 
 			SEXP Rmax_num_iteration_pirls, SEXP Rthreshold_pirls);
 		
 		// PDE SpaceVarying time
 		explicit RegressionDataGAM(SEXP Rlocations, SEXP RbaryLocations, SEXP Rtime_locations, SEXP Robservations, SEXP Rorder,
-			SEXP RK, SEXP Rbeta, SEXP Rc, SEXP Ru, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues, SEXP RincidenceMatrix, SEXP RarealDataAvg,
+			SEXP RK, SEXP Rb, SEXP Rc, SEXP Ru, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues, SEXP RincidenceMatrix, SEXP RarealDataAvg,
 			SEXP Rflag_mass, SEXP Rflag_parabolic, SEXP Rflag_iterative, SEXP Rmax_num_iteration, SEXP Rthreshold, SEXP Ric, SEXP Rsearch, 
 			SEXP Rmax_num_iteration_pirls, SEXP Rthreshold_pirls);
 

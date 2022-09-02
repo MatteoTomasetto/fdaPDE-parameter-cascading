@@ -65,8 +65,7 @@ checkSmoothingParameters<-function(locations = NULL, observations, FEMbasis, cov
       stop("'c' in 'PDE_parameters' is not a function")
     if(!is.function(PDE_parameters$u))
       stop("'u' in 'PDE_parameters' is not a function")
-  }
-  else if(!is.null(PDE_parameters)){
+  }else if(!is.null(PDE_parameters)){
     message("Smoothing: anysotropic and stationary case")
   }
   

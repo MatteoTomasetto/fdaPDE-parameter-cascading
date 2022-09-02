@@ -28,7 +28,7 @@ class MixedFERegressionBase
 
 		const std::vector<Real> mesh_time_;
 		const UInt N_; 			//!< Number of spatial basis functions
-		const UInt M_;			//!< Number of temporal nodes
+		const UInt M_;  		//!< Number of temporal nodes
 
 		const InputHandler & regressionData_;
         OptimizationData & optimizationData_; //!<COnst reference to OptimizationData class
@@ -202,6 +202,10 @@ class MixedFERegressionBase
 		void recomputeWTW(void){ this->isWTWfactorized_ = false;}
 
 		// -- GETTERS --
+		//! A function returning the regression data
+		InputHandler const & getRegressionData(void) const {return this->regressionData_;}
+		//! A function returning the optimization data
+		OptimizationData & getOptimizationData(void) const {return this->optimizationData_;}
 		//! A function returning the computed barycenters of the locationss
 		MatrixXr const & getBarycenters(void) const {return barycenters_;}; //returns a const reference as in rergressionData
 		//! A function returning the element ids of the locations

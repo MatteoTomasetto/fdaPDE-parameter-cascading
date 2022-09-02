@@ -18,9 +18,9 @@ RegressionDataGAM<RegressionHandler>::RegressionDataGAM(SEXP Rlocations, SEXP Rb
 // PDE
 template<typename RegressionHandler>
 RegressionDataGAM<RegressionHandler>::RegressionDataGAM(SEXP Rlocations, SEXP RbaryLocations, SEXP Robservations, SEXP Rorder,
-	SEXP RK, SEXP Rbeta, SEXP Rc, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues,
+	SEXP RK, SEXP Rb, SEXP Rc, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues,
 	SEXP RincidenceMatrix, SEXP RarealDataAvg, SEXP Rsearch, SEXP Rmax_num_iteration, SEXP Rthreshold):
-	RegressionDataElliptic(Rlocations, RbaryLocations, Robservations, Rorder, RK, Rbeta, Rc,
+	RegressionDataElliptic(Rlocations, RbaryLocations, Robservations, Rorder, RK, Rb, Rc,
 		Rcovariates, RBCIndices, RBCValues, RincidenceMatrix, RarealDataAvg, Rsearch)
 {
 	max_num_iterations_ = INTEGER(Rmax_num_iteration)[0];
@@ -32,9 +32,9 @@ RegressionDataGAM<RegressionHandler>::RegressionDataGAM(SEXP Rlocations, SEXP Rb
 // PDE SpaceVarying
 template<typename RegressionHandler>
 RegressionDataGAM<RegressionHandler>::RegressionDataGAM(SEXP Rlocations, SEXP RbaryLocations, SEXP Robservations, SEXP Rorder,
-	SEXP RK, SEXP Rbeta, SEXP Rc, SEXP Ru, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues,
+	SEXP RK, SEXP Rb, SEXP Rc, SEXP Ru, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues,
 	SEXP RincidenceMatrix, SEXP RarealDataAvg, SEXP Rsearch, SEXP Rmax_num_iteration, SEXP Rthreshold):
-	RegressionDataEllipticSpaceVarying(Rlocations, RbaryLocations, Robservations, Rorder, RK, Rbeta, Rc, Ru,
+	RegressionDataEllipticSpaceVarying(Rlocations, RbaryLocations, Robservations, Rorder, RK, Rb, Rc, Ru,
 		Rcovariates, RBCIndices, RBCValues, RincidenceMatrix, RarealDataAvg, Rsearch)
 {
 	max_num_iterations_ = INTEGER(Rmax_num_iteration)[0];
@@ -61,10 +61,10 @@ RegressionDataGAM<RegressionHandler>::RegressionDataGAM(SEXP Rlocations, SEXP Rb
 // PDE time
 template <typename RegressionHandler>
 RegressionDataGAM<RegressionHandler>::RegressionDataGAM(SEXP Rlocations, SEXP RbaryLocations, SEXP Rtime_locations, SEXP Robservations, 
-	SEXP Rorder, SEXP RK, SEXP Rbeta, SEXP Rc, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues, SEXP RincidenceMatrix,
+	SEXP Rorder, SEXP RK, SEXP Rb, SEXP Rc, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues, SEXP RincidenceMatrix,
     	SEXP RarealDataAvg, SEXP Rflag_mass, SEXP Rflag_parabolic,SEXP Rflag_iterative, SEXP Rmax_num_iteration, 
     	SEXP Rthreshold, SEXP Ric, SEXP Rsearch, SEXP Rmax_num_iteration_pirls, SEXP Rthreshold_pirls):
-    		RegressionDataElliptic(Rlocations, RbaryLocations, Rtime_locations, Robservations, Rorder, RK, Rbeta, Rc, 
+    		RegressionDataElliptic(Rlocations, RbaryLocations, Rtime_locations, Robservations, Rorder, RK, Rb, Rc, 
     				       Rcovariates, RBCIndices, RBCValues, RincidenceMatrix, RarealDataAvg, 
     				       Rflag_mass, Rflag_parabolic, Rflag_iterative, Rmax_num_iteration, Rthreshold, Ric, Rsearch) {
     max_num_iterations_ = INTEGER(Rmax_num_iteration_pirls)[0];
@@ -76,10 +76,10 @@ RegressionDataGAM<RegressionHandler>::RegressionDataGAM(SEXP Rlocations, SEXP Rb
 // PDE SpaceVarying time
 template <typename RegressionHandler>
 RegressionDataGAM<RegressionHandler>::RegressionDataGAM(SEXP Rlocations, SEXP RbaryLocations, SEXP Rtime_locations, SEXP Robservations, 
-	SEXP Rorder, SEXP RK, SEXP Rbeta, SEXP Rc, SEXP Ru, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues, SEXP RincidenceMatrix,
+	SEXP Rorder, SEXP RK, SEXP Rb, SEXP Rc, SEXP Ru, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues, SEXP RincidenceMatrix,
 	SEXP RarealDataAvg, SEXP Rflag_mass, SEXP Rflag_parabolic,SEXP Rflag_iterative, SEXP Rmax_num_iteration, 
 	SEXP Rthreshold, SEXP Ric, SEXP Rsearch, SEXP Rmax_num_iteration_pirls, SEXP Rthreshold_pirls): 
-		RegressionDataEllipticSpaceVarying(Rlocations, RbaryLocations, Rtime_locations, Robservations, Rorder, RK, Rbeta, Rc, Ru, 
+		RegressionDataEllipticSpaceVarying(Rlocations, RbaryLocations, Rtime_locations, Robservations, Rorder, RK, Rb, Rc, Ru, 
 						   Rcovariates, RBCIndices, RBCValues, RincidenceMatrix, RarealDataAvg, 
 						   Rflag_mass, Rflag_parabolic, Rflag_iterative, Rmax_num_iteration_pirls, Rthreshold_pirls, Ric,Rsearch) {
     max_num_iterations_ = INTEGER(Rmax_num_iteration_pirls)[0];

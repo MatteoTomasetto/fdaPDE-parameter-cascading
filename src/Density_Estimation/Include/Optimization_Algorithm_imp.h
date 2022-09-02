@@ -298,6 +298,4 @@ WolfeMethod<ORDER, mydim, ndim>::clone() const {
 
 }
 
-
-
 #endif
