@@ -108,7 +108,7 @@
 #' If an entry of parameter_cascading is not explicitly added, it will be considered as NULL.
 #' \code{K}, \code{b} or \code{c} values provided in \code{PDE_parameters} are exploited as initializations if Parameter Cascading is applied;
 #' otherwise, if a parameter is not provided, it will be automatically initialized with default values.
-#
+#'
 #' @param BC A list with two vectors:
 #'  \code{BC_indices}, a vector with the indices in \code{nodes} of boundary nodes where a Dirichlet Boundary Condition should be applied;
 #'  \code{BC_values}, a vector with the values that the spatial field must take at the nodes indicated in \code{BC_indices}.
