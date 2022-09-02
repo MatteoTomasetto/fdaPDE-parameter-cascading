@@ -62,6 +62,72 @@ a vector with length #points.}
 }
 For 2.5D and 3D, only the Laplacian is available (\code{PDE_parameters=NULL}).}
 
+In addition, \code{PDE_parameters} can contain also the \code{parameter_cascading} option to estimate
+the wanted stationary PDE_parameters via Parameter Cascading Algorithm minimizing the mean squared error.
+\code{parameter_cascading} is a list with 4 possible entries:
+\itemize{
+   \item{\code{diffusion}, a vector of length 2 with the diffusion option and the optimization algorithm to use.
+        The following diffusion options are available:
+        \itemize{
+        \item{NULL: Parameter Cascading not enabled for the diffusion;}
+        \item{'K': the diffusion matrix will be estimated;}
+        \item{'K_direction': the angle identifying the direction of anisotropy will be estimated;}
+        \item{'K_eigenval_ratio': the ratio of K eigenvalues identifying the anisotropy shape will be estimated;}
+        }
+        The following optimization algorithms are available:
+        \itemize{
+        \item{'L-BFGS-B': L-BFGS-B algorithm will be used;}
+        \item{'Gradient': Gradient Descent algorithm will be used;}
+        \item{'Genetic': Genetic algorithm will be used;}
+        }
+    }
+   \item{\code{anisotropy_intensity}, a vector of length 2 with the anisotropy intensity option and the optimization algorithm to use.
+        This option is available only if the advection or the reaction is not null.
+        The following anisotropy intensity options are available:
+        \itemize{
+        \item{NULL: Parameter Cascading not enabled for the anisotropy intensity;}
+        \item{'anisotropy_intensity': a coefficient that pre-multiplies the diffusion matrix will be estimated;}
+        }
+        The following optimization algorithms are available:
+        \itemize{
+        \item{'L-BFGS-B': L-BFGS-B algorithm will be used;}
+        \item{'Gradient': Gradient Descent algorithm will be used;}
+        \item{'Genetic': Genetic algorithm will be used;}
+        }
+    }
+   \item{\code{advection}, a vector of length 2 with the advection option and the optimization algorithm to use.
+        The following advection options are available:
+        \itemize{
+        \item{NULL: Parameter Cascading not enabled for the advection;}
+        \item{'b': the advection vector will be estimated;}
+        \item{'b_direction': the angle identifying the direction of the advection vector will be estimated;}
+        \item{'b_intensity': the module of the advection vector will be estimated;}
+        }
+        The following optimization algorithms are available:
+        \itemize{
+        \item{'L-BFGS-B': L-BFGS-B algorithm will be used;}
+        \item{'Gradient': Gradient Descent algorithm will be used;}
+        \item{'Genetic': Genetic algorithm will be used;}
+        }
+    }       
+   \item{\code{reaction}, a vector of length 2 with the reaction option and the optimization algorithm to use.
+        The following reaction options are available:
+        \itemize{
+        \item{NULL: Parameter Cascading not enabled for the diffusion;}
+        \item{'c': the reaction coefficient will be estimated;}
+        }
+        The following optimization algorithms are available:
+        \itemize{
+        \item{'BFGS': BFGS algorithm will be used;}
+        \item{'CG': Conjugate Gradient method will be used;}
+        \item{'Nelder-Mead': Nelder-Mead algorithm will be used;}
+        }
+    }
+}
+If an entry of parameter_cascading is not explicitly added, it will be considered as NULL.
+\code{K}, \code{b} or \code{c} values provided in \code{PDE_parameters} are exploited as initializations if Parameter Cascading is applied;
+otherwise, if a parameter is not provided, it will be automatically initialized with default values.}
+
 \item{BC}{A list with two vectors:
 \code{BC_indices}, a vector with the indices in \code{nodes} of boundary nodes where a Dirichlet Boundary Condition should be applied;
 \code{BC_values}, a vector with the values that the spatial field must take at the nodes indicated in \code{BC_indices}.}
