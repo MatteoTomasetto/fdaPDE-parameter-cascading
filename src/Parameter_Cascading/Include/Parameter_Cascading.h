@@ -109,6 +109,7 @@ class Parameter_Cascading
 
 				// Save and set the normalized diffusion matrix in RegressionData;
 				// in this way, aniso_intensity will multiply the normalized K instead of the initial K (it has a clearer meaning)
+				// Moreover the diffusion parameteres are computed from matrix with unitary determinant as required by their formulas
 				K = H.getModel().getRegressionData().getK().template getDiffusionMatrix<ndim>();
 				aniso_intensity = (ndim == 2) ? std::sqrt(K.determinant()) : std::cbrt(K.determinant());
 				K /= aniso_intensity;

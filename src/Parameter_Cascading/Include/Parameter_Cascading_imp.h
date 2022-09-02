@@ -593,9 +593,9 @@ Output_Parameter_Cascading Parameter_Cascading<ORDER, mydim, ndim, InputHandler>
 		// Save the result in K
 		K = H.getModel().getRegressionData().getK().template getDiffusionMatrix<ndim>();
 	}
-	else
-	{
-		// Recompute the matrix K (not normalized) if anisotropy intensity estimation is not done
+	
+	if(!update_K && !update_K_direction && !update_K_eigenval_ratio && !update_anisotropy_intensity){
+		// Recompute the matrix K (not normalized) if a new diffusion is not found
 		K *= aniso_intensity;
 		H.template set_K<MatrixXr>(K);
 	}
