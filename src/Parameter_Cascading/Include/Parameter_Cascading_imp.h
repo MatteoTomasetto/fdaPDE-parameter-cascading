@@ -4,9 +4,7 @@
 #include <memory>
 #include <functional>
 #include <limits>
-#include <iostream>
 #include <cmath>
-#include <cstddef>
 #include <algorithm>
 
 #include "../../Lambda_Optimization/Include/Optimization_Data.h"
