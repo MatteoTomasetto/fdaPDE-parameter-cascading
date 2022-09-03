@@ -365,7 +365,8 @@
 #' PDE_parameters = list(K = K, b = b, c = c, parameter_cascading = parameter_cascading)
 #'
 #' smoothing_aniso <- smooth.FEM(observations=data, FEMbasis=FEMbasis, PDE_parameters=PDE_parameters,
-#'                              lambda.selection.criterion='newton', DOF.evaluation='exact', lambda.selection.lossfunction='GCV')
+#'                              lambda.selection.criterion='newton', DOF.evaluation='exact',
+#'								lambda.selection.lossfunction='GCV')
 #'
 #' #### Smoothing with areal data ####
 #' # See Azzimonti et al. for reference to the current exemple
