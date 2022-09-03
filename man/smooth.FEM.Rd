@@ -357,6 +357,40 @@ solution = smooth.FEM(observations = dataNA,
 plot(solution$fit.FEM)
 image(solution$fit.FEM)
 
+#### Parameter Cascading Algorithm ####
+# Create locations
+x = y = seq(0,1, length.out = 11)
+locations = expand.grid(x,y)
+
+# Build mesh and FEM object
+mesh = create.mesh.2D(locations, order = 1)
+FEMbasis=create.FEM.basis(mesh)
+
+# Simulate data
+a1=1
+a2=4
+z<-function(p){a1*sin(2*pi*p[,1])*cos(2*pi*p[,2])+a2*sin(3*pi*p[,1])}
+data = z(locations)
+ndati = length(data)
+
+# Add error to the simulated data
+set.seed(7893475)
+ran=range(data)
+data = data + rnorm(ndati, mean=0, sd=0.05*abs(ran[2]-ran[1]))
+
+# Set PDE parameters
+K = matrix(c(1,0,0,1), nrow = 2)
+b = c(0,0)
+c = 0
+
+# Parameter Cascading Algorithm to estimate the diffusion matrix with 'L-BFGS-B' and GCV exact
+parameter_cascading = list(diffusion = c('K','L-BFGS-B'))
+PDE_parameters = list(K = K, b = b, c = c, parameter_cascading = parameter_cascading)
+
+smoothing_aniso <- smooth.FEM(observations=data, FEMbasis=FEMbasis, PDE_parameters=PDE_parameters,
+                             lambda.selection.criterion='newton', DOF.evaluation='exact',
+							lambda.selection.lossfunction='GCV')
+ 
 #### Smoothing with areal data ####
 # See Azzimonti et al. for reference to the current exemple
 data(quasicircle2Dareal)
