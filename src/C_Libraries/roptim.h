@@ -16,16 +16,11 @@
 #ifndef __ROPTIM_H__
 #define __ROPTIM_H__
 
-#include <cassert>
-#include <cmath>
-#include <cstddef>
-
 #include <functional>
-#include <iostream>
 #include <limits>
 #include <string>
 #include <vector>
-
+#include <cmath>
 #include "../FdaPDE.h"
 #include <R_ext/Applic.h> // optimization algorithm by stats::optim()
 
