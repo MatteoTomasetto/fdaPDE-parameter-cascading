@@ -1195,7 +1195,7 @@ smooth.FEM<-function(locations = NULL, observations, FEMbasis,
                 optimization  = optimization, time = time, bary.locations = bary.locations)
 
     # Save information of parameter cascading
-  	if(parameter_cascading_option[1] != 0 | parameter_cascading_option[2] != 0 | parameter_cascading_option[3] != 0)
+  	if(parameter_cascading_option[1] != 0 | parameter_cascading_option[2] != 0 | parameter_cascading_option[3] != 0 | parameter_cascading_option[4] != 0)
    	{
    		if(!space_varying)
    		{
@@ -1229,7 +1229,7 @@ smooth.FEM<-function(locations = NULL, observations, FEMbasis,
    		}
    		else
    		{
-   			if(parameter_cascading_option[1] != 0)
+   			if(parameter_cascading_option[1] != 0 | parameter_cascading_option[2] != 0)
    			{
 	   			if(ndim == 2)
 		   		{
@@ -1239,13 +1239,13 @@ smooth.FEM<-function(locations = NULL, observations, FEMbasis,
 						K_eigenval_ratio = bigsol[[24]],
 						aniso_intensity = bigsol[[25]])
 
-	   				if(parameter_cascading_option[2] != 0){
+	   				if(parameter_cascading_option[3] != 0){
 	   					parameter_cascading$b = bigsol[[29]]
 	   					parameter_cascading$b_direction = bigsol[[27]]
    						parameter_cascading$b_intensity = bigsol[[28]]
 	   				}
 
-	   				if(parameter_cascading_option[3] != 0)
+	   				if(parameter_cascading_option[4] != 0)
 	   					parameter_cascading$c = bigsol[[30]]
 
    				}
@@ -1259,17 +1259,17 @@ smooth.FEM<-function(locations = NULL, observations, FEMbasis,
    						K_second_eigenval_ratio = bigsol[[26]],
    						aniso_intensity = bigsol[[27]])
 
-   					if(parameter_cascading_option[2] != 0){
+   					if(parameter_cascading_option[3] != 0){
 	   					parameter_cascading$b = bigsol[[32]]
 	   					parameter_cascading$b_first_direction = bigsol[[29]]
 	   					parameter_cascading$b_second_direction = bigsol[[30]]
    						parameter_cascading$b_intensity = bigsol[[31]]
 	   				}
 
-	   				if(parameter_cascading_option[3] != 0)
+	   				if(parameter_cascading_option[4] != 0)
 	   					parameter_cascading$c = bigsol[[33]]
 	   			}
-	   		}else if(parameter_cascading_option[2] != 0){
+	   		}else if(parameter_cascading_option[3] != 0){
 	   			if(ndim == 2)
 		   		{
 	   				parameter_cascading = list(
@@ -1277,7 +1277,7 @@ smooth.FEM<-function(locations = NULL, observations, FEMbasis,
    						b_direction = bigsol[[27]],
    						b_intensity = bigsol[[28]])
 
-	   				if(parameter_cascading_option[3] != 0)
+	   				if(parameter_cascading_option[4] != 0)
 	   					parameter_cascading$c = bigsol[[30]]
 
    				}
@@ -1289,12 +1289,12 @@ smooth.FEM<-function(locations = NULL, observations, FEMbasis,
    						b_second_direction = bigsol[[30]],
    						b_intensity = bigsol[[31]])
 
-	   				if(parameter_cascading_option[3] != 0)
+	   				if(parameter_cascading_option[4] != 0)
 	   					parameter_cascading$c = bigsol[[33]]
 	   			}
 
 
-	   		}else if(parameter_cascading_option[3] != 0){
+	   		}else if(parameter_cascading_option[4] != 0){
 	   			if(ndim == 2){
 	   				parameter_cascading = list(c = bigsol[[30]])
 	   			}else{
