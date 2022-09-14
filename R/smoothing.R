@@ -1194,8 +1194,8 @@ smooth.FEM<-function(locations = NULL, observations, FEMbasis,
     reslist = list(fit.FEM = fit.FEM, PDEmisfit.FEM = PDEmisfit.FEM, solution = solution,
                 optimization  = optimization, time = time, bary.locations = bary.locations)
 
-    # Save information of parameter cascading
-  	if(parameter_cascading_option[1] != 0 | parameter_cascading_option[2] != 0 | parameter_cascading_option[3] != 0)
+   # Save information of parameter cascading
+  	if(parameter_cascading_option[1] != 0 | parameter_cascading_option[2] != 0 | parameter_cascading_option[3] != 0 | parameter_cascading_option[4] != 0)
    	{
    		if(!space_varying)
    		{
