@@ -183,6 +183,7 @@
 #'          \item{\code{lambda_vector}}{vector of positive numbers: penalizations either passed by the user or found in the iterations of the optimization method.}
 #'          \item{\code{GCV_vector}}{vector of positive numbers, GCV values for all the lambdas in \code{lambda_vector}}
 #'          }
+#'    \item{\code{parameter_cascading}}{A list with the optimal PDE parameters found via Parameter Cascading}
 #'    \item{\code{time}}{Duration of the entire optimization computation.}
 #'    \item{\code{bary.locations}}{Barycenter information of the given locations, if the locations are not mesh nodes.}
 #'    \item{\code{GAM_output}}{A list of GAM related data:
