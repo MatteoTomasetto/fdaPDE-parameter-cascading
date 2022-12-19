@@ -36,6 +36,6 @@ see the installation section in the report for more information.
 1) the shift of indexes from R to C++ is done within the R functions smooth.FEM and FPCA.FEM Do not use C++ scripts directly on the R mesh objects, unless you take care of shifing indexes by yourself.
 
 ## Parameter Cascading algorithm
-Parameter Cascading algorithm estimates optimally the PDE parameters (diffusion, advection and reaction) from data in order to model spatial anisotropy and non-stationarity in the context of Spatial Regression with Partial Differential Equation. Doing so, spatial anisotropy and non-stationarity 
-regularisation (SR-PDE).
+Parameter Cascading algorithm estimates optimally the PDE parameters (diffusion, advection and reaction) from data in order to model spatial anisotropy and non-stationarity in the context of Spatial Regression with Partial Differential Equation.
+
 `src/Parameter_Cascading` folder contains the C++ implementation of parameter cascading with different optimization algorithms.
